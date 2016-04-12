@@ -446,56 +446,114 @@ if __name__=='__main__':
 	for i in range(3):
 		grain_a.positions[:,i] -= 10*a/2.
 		grain_b.positions[:,i] -= 10*a/2.
+#These lists shouldn't be necessary if we exploit
+#the relationship between the rotation quaternion
+#and the tilt symmetric mirror plane.
+	sym_titl_100 = [[np.pi*(28.07/180.), np.array([4,1,0])],
+									[np.pi*(36.87/180.), np.array([3,1,0])],
+									[np.pi*(46.40/180.), np.array([7,3,0])],   
+									[np.pi*(53.13/180.), np.array([2,1,0])],   
+									[np.pi*(61.93/180.), np.array([2,1,0])],   
+									]
+
+	sym_tilt_110 = [ 
+								  [np.pi*(13.48/180.),   np.array([-1., 1., 12.])],
+								  [np.pi*(20.05/180.),   np.array([-1., 1., 8.])],
+								  [np.pi*(26.53/180.),   np.array([-1., 1., 6.])],
+								  [np.pi*(31.59/180.),   np.array([-1., 1., 5.])],
+								  [np.pi*(38.94/180.),   np.array([-1., 1., 4.])],
+								  [np.pi*(44.00/180.),   np.array([-2., 2., 7.])],
+									[np.pi*(50.48/180.),   np.array([-1., 1., 3.])],
+									[np.pi*(58.99/180.),   np.array([-2., 2., 5.])],
+									[np.pi*(70.53/180.),   np.array([-1, 1, 2])],
+									[np.pi*(80.63/180.),   np.array([-3, 3, 5])],
+									[np.pi*(86.63/180.),   np.array([-2, 2, 3])],
+									[np.pi*(93.37/180.),   np.array([-3., 3., 4.])],
+									[np.pi*(99.37/180.),   np.array([-3., 3., 4.])],
+								  [np.pi*(109.47/180.),  np.array([1., -1., -1.])],
+									[np.pi*(121.01/180.),  np.array([2., -2., 5.])],
+									[np.pi*(129.52/180.),  np.array([-3., 3., 2.])],
+									[np.pi*(141.06/180.),  np.array([-2., 2., 1.])],
+									[np.pi*(148.41/180.),  np.array([-5., 5., 2.])],
+									[np.pi*(153.47/180.),  np.array([-3., 3., 1.])],
+									[np.pi*(159.95/180.),  np.array([-4., 4., 1.])],
+									[np.pi*(166.56/180.),  np.array([-6., 6., 1.])]
+								 ]
+
+	sym_tilt_111 = []
+
 	orientation_axis = np.array([1, 1, 0])
 	miller           = np.array([1, 1, 0])
-#	theta            = np.pi*(0.0/180.)
-#	boundary_plane   = np.array([0, 0, 0])
-	sym_tilt_110 = [[np.pi*(70.53/180.),   np.array([1, -1, 1])],
-								  [np.pi*(109.47/180.),  np.array([1, -1, 2])],
-								  [np.pi*(38.94/180.),   np.array([2, -2, 1])],
-								  [np.pi*(31.59/180.),   np.array([5, -5, 2])],
-									[np.pi*(141.06/180.),  np.array([-2, 2, 1])],
-									[np.pi*(93.37/180.),   np.array([-3, 3, 4])],
-									[np.pi*(50.48/180.),   np.array([-1, 1, 3])],
-									[np.pi*(58.99/180.),   np.array([5, -5, 4])],
-									[np.pi*(129.52/180.),  np.array([1, -1, 3])]]
 
-	theta          = np.pi*(129.52/180.)  
-	boundary_plane = np.array([1, -1, 3])
-	theta          = np.pi*(70.53/180.)  
-	boundary_plane = np.array([1, -1, 1])
-	theta          = np.pi*(31.59/180.)  
-	boundary_plane = np.array([5, -5, 2])
-#	theta          = np.pi*(109.47/180.)  
-#	boundary_plane = np.array([1, -1, 2])
-	refl           = quat.reflection_matrix(np.array([0., 0., 0]), boundary_plane)
-	print 'Reflection matrix: \n', refl.round(3)
-	reflt          = quat.rotation_matrix(theta, orientation_axis)
-	print 'Rotation matrix: \n', reflt.round(3)
-	print '\t Boundary plane: ', boundary_plane.round(3)
-	print '\t Boundary rotated: ', reflt[:3,:3].dot(boundary_plane).round(3)
-	print '\t Boundary reflected: ', refl[:3,:3].dot(boundary_plane).round(3)
-	refl_bound = refl[:3,:3].dot(boundary_plane).round(3)
-	print '\t Boundary in Grain B Coordinate system ', np.linalg.inv(reflt.T)[:3, :3].dot(boundary_plane).round(3)
+	for gb in sym_tilt_110: 
+		print '\t', 'Rotation Axis: ', orientation_axis, 'Rotation Angle: ', (round(gb[0],4))*(180./np.pi), round(gb[0],4)
+		gb[1] = np.array(gb[1])
+		refl           = quat.reflection_matrix(np.array([0., 0., 0]), gb[1])
+#Reflection Matrices for 100 boundaries:
+#		refl_or        = quat.reflection_matrix(np.array([0.,0.,0.]), [0.,1.,0.])
+#		refl_or2       = quat.reflection_matrix(np.array([0.,0.,0.]), [0.,0.,1.])
+#Reflection Matrices for 110 boundaries:
+		refl_or        = quat.reflection_matrix(np.array([0.,0.,0.]), [0.,0.,1.])
+		refl_or2       = quat.reflection_matrix(np.array([0.,0.,0.]), [-1.,1.,0.])
+#Reflection Matrices for 111 boundaries:
+#		refl_or        = quat.reflection_matrix(np.array([0.,0.,0.]), [1.,-1.,0.])
+#		refl_or2       = quat.reflection_matrix(np.array([0.,0.,0.]), [-1.,1.,2.])
+		rotm           = quat.rotation_matrix(gb[0], orientation_axis)
+		rotquat 			 = quat.quaternion_from_matrix(rotm).round(3)
+		print '\t Rotation quaternion: ', rotquat
+		print '\t Integral Rotation quaternion: ', (1./(np.array([a for a in rotquat if a !=0]).min())*rotquat).round(2)
+		print '\t Boundary plane grain A coordinate system: ', gb[1].round(3)
+#		print '\t Boundary rotated: ',    rotm[:3,:3].dot(gb[1]).round(3)
+#		print '\t Boundary reflected  ',  refl_or[:3,:3].dot(np.linalg.inv(rotm[:3,:3].T).dot(gb[1])).round(3)
+#		print '\t Boundary reflected  ',  refl_or2[:3,:3].dot(np.linalg.inv(rotm[:3,:3].T).dot(gb[1])).round(3)
+		print '\n \t Find Symmetrix Boundary from reflected quaternion'
+		rotm           = quat.rotation_matrix(gb[0], orientation_axis)
+		rotmquat       = (1./(np.array([a for a in rotquat if a !=0]).min())*rotquat).round(2)
+		planequat_1 	 = np.array([0,0,0,1])	
+		planequat_2 	 = np.array([0,1,-1,0])	
+		print '\t One of these should be the Symmetric Boundary Plane: \n'
+		print '\t', planequat_1
+		print '\t', planequat_2
+		n1 = quat.quaternion_multiply(planequat_1, rotmquat)
+		n2 = quat.quaternion_multiply(planequat_2, rotmquat)
+		comm_denom = []
+		for a in n1:
+			if (a%1).round(1) != 0:
+				print '\t', a, 1./(np.abs(a)%1)
+				comm_denom.append(1./(np.abs(a)%1))
+		comm_denom = np.array(comm_denom)
+		if len(comm_denom)!=0:
+			print '\t', n1*comm_denom.max()
+			print '\t', n2*comm_denom.max()
+		else:
+			print '\t', n1
+			print '\t', n2
 
-	print ''
-#	theta = np.pi*(109.47/180.)
-#	theta = np.pi*(141.06/180.)
-#	theta = np.pi*(86.63/180.)
+#Gives same indices:
+#		print '\t', quat.quaternion_multiply(rotmquat, planequat_1)
+#		print '\t', quat.quaternion_multiply(rotmquat, planequat_2)
+		print '\t '
+		print '\n'
+		print '\t', '{0}{1}{2}'.format(orientation_axis[0], orientation_axis[1], orientation_axis[2])+str(round((gb[0]*180./np.pi),2)).replace('.', '')
+#		csl_factory(orientation_axis, miller, boundary_plane, m, n, grain_a, grain_b,theta=theta, mode='')
+
+	theta = sym_tilt_110[0][0]
+	boundary_plane = sym_tilt_110[0][1]
 	if theta != 0:
 		m2 = 2*(1.+np.cos(theta))/(1.-np.cos(theta))
 	else:
 		m2 = 0
 	print ''
 	print '\t m squared: ', np.sqrt(m2), np.sqrt(m2).round(0) , '\n'
+	print ''
 	if theta !=0:
 		m = np.sqrt(m2).round(0)
 		n = 1
 	else:
 		m=0
 		n=0
-	#csl_factory(orientation_axis, miller, boundary_plane, m, n, grain_a, grain_b, mode='Zeiner')
-	csl_factory(orientation_axis, miller, boundary_plane, m, n, grain_a, grain_b,theta=theta, mode='')
+	csl_factory(orientation_axis, miller, boundary_plane, m, n, grain_a, grain_b, theta=theta, mode='')
+#
 #	Can also just generate the symmetric grain boundaries this way?
 #	grain_test = BodyCenteredCubic(directions=[[1,-1,0], [1,1,-2], [1,1,1]],#, miller=[None,[1,1,0],[1,1,1]],
 #                                size=(1,1,4), symbol='Fe', pbc=(1,1,1),
@@ -521,3 +579,4 @@ if __name__=='__main__':
 #grain_test.extend(grain_b)
 #grain_test[0].position = (2.007,1.18,0.00) 
 #view(grain_test)
+#
