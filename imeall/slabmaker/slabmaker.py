@@ -13,15 +13,16 @@ import transformations as quat
 def make_interface(slab_a, slab_b, dist):
 	interface = slab_a.copy()
 #we will fuse along z direction so fe the highest z-component 
-#of bottom slab. Then align top slab according to this.
+#of bottom slab. Then align the top of the slab according to this.
 	zmax = interface.get_positions()[:,2].max()
 	slab_b.center(vacuum = zmax + dist , axis=2)
 	interface.extend(slab_b)
 	interface.center(vacuum=0.0)
 	return interface
 
-def compare_latt_vecs(cell_a, cell_b):
+
 # works for orthorhombic cells:
+def compare_latt_vecs(cell_a, cell_b):
   ratios = [a[0]/a[1] for a in zip(np.diag(cell_a), np.diag(cell_a))]
   return ratios
 
@@ -39,25 +40,22 @@ def rotate_plane_z(grain, miller):
 		rotation_quaternion = np.array([1., 0., 0., 0.])
 	else:
 		rotation_quaternion = quat.quaternion_about_axis(theta, p)
-
-	print '\t Aligning Orientation [', int(miller[0]), int(miller[1]), int(miller[2]), '] axis with z-axis'
+	print '\t Aligning Orientation [', int(miller[0]), int(miller[1]), int(miller[2]), '] axis with +z-axis'
 	print '\t rotation: ', theta, '(', theta*(180./np.pi), ')'
 	print '\t around : ', p, '\n'
 	print '\t Rotated Vector (should be along z): ', rotate_vec(rotation_quaternion, miller).round(3)
 	grain = rotate_grain(grain, q=rotation_quaternion)
 	return rotation_quaternion
 
-def rotate_plane_xy(grain, miller):
-# rotates atoms in grain so that a line in the plane 
-# defined by miller index n is parallel to x.
-# This is equivalent to making the miller index parallel to y.
-#	z = np.array([1., 0., 0.])
-	z = np.array([0., 1., 0.])
-	p = np.cross(miller, z)
+def rotate_plane_y(grain, miller):
+	# rotates atoms in grain so that the miller plane 
+	# in grain is parallel to the y axis.
+	# Returns the quaternion characterizing this.
+	y = np.array([0., 1., 0.])
+	p = np.cross(miller, y)
 	p *= 1./np.linalg.norm(p)
-#	angle between line on plane and desired line:
-	theta = np.arccos(miller.dot(z)/(np.linalg.norm(miller)*(np.linalg.norm(z))))
-
+	#	angle between line in plane and desired line:
+	theta = np.arccos(miller.dot(y)/(np.linalg.norm(miller)*(np.linalg.norm(y))))
 	if theta != theta:
 		theta = 0.
 		rotation_quaternion = np.array([1., 0., 0., 0.])
@@ -70,7 +68,6 @@ def rotate_plane_xy(grain, miller):
 	print '\t Aligning miller plane with y-axis by angle: ', theta*(180./np.pi)
 	print '\t around : ', p.round(3)
 	print '\t Rotated vector (should be along y): ', rotate_vec(rotation_quaternion, miller).round(3), '\n'
-
 	grain = rotate_grain(grain, q = rotation_quaternion)
 	return rotation_quaternion
 
@@ -134,6 +131,9 @@ def gnu_plot_gb(boundary_plane, m, invm, mb=0.0, invmb=0.0, gb_id='0000000000'):
 #	repl hb(x) lt 3 t '' \n \
 	set terminal pngcairo     \n \
 	set output 'csl_{1}.png'  \n \
+	repl                      \n \
+	set terminal svg     \n \
+	set output 'csl_{1}.svg'  \n \
 	repl \n \
 	set terminal x11 \n".format(boundary_plane, gb_id, m, invm, mb, invmb)
 	print >> f, script
@@ -293,17 +293,23 @@ def simplify_csl(m, b=0.00):
 				pass
 		f.close()
 
-def csl_factory(orientation_axis, miller, boundary_plane, m, n, grain_a, grain_b, mode='Zeiner', theta=0):
+def csl_factory(orientation_axis, boundary_plane, m, n, grain_a, grain_b, mode='Zeiner', theta=0):
 	f = open('grainaT.dat','w')
 	g = open('grainaB.dat','w')
-# rotate_plane takes grain a and rotates it
-# so that the orientation axis of the grain boundary with
-# respect to grain a is orthogonal to the x-y plane this is for,
-# and the miller index of the boundary_plane is !perpendicular to the x-axis.
 # ease of visualization.
-	plane_quaternion_z = rotate_plane_z(grain_a, miller)
+# In the gnuplot plane we think of x,y,z
+# General orientation axis = N = z
+# Vector specifying 0 Angle (for the case of tilt) = v = x
+# y = Nxv.
+# rotate_plane_z takes grain_a and rotates it
+# so that the orientation axis of the grain boundary with
+# respect to grain a is orthogonal to the x-y plane. The
+# quaternion to accomplish this rotation is stored in plane_quaternion_z
+	plane_quaternion_z = rotate_plane_z(grain_a, (-1.*orientation_axis))
 	print '\t boundary plane', boundary_plane.round(2)
-	plane_quaternion_x = rotate_plane_xy(grain_a, rotate_vec(plane_quaternion_z, boundary_plane))
+# plane_quaternion_x stores the rotation quaternion so that the boundary plane in grain_a coordinates
+# can be rotated so that it is perpendicular to the x-axis.
+	plane_quaternion_x = rotate_plane_y(grain_a, rotate_vec(plane_quaternion_z, boundary_plane))
 	print '\t boundary plane', boundary_plane.round(2)
 # The following code finds the planes with largest number
 # of points for viewing purposes:
@@ -372,9 +378,6 @@ def csl_factory(orientation_axis, miller, boundary_plane, m, n, grain_a, grain_b
 	boundary_plane = rotate_vec(plane_quaternion_x, boundary_plane)
 	intercept = rotate_vec(plane_quaternion_z, intercept)
 	intercept = rotate_vec(plane_quaternion_x, intercept)
-	print ''
-	print 'Choose a boundary plane. For pure tilt grain boundary this should be orthogonal'
-	print 'to the orientation axis. '
 	print ''
 	print 'Boundary plane: ', boundary_plane.round(3)
 	print 'Intercept: ', intercept.round(3)
@@ -449,6 +452,14 @@ if __name__=='__main__':
 #These lists shouldn't be necessary if we exploit
 #the relationship between the rotation quaternion
 #and the tilt symmetric mirror plane.
+
+#Angle from zeiner
+#
+# 100, \psi = ( m**2 -   n**2)/(m**2-n**2)
+# 110, \psi = ( m**2 - 2*n**2)/(m**2-n**2)
+# 111, \psi = ( m**2 - 3*n**2)/(m**2-n**2)
+#
+
 	sym_titl_100 = [[np.pi*(28.07/180.), np.array([4,1,0])],
 									[np.pi*(36.87/180.), np.array([3,1,0])],
 									[np.pi*(46.40/180.), np.array([7,3,0])],   
@@ -457,7 +468,7 @@ if __name__=='__main__':
 									]
 
 	sym_tilt_110 = [ 
-								  [np.pi*(13.48/180.),   np.array([-1., 1., 12.])],
+									[np.pi*(13.442738678/180.), np.array([-1., 1., 12.])],
 								  [np.pi*(20.05/180.),   np.array([-1., 1., 8.])],
 								  [np.pi*(26.53/180.),   np.array([-1., 1., 6.])],
 								  [np.pi*(31.59/180.),   np.array([-1., 1., 5.])],
@@ -466,27 +477,27 @@ if __name__=='__main__':
 									[np.pi*(50.48/180.),   np.array([-1., 1., 3.])],
 									[np.pi*(58.99/180.),   np.array([-2., 2., 5.])],
 									[np.pi*(70.53/180.),   np.array([-1, 1, 2])],
-									[np.pi*(80.63/180.),   np.array([-3, 3, 5])],
+									[np.pi*(80.631/180.),   np.array([-3, 3, 5])],
 									[np.pi*(86.63/180.),   np.array([-2, 2, 3])],
 									[np.pi*(93.37/180.),   np.array([-3., 3., 4.])],
 									[np.pi*(99.37/180.),   np.array([-3., 3., 4.])],
-								  [np.pi*(109.47/180.),  np.array([1., -1., -1.])],
-									[np.pi*(121.01/180.),  np.array([2., -2., 5.])],
+								  [np.pi*(109.47/180.),  np.array([-1., 1., 1.])],
+									[np.pi*(121.01/180.),  np.array([-5., 5., 4.])],
 									[np.pi*(129.52/180.),  np.array([-3., 3., 2.])],
-									[np.pi*(141.06/180.),  np.array([-2., 2., 1.])],
+									[np.pi*(141.057/180.),  np.array([-2., 2., 1.])],
 									[np.pi*(148.41/180.),  np.array([-5., 5., 2.])],
 									[np.pi*(153.47/180.),  np.array([-3., 3., 1.])],
 									[np.pi*(159.95/180.),  np.array([-4., 4., 1.])],
-									[np.pi*(166.56/180.),  np.array([-6., 6., 1.])]
+									[np.pi*(166.55726/180.),  np.array([-6., 6., 1.])]
 								 ]
 
 	sym_tilt_111 = []
 
 	orientation_axis = np.array([1, 1, 0])
-	miller           = np.array([1, 1, 0])
 
 	for gb in sym_tilt_110: 
-		print '\t', 'Rotation Axis: ', orientation_axis, 'Rotation Angle: ', (round(gb[0],4))*(180./np.pi), round(gb[0],4)
+		n = gb[1][0]
+		m = gb[1][2]
 		gb[1] = np.array(gb[1])
 		refl           = quat.reflection_matrix(np.array([0., 0., 0]), gb[1])
 #Reflection Matrices for 100 boundaries:
@@ -499,52 +510,52 @@ if __name__=='__main__':
 #		refl_or        = quat.reflection_matrix(np.array([0.,0.,0.]), [1.,-1.,0.])
 #		refl_or2       = quat.reflection_matrix(np.array([0.,0.,0.]), [-1.,1.,2.])
 		rotm           = quat.rotation_matrix(gb[0], orientation_axis)
-		rotquat 			 = quat.quaternion_from_matrix(rotm).round(3)
+		rotquat 			 = quat.quaternion_from_matrix(rotm).round(8)
+		angle_str      = str(round((gb[0]*180./np.pi),2)).replace('.', '')
+#Truncate string if it is greater than 4 characters
+		if len(angle_str) > 4:
+			angle_str = angle_str[:-1]
+		gbid = '{0}{1}{2}'.format(orientation_axis[0], orientation_axis[1], orientation_axis[2]) + angle_str
+		print '\t Grain Boundary ID: ', gbid
+		print '\t Rotation Axis: ', orientation_axis, 'Rotation Angle: ', (round(gb[0],6))*(180./np.pi),round(gb[0],4)
+		print '\t Angle from Zeiner Formula', np.arccos((m*m-2.*n*n)/(m*m+2.*n*n))*(180./np.pi), m*m-2*n*n, m*m+2*n*n
 		print '\t Rotation quaternion: ', rotquat
-		print '\t Integral Rotation quaternion: ', (1./(np.array([a for a in rotquat if a !=0]).min())*rotquat).round(2)
+		print '\t Integral Rotation quaternion: ', (1./(np.array([a for a in rotquat if a !=0]).min())*rotquat).round(5)
 		print '\t Boundary plane grain A coordinate system: ', gb[1].round(3)
-#		print '\t Boundary rotated: ',    rotm[:3,:3].dot(gb[1]).round(3)
-#		print '\t Boundary reflected  ',  refl_or[:3,:3].dot(np.linalg.inv(rotm[:3,:3].T).dot(gb[1])).round(3)
-#		print '\t Boundary reflected  ',  refl_or2[:3,:3].dot(np.linalg.inv(rotm[:3,:3].T).dot(gb[1])).round(3)
-		print '\n \t Find Symmetrix Boundary from reflected quaternion'
 		rotm           = quat.rotation_matrix(gb[0], orientation_axis)
-		rotmquat       = (1./(np.array([a for a in rotquat if a !=0]).min())*rotquat).round(2)
+		rotmquat       = (1./(np.array([a for a in rotquat if a !=0.]).min())*rotquat).round(5)
 		planequat_1 	 = np.array([0,0,0,1])	
 		planequat_2 	 = np.array([0,1,-1,0])	
-		print '\t One of these should be the Symmetric Boundary Plane: \n'
-		print '\t', planequat_1
-		print '\t', planequat_2
+		print '\t These vectors satisfy the conditions for a Symmetric Boundary Plane: '
 		n1 = quat.quaternion_multiply(planequat_1, rotmquat)
 		n2 = quat.quaternion_multiply(planequat_2, rotmquat)
 		comm_denom = []
 		for a in n1:
 			if (a%1).round(1) != 0:
-				print '\t', a, 1./(np.abs(a)%1)
 				comm_denom.append(1./(np.abs(a)%1))
 		comm_denom = np.array(comm_denom)
 		if len(comm_denom)!=0:
-			print '\t', n1*comm_denom.max()
-			print '\t', n2*comm_denom.max()
+			print '\t {}'.format((comm_denom.max()*n1).round(2))
+			print '\t {}'.format((comm_denom.max()*n2).round(2))
+			print '\n'
+			print '\n'
 		else:
+#			print 'Already in LCD'
 			print '\t', n1
 			print '\t', n2
+			print '\n'
+			print '\n'
 
-#Gives same indices:
-#		print '\t', quat.quaternion_multiply(rotmquat, planequat_1)
-#		print '\t', quat.quaternion_multiply(rotmquat, planequat_2)
-		print '\t '
-		print '\n'
-		print '\t', '{0}{1}{2}'.format(orientation_axis[0], orientation_axis[1], orientation_axis[2])+str(round((gb[0]*180./np.pi),2)).replace('.', '')
-#		csl_factory(orientation_axis, miller, boundary_plane, m, n, grain_a, grain_b,theta=theta, mode='')
+#Generate CSLs, and eventually simulation cells
+	theta = sym_tilt_110[8][0]
+	boundary_plane = sym_tilt_110[8][1]
 
-	theta = sym_tilt_110[0][0]
-	boundary_plane = sym_tilt_110[0][1]
 	if theta != 0:
 		m2 = 2*(1.+np.cos(theta))/(1.-np.cos(theta))
 	else:
 		m2 = 0
 	print ''
-	print '\t m squared: ', np.sqrt(m2), np.sqrt(m2).round(0) , '\n'
+#	print '\t m squared: ', np.sqrt(m2), np.sqrt(m2).round(0) , '\n'
 	print ''
 	if theta !=0:
 		m = np.sqrt(m2).round(0)
@@ -552,7 +563,8 @@ if __name__=='__main__':
 	else:
 		m=0
 		n=0
-	csl_factory(orientation_axis, miller, boundary_plane, m, n, grain_a, grain_b, theta=theta, mode='')
+
+	csl_factory(orientation_axis, boundary_plane, m, n, grain_a, grain_b, theta=theta, mode='')
 #
 #	Can also just generate the symmetric grain boundaries this way?
 #	grain_test = BodyCenteredCubic(directions=[[1,-1,0], [1,1,-2], [1,1,1]],#, miller=[None,[1,1,0],[1,1,1]],
@@ -565,18 +577,18 @@ if __name__=='__main__':
 #	miller = np.array([0.,0.,1.])
 #	generate_mirror(grain_b, point, miller)
 #	grain_test.extend(grain_b)
-#Can also just generate the symmetric grain boundaries this way?
+# Can also just generate the symmetric grain boundaries this way?
 #	grain_test = BodyCenteredCubic(directions=[[1,-1,0], [1,1,-3], [3,3,2]],#, miller=[None,[1,1,0],[1,1,1]],
 #                         size=(1,1,1), symbol='Fe', pbc=(1,1,1),
 #                         latticeconstant=2.83)	
 #	grain_b = grain_test.copy()
 #	point = np.array([0.,0.,0.])
-#miller = np.array([1.,1.,1.])
-#1,1,1 plane is oriented along  xyz already
-#miller = np.array([0.,0.,1.])
-#generate_mirror(grain_b, point, miller)
-#grain_b.positions[:,2] -= 0.0
-#grain_test.extend(grain_b)
-#grain_test[0].position = (2.007,1.18,0.00) 
-#view(grain_test)
+# miller = np.array([1.,1.,1.])
+# 1,1,1 plane is oriented along  xyz already
+# miller = np.array([0.,0.,1.])
+# generate_mirror(grain_b, point, miller)
+# grain_b.positions[:,2] -= 0.0
+# grain_test.extend(grain_b)
+# grain_test[0].position = (2.007,1.18,0.00) 
+# view(grain_test)
 #
