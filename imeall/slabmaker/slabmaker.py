@@ -8,8 +8,11 @@ from ase.utils.geometry  import get_duplicate_atoms
 from collections import Counter
 import numpy as np
 from quippy import io
+from qlab import set_fortran_indexing
 import transformations as quat
 import os
+set_fortran_indexing(False)
+
 
 def make_interface(slab_a, slab_b, dist):
 	interface = slab_a.copy()
@@ -52,8 +55,8 @@ def build_tilt_sym_gb(gbid, bp = [3,3,2], v=[1,1,0], c_space=None):
 # plane oriented along z axis and orthogonal directions in the 
 # the other two planes given the boundary plane and an orthogonal vector generate
 # the second orthogonal vector bpxv so we have a proper cube:
-	bpxv = [(bp[1]*v[2]-v[1]*bp[2]),(bp[2]*v[0]-bp[0]*v[2]),(bp[0]*v[1]- v[0]*bp[1])]
 # Now generate the unit cell
+	bpxv = [(bp[1]*v[2]-v[1]*bp[2]),(bp[2]*v[0]-bp[0]*v[2]),(bp[0]*v[1]- v[0]*bp[1])]
 	grain_a = BodyCenteredCubic(directions = [v, bpxv, bp],
 	                         size = (1,1,1), symbol='Fe', pbc=(1,1,1),
 	                         latticeconstant = 2.83)
@@ -70,27 +73,30 @@ def build_tilt_sym_gb(gbid, bp = [3,3,2], v=[1,1,0], c_space=None):
 	if c_space==None:
 		s1 = surface('Fe', (map(int, bp)), 1)
 		c_space = s1.get_cell()[2,2]
+	print 'Interplanar spacing: ', c_space.round(2), 'A'
 # Reflect grain b in z-axis (across mirror plane):
 	grain_b.positions[:,2]  = -1.0*grain_b.positions[:,2]
-	grain_b.center(vacuum   = 0.0, axis=2)
+	grain_b.center(vacuum = 0.0, axis=2)
 	grain_b.positions[:,2] -= grain_b.positions[:,2].max()
 	grain_c.extend(grain_b)
-	grain_c.center(vacuum=2*c_space, axis=2)
+	grain_c.center(vacuum = c_space/2., axis=2)
 	dups = get_duplicate_atoms(grain_c)
 # Now build the second grain boundary by reflecting in y plane
 	grain_b = grain_c.copy()
 	grain_b.positions[:,1] = -grain_b.positions[:,1]
 	grain_b.wrap()
-	grain_b.center(vacuum = c_space,axis=2)
-	grain_b.positions[:,2] -= grain_b.positions[:,2].max() 
+	grain_b.center(vacuum = 0.0, axis=2)
+	grain_b.positions[:,2] -= (grain_b.positions[:,2].max() + c_space)
 	grain_c.extend(grain_b)
-	grain_c.center(vacuum=0.0, axis=2)
+	grain_c.center(vacuum=c_space/2., axis=2)
 	dups = get_duplicate_atoms(grain_c)
 	print grain_a.get_cell()[2,2]
 # Displace replicated atoms along the unit cell
 	for dup in dups:
+		print dup
+	for dup in dups:
 	    grain_c[dup[1]].position[2] += grain_a.get_cell()[2,2]
-	grain_c.center(vacuum=2.*c_space, axis=2)
+	grain_c.center(vacuum=c_space/2., axis=2)
 	shared_atoms = [grain_c[dup[0]] for dup in dups]
 	print 'There are {0} shared atoms'.format(len(shared_atoms))
 # The shared atoms( coincident sites) now need to be spaced out:
@@ -601,13 +607,10 @@ if __name__=='__main__':
 			print '\n'
 			print '\n'
 		else:
-#			print 'Already in LCD'
 			print '\t', n1
 			print '\t', n2
 			print '\n'
 			print '\n'
-
-#Generate CSLs, and eventually simulation cells
 	theta = sym_tilt_110[13][0]
 	boundary_plane = sym_tilt_110[13][1]
 
@@ -616,7 +619,6 @@ if __name__=='__main__':
 	else:
 		m2 = 0
 	print ''
-#	print '\t m squared: ', np.sqrt(m2), np.sqrt(m2).round(0) , '\n'
 	print ''
 	if theta !=0:
 		m = np.sqrt(m2).round(0)
