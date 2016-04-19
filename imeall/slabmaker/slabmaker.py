@@ -4,35 +4,32 @@ from ase.io import write
 from ase.lattice.spacegroup import crystal
 from ase.lattice.surface import surface,bcc111,bcc110
 from ase.lattice.cubic import BodyCenteredCubic
-
 from collections import Counter
-
 import numpy as np
 import transformations as quat
 
 def make_interface(slab_a, slab_b, dist):
 	interface = slab_a.copy()
-#we will fuse along z direction so fe the highest z-component 
-#of bottom slab. Then align the top of the slab according to this.
+# We will fuse along z direction so fe the highest z-component 
+# of bottom slab. Then align the top of the slab according to this.
 	zmax = interface.get_positions()[:,2].max()
 	slab_b.center(vacuum = zmax + dist , axis=2)
 	interface.extend(slab_b)
 	interface.center(vacuum=0.0)
 	return interface
-
-
-# works for orthorhombic cells:
+# Works for orthorhombic cells:
 def compare_latt_vecs(cell_a, cell_b):
   ratios = [a[0]/a[1] for a in zip(np.diag(cell_a), np.diag(cell_a))]
   return ratios
 
 def rotate_plane_z(grain, miller):
-	# rotates atoms in grain so that planes parallel to plane
-	# defined by miller index n is in the xy plane.
+# Rotates atoms in grain so that planes parallel to plane
+# defined by miller index n are parallel to the xy 
+# plotting plane.
 	z = np.array([0.,0., 1.])
 	p = np.cross(miller, z)
 	p *= 1./np.linalg.norm(p)
-  # angle between line on plane and z-axis
+# Angle between line on plane and z-axis
 	theta = np.arccos(miller.dot(z)/(np.linalg.norm(miller)*(np.linalg.norm(z))))
 	if theta != theta:
 		theta = 0.
@@ -47,10 +44,68 @@ def rotate_plane_z(grain, miller):
 	grain = rotate_grain(grain, q=rotation_quaternion)
 	return rotation_quaternion
 
+def build_tilt_sym_gb(v=[1,-1,0], bp = [3,3,2], gbid, c_space=None):
+# Generate grain with appropriate configurations: boundary
+# plane oriented along z axis and orthogonal directions in the 
+# the other two planes given the boundary plane and an orthogonal vector generate
+# the second orthogonal vector bpxv so we have a proper cube:
+	bpxv = [(bp[1]*v[2]-v[1]*bp[2]),(bp[2]v[0]-bp[0]v[2]),(bp[0]*v[1]- v[0]bp[1])]
+# Now generate the unit cell
+	grain_a = BodyCenteredCubic(directions = [v, bpxv, bp],
+	                         size = (1,1,1), symbol='Fe', pbc=(1,1,1),
+	                         latticeconstant = 2.83)
+	grain_b = grain_a.copy()
+	grain_c = grain_a.copy()
+	if c_space==None:
+		s1 = surface('Fe', (3, 3, 2), 1)
+		c_space = s1.get_cell()[2,2]
+# Reflect grain b in z-axis (across mirror plane):
+	grain_b.positions[:,2] = -1.0*grain_b.positions[:,2]
+	grain_b.center(vacuum  = 0.0, axis=2)
+	grain_b.positions[:,2] -= grain_b.positions[:,2].max()
+	grain_c.extend(grain_b)
+	grain_c.center(vacuum=2*c_space, axis=2)
+	dups = get_duplicate_atoms(grain_c)
+# Now build the second grain boundary by reflecting in y plane
+	grain_b = grain_c.copy()
+	grain_b.positions[:,1] = -grain_b.positions[:,1]
+	grain_b.wrap()
+	grain_b.center(vacuum=2*c_space,axis=2)
+	grain_b.positions[:,2] -= grain_b.positions[:,2].max() 
+	grain_c.extend(grain_b)
+	grain_c.center(vacuum=0.0, axis=2)
+	dups = get_duplicate_atoms(grain_c)
+	print grain_a.get_cell()[2,2]
+# Displace replicated atoms along the unit cell
+	for dup in dups:
+	    grain_c[dup[1]].position[2] += grain_a.get_cell()[2,2]
+	grain_c.center(vacuum=2.*c_space, axis=2)
+	shared_atoms = [grain_c[dup[0]] for dup in dups]
+	print 'There are {0} shared atoms'.format(len(shared_atoms))
+# The shared atoms( coincident sites) now need to be spaced out:
+	grain_c.center(vacuum=2.*c_space, axis=2)
+	z_planes = [round(atom.position[2],4) for atom in shared_atoms]
+	z_planes = list(sorted(set(z_planes)))
+	if len(z_planes) > 2: 
+		print 'MULTIPLE Z PLANES DETECTED SOMETHING WRONG!'
+	for grain in grain_c:
+	    if grain.position[2].round(4) < z_planes[0]:
+	        grain.position[2] -= 2*c_space
+	    if grain.position[2].round(4) > z_planes[1]:
+	        grain.position[2] += 2*c_space
+	for grain in grain_c:
+	    if grain.position[2].round(4) == z_planes[0]:
+	        grain.position[2] -= c_space
+	    if grain.position[2].round(4) == z_planes[1]:
+	        grain.position[2] += c_space    
+	grain_c.center(vacuum=c_space/2., axis=2)
+	print 'Writing grain.xyz to file'
+	io.write('{0}'.format(gbid),grain_c)
+
 def rotate_plane_y(grain, miller):
 	# rotates atoms in grain so that the miller plane 
 	# in grain is parallel to the y axis.
-	# Returns the quaternion characterizing this.
+	# Returns the quaternion characterizing the rotation which accomplishes this.
 	y = np.array([0., 1., 0.])
 	p = np.cross(miller, y)
 	p *= 1./np.linalg.norm(p)
@@ -63,7 +118,6 @@ def rotate_plane_y(grain, miller):
 	else:
 		rotation_quaternion = quat.quaternion_about_axis(theta, p)
 		print '\t quaternion: ', rotation_quaternion.round(2)
-
 	print '\t Rotated miller index: ', miller.round(3)
 	print '\t Aligning miller plane with y-axis by angle: ', theta*(180./np.pi)
 	print '\t around : ', p.round(3)
@@ -89,7 +143,7 @@ def generate_mirror(grain, point, miller):
 #  In order to be pure we should !!not!! do the rotations in terms of !!Degrees!!
 #  It is superior to do the rotation in terms of an integral number of radians.
 #  Then we can exploit all of Zeiner's relationships. For instance:
-#  quaternion               rotation angle \psi and the lattice 
+#  quaternion rotation angle \psi and the lattice 
 #  direction of the rotation axis.
 #  Additionally the coincidence index can be given by
 #  m is angle of rotation in radians, atoms is the grain to be rotated
@@ -98,6 +152,11 @@ def generate_mirror(grain, point, miller):
 def find_sigma_csl(q):
 # \Sigma(R(\mathbf{r})) = |\mathbf{r}|^{2}/2^{l} where l is the maximal power such that
 # 2^{l} divides |\mathbf{r}|^{2}.
+# m is angle of rotation in radians
+#(m,n,n,0) := \psi = \arccos(\frac{m^{2} - 3n^{2}}{m^{2} + 3n^{2}}), [111]
+#(k,lambda,mu,nu)   :=
+#				\psi = \arccos(\frac{k^{2} - \lambda^{2} - \mu^{2} -\nu^{2}}{k^{2} +
+#					  +  \lambda^{2} + \mu^{2} + \nu^{2}}), [\lambda\mu\nu]
 	r   = q.dot(q)
 	div = r
 	l   = 0
@@ -105,14 +164,11 @@ def find_sigma_csl(q):
 		div = r/np.power(2,l)
 		l += 1
 	return sigma
-# m is angle of rotation in radians
-#(m,n,n,0) := \psi = \arccos(\frac{m^{2} - 3n^{2}}{m^{2} + 3n^{2}}), [111]
-#(k,lambda,mu,nu)   :=
-#				\psi = \arccos(\frac{k^{2} - \lambda^{2} - \mu^{2} -\nu^{2}}{k^{2} +
-#					  +  \lambda^{2} + \mu^{2} + \nu^{2}}), [\lambda\mu\nu]
+
+
 def gnu_plot_gb(boundary_plane, m, invm, mb=0.0, invmb=0.0, gb_id='0000000000'):
 # output gnuplot script to generate "CSL plots on the fly"
-# should be equation of line for given miller plane
+# in svg format for visualization in imeall.
 	f = open('plot.gnu', 'w')
 	script = " \
 #	g(x) = {2}*x \n \
@@ -191,7 +247,6 @@ def csl_lattice_vecs(m,n):
 	r1 = np.array([r[0], r[3], -r[2]])
 	r2 = np.array([-r[3], r[0], r[1]])
 	r3 = np.array([r[2], -r[1], r[0]])
-
 	if np.mod(r.dot(r),2)==1:
 		print '\t |r|^{2} is odd'
 		a = r0
@@ -452,21 +507,18 @@ if __name__=='__main__':
 #These lists shouldn't be necessary if we exploit
 #the relationship between the rotation quaternion
 #and the tilt symmetric mirror plane.
-
 #Angle from zeiner
-#
 # 100, \psi = ( m**2 -   n**2)/(m**2-n**2)
 # 110, \psi = ( m**2 - 2*n**2)/(m**2-n**2)
 # 111, \psi = ( m**2 - 3*n**2)/(m**2-n**2)
-#
-
 	sym_titl_100 = [[np.pi*(28.07/180.), np.array([4,1,0])],
 									[np.pi*(36.87/180.), np.array([3,1,0])],
 									[np.pi*(46.40/180.), np.array([7,3,0])],   
 									[np.pi*(53.13/180.), np.array([2,1,0])],   
 									[np.pi*(61.93/180.), np.array([2,1,0])],   
 									]
-
+# 0 degrees is at [1-10] rotation by 180 would set
+# this angles as [-110].
 	sym_tilt_110 = [ 
 									[np.pi*(13.442738678/180.), np.array([-1., 1., 12.])],
 								  [np.pi*(20.05/180.),   np.array([-1., 1., 8.])],
@@ -492,7 +544,6 @@ if __name__=='__main__':
 								 ]
 
 	sym_tilt_111 = []
-
 	orientation_axis = np.array([1, 1, 0])
 
 	for gb in sym_tilt_110: 
@@ -547,8 +598,8 @@ if __name__=='__main__':
 			print '\n'
 
 #Generate CSLs, and eventually simulation cells
-	theta = sym_tilt_110[8][0]
-	boundary_plane = sym_tilt_110[8][1]
+	theta = sym_tilt_110[13][0]
+	boundary_plane = sym_tilt_110[13][1]
 
 	if theta != 0:
 		m2 = 2*(1.+np.cos(theta))/(1.-np.cos(theta))
