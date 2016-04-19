@@ -3,10 +3,13 @@ from ase.visualize import view
 from ase.io import write
 from ase.lattice.spacegroup import crystal
 from ase.lattice.surface import surface,bcc111,bcc110
-from ase.lattice.cubic import BodyCenteredCubic
+from ase.lattice.cubic   import BodyCenteredCubic
+from ase.utils.geometry  import get_duplicate_atoms
 from collections import Counter
 import numpy as np
+from quippy import io
 import transformations as quat
+import os
 
 def make_interface(slab_a, slab_b, dist):
 	interface = slab_a.copy()
@@ -44,24 +47,32 @@ def rotate_plane_z(grain, miller):
 	grain = rotate_grain(grain, q=rotation_quaternion)
 	return rotation_quaternion
 
-def build_tilt_sym_gb(v=[1,-1,0], bp = [3,3,2], gbid, c_space=None):
+def build_tilt_sym_gb(gbid, bp = [3,3,2], v=[1,1,0], c_space=None):
 # Generate grain with appropriate configurations: boundary
 # plane oriented along z axis and orthogonal directions in the 
 # the other two planes given the boundary plane and an orthogonal vector generate
 # the second orthogonal vector bpxv so we have a proper cube:
-	bpxv = [(bp[1]*v[2]-v[1]*bp[2]),(bp[2]v[0]-bp[0]v[2]),(bp[0]*v[1]- v[0]bp[1])]
+	bpxv = [(bp[1]*v[2]-v[1]*bp[2]),(bp[2]*v[0]-bp[0]*v[2]),(bp[0]*v[1]- v[0]*bp[1])]
 # Now generate the unit cell
 	grain_a = BodyCenteredCubic(directions = [v, bpxv, bp],
 	                         size = (1,1,1), symbol='Fe', pbc=(1,1,1),
 	                         latticeconstant = 2.83)
+# For the Chamati EAM potential the cutoff radius is 5.67 A
+# We want to separate the grain boundaries by at least this much,
+	n = 2
+	while(grain_a.get_cell()[2,2]< 12.0 and n < 10):
+		grain_a = BodyCenteredCubic(directions = [v, bpxv, bp],
+	 	                       size = (1,1,n), symbol='Fe', pbc=(1,1,1),
+	                         latticeconstant = 2.83)
+		n += 1
 	grain_b = grain_a.copy()
 	grain_c = grain_a.copy()
 	if c_space==None:
-		s1 = surface('Fe', (3, 3, 2), 1)
+		s1 = surface('Fe', (map(int, bp)), 1)
 		c_space = s1.get_cell()[2,2]
 # Reflect grain b in z-axis (across mirror plane):
-	grain_b.positions[:,2] = -1.0*grain_b.positions[:,2]
-	grain_b.center(vacuum  = 0.0, axis=2)
+	grain_b.positions[:,2]  = -1.0*grain_b.positions[:,2]
+	grain_b.center(vacuum   = 0.0, axis=2)
 	grain_b.positions[:,2] -= grain_b.positions[:,2].max()
 	grain_c.extend(grain_b)
 	grain_c.center(vacuum=2*c_space, axis=2)
@@ -70,7 +81,7 @@ def build_tilt_sym_gb(v=[1,-1,0], bp = [3,3,2], gbid, c_space=None):
 	grain_b = grain_c.copy()
 	grain_b.positions[:,1] = -grain_b.positions[:,1]
 	grain_b.wrap()
-	grain_b.center(vacuum=2*c_space,axis=2)
+	grain_b.center(vacuum = c_space,axis=2)
 	grain_b.positions[:,2] -= grain_b.positions[:,2].max() 
 	grain_c.extend(grain_b)
 	grain_c.center(vacuum=0.0, axis=2)
@@ -99,8 +110,8 @@ def build_tilt_sym_gb(v=[1,-1,0], bp = [3,3,2], gbid, c_space=None):
 	    if grain.position[2].round(4) == z_planes[1]:
 	        grain.position[2] += c_space    
 	grain_c.center(vacuum=c_space/2., axis=2)
-	print 'Writing grain.xyz to file'
-	io.write('{0}'.format(gbid),grain_c)
+	print 'Writing {0}.xyz to file'.format(gbid)
+	io.write('{0}.xyz'.format(gbid),grain_c)
 
 def rotate_plane_y(grain, miller):
 	# rotates atoms in grain so that the miller plane 
@@ -342,7 +353,6 @@ def simplify_csl(m, b=0.00):
 		for at in grain_b:
 			position = np.array(map(float, at.split()))
 			if (round(position[1]-m*position[0]-b,2) >= 0.0):
-			#if (round(position[0],2) >= 0.0):
 				print>>f, '{0:12.7f} {1:12.7f} {2:12.7f}'.format(position[0], position[1], position[2])
 			else:
 				pass
@@ -616,30 +626,15 @@ if __name__=='__main__':
 		n=0
 
 	csl_factory(orientation_axis, boundary_plane, m, n, grain_a, grain_b, theta=theta, mode='')
-#
-#	Can also just generate the symmetric grain boundaries this way?
-#	grain_test = BodyCenteredCubic(directions=[[1,-1,0], [1,1,-2], [1,1,1]],#, miller=[None,[1,1,0],[1,1,1]],
-#                                size=(1,1,4), symbol='Fe', pbc=(1,1,1),
-#                                latticeconstant=2.83)
-#	grain_b = grain_test.copy()
-#	point = np.array([0.,0.,0.])
-#	miller = np.array([1.,1.,1.])
-#	1,1,1 plane is oriented along  xyz already
-#	miller = np.array([0.,0.,1.])
-#	generate_mirror(grain_b, point, miller)
-#	grain_test.extend(grain_b)
-# Can also just generate the symmetric grain boundaries this way?
-#	grain_test = BodyCenteredCubic(directions=[[1,-1,0], [1,1,-3], [3,3,2]],#, miller=[None,[1,1,0],[1,1,1]],
-#                         size=(1,1,1), symbol='Fe', pbc=(1,1,1),
-#                         latticeconstant=2.83)	
-#	grain_b = grain_test.copy()
-#	point = np.array([0.,0.,0.])
-# miller = np.array([1.,1.,1.])
-# 1,1,1 plane is oriented along  xyz already
-# miller = np.array([0.,0.,1.])
-# generate_mirror(grain_b, point, miller)
-# grain_b.positions[:,2] -= 0.0
-# grain_test.extend(grain_b)
-# grain_test[0].position = (2.007,1.18,0.00) 
-# view(grain_test)
-#
+
+	for gb in sym_tilt_110[:]:
+		angle_str      = str(round((gb[0]*180./np.pi),2)).replace('.', '')
+		gbid = '{0}{1}{2}'.format(orientation_axis[0], orientation_axis[1], orientation_axis[2]) + angle_str + '{0}{1}{2}'.format(int(abs(gb[1][0])), int(abs(gb[1][1])), int(abs(gb[1][2])))
+		print gbid
+		build_tilt_sym_gb(gbid, bp=gb[1])
+		os.system("/home/k1511981/ovito-2.6.1-x86_64/bin/ovito {0}.xyz".format(gbid))
+		variable = raw_input('Continue?')
+		if variable == 'y':
+			pass
+		elif variable =='n':
+			break
