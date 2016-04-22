@@ -63,60 +63,86 @@ def build_tilt_sym_gb(gbid, bp = [3,3,2], v=[1,1,0], c_space=None):
 # For the Chamati EAM potential the cutoff radius is 5.67 A
 # We want to separate the grain boundaries by at least this much,
 	n = 2
-	while(grain_a.get_cell()[2,2]< 12.0 and n < 10):
+	while(grain_a.get_cell()[2,2]< 24.0 and n < 10):
 		grain_a = BodyCenteredCubic(directions = [v, bpxv, bp],
 	 	                       size = (1,1,n), symbol='Fe', pbc=(1,1,1),
 	                         latticeconstant = 2.83)
 		n += 1
+	print '\t {0} repeats in z direction'.format(n)
 	grain_b = grain_a.copy()
 	grain_c = grain_a.copy()
+	print '\t', '{0} {1} {2}'.format(v[0],v[1],v[2])
+	print '\t', '{0} {1} {2}'.format(bpxv[0],bpxv[1],bpxv[2])
+	print '\t', '{0} {1} {2}'.format(bp[0], bp[1], bp[2])
 	if c_space==None:
-		s1 = surface('Fe', (map(int, bp)), 1)
-		c_space = s1.get_cell()[2,2]
-	print 'Interplanar spacing: ', c_space.round(2), 'A'
+		s1 = surface('Fe', (map(int, bp)), n)
+		c_space = s1.get_cell()[2,2]/float(n) #-s1.positions[:,2].max()
+		s2 = surface('Fe', (map(int, v)), 1)
+		x_space = s2.get_cell()[0,0] #-s1.positions[:,2].max()
+		s3 = surface('Fe', (map(int, bpxv)), 1)
+		y_space = s3.get_cell()[1,1] #-s1.positions[:,2].max()
+
+	print '\t Interplanar spacing: ', x_space.round(2), y_space.round(2), c_space.round(2), 'A'
 # Reflect grain b in z-axis (across mirror plane):
+	print grain_a.get_cell()[2,2]-grain_a.positions[:,2].max()
 	grain_b.positions[:,2]  = -1.0*grain_b.positions[:,2]
-	grain_b.center(vacuum = 0.0, axis=2)
-	grain_b.positions[:,2] -= grain_b.positions[:,2].max()
 	grain_c.extend(grain_b)
-	grain_c.center(vacuum = c_space/2., axis=2)
+	grain_c.set_cell([grain_c.get_cell()[0,0], grain_c.get_cell()[1,1], 2.*grain_c.get_cell()[2,2]])
+	grain_c.positions[:,2] += abs(grain_c.positions[:,2].min())
+	pos = [grain.position for grain in grain_c]
+	pos = sorted(pos, key= lambda x: x[2])
+#	for p in pos:
+#		print p.round(2)
 	dups = get_duplicate_atoms(grain_c)
 # Now build the second grain boundary by reflecting in y plane
 	grain_b = grain_c.copy()
+	grain_b.positions[:,0] = -grain_b.positions[:,0]
 	grain_b.positions[:,1] = -grain_b.positions[:,1]
 	grain_b.wrap()
-	grain_b.center(vacuum = 0.0, axis=2)
-	grain_b.positions[:,2] -= (grain_b.positions[:,2].max() + c_space)
+#
+# In BCC lattice spacing is different depending on whether the
+# z-plane has an even or odd number of odd miller indices:
+#
+	if sum([int(n)%2 for n in bp])%2 == 0 :
+		grain_b.positions[:,2] -= (grain_b.positions[:,2].max()+2*c_space)
+	else:
+		grain_b.positions[:,2] -= (grain_b.positions[:,2].max()+c_space)
 	grain_c.extend(grain_b)
-	grain_c.center(vacuum=c_space/2., axis=2)
+	grain_c.set_cell([grain_c.get_cell()[0,0], grain_c.get_cell()[1,1], 2.*grain_c.get_cell()[2,2]])
+	grain_c.positions[:,2] += abs(grain_c.positions[:,2].min())
 	dups = get_duplicate_atoms(grain_c)
-	print grain_a.get_cell()[2,2]
+	print 'Dimensions cell A', grain_a.get_cell()[2,2]
 # Displace replicated atoms along the unit cell
 	for dup in dups:
-		print dup
-	for dup in dups:
 	    grain_c[dup[1]].position[2] += grain_a.get_cell()[2,2]
-	grain_c.center(vacuum=c_space/2., axis=2)
+
 	shared_atoms = [grain_c[dup[0]] for dup in dups]
-	print 'There are {0} shared atoms'.format(len(shared_atoms))
-# The shared atoms( coincident sites) now need to be spaced out:
+	for at in shared_atoms:
+		print '\t', at.index, at.position
+	print '\t There are {0} shared atoms'.format(len(shared_atoms))
+# The shared atoms(coincident sites) now need to be spaced out:
 	grain_c.center(vacuum=2.*c_space, axis=2)
 	z_planes = [round(atom.position[2],4) for atom in shared_atoms]
 	z_planes = list(sorted(set(z_planes)))
 	if len(z_planes) > 2: 
-		print 'MULTIPLE Z PLANES DETECTED SOMETHING WRONG!'
+		print '\t MULTIPLE Z PLANES DETECTED SOMETHING WRONG!'
 	for grain in grain_c:
 	    if grain.position[2].round(4) < z_planes[0]:
-	        grain.position[2] -= 2*c_space
+	        grain.position[2] -= 2.*c_space
 	    if grain.position[2].round(4) > z_planes[1]:
-	        grain.position[2] += 2*c_space
+	        grain.position[2] += 2.*c_space
 	for grain in grain_c:
 	    if grain.position[2].round(4) == z_planes[0]:
-	        grain.position[2] -= c_space
+	        grain.position[2] -= 1.*c_space
 	    if grain.position[2].round(4) == z_planes[1]:
-	        grain.position[2] += c_space    
-	grain_c.center(vacuum=c_space/2., axis=2)
-	print 'Writing {0}.xyz to file'.format(gbid)
+	        grain.position[2] += 1.*c_space    
+
+	if sum([int(n)%2 for n in bp])%2 == 0 :
+		grain_c.center(vacuum=c_space/2., axis=2)
+	else:
+		grain_c.center(vacuum=c_space/4., axis=2)
+
+	print '\t Writing {0}.xyz to file'.format(gbid)
 	io.write('{0}.xyz'.format(gbid),grain_c)
 
 def rotate_plane_y(grain, miller):
@@ -632,8 +658,8 @@ if __name__=='__main__':
 	for gb in sym_tilt_110[:]:
 		angle_str      = str(round((gb[0]*180./np.pi),2)).replace('.', '')
 		gbid = '{0}{1}{2}'.format(orientation_axis[0], orientation_axis[1], orientation_axis[2]) + angle_str + '{0}{1}{2}'.format(int(abs(gb[1][0])), int(abs(gb[1][1])), int(abs(gb[1][2])))
-		print gbid
-		build_tilt_sym_gb(gbid, bp=gb[1])
+		print '\t Grain Boundary ID',  gbid
+		build_tilt_sym_gb(gbid, bp=gb[1], c_space=None)
 		os.system("/home/k1511981/ovito-2.6.1-x86_64/bin/ovito {0}.xyz".format(gbid))
 		variable = raw_input('Continue?')
 		if variable == 'y':
