@@ -38,8 +38,8 @@ in degrees (4 decimal places should be sufficient) AAA, the
 rotation axis ooo, and nnn the miller index of the boundary plane.
 
 ## Dependencies
-	- [Flask](http://flask.pocoo.org/)
-	- [ASE](https://wiki.fysik.dtu.dk/ase/)
+  - [Flask](http://flask.pocoo.org/)
+  - [ASE](https://wiki.fysik.dtu.dk/ase/)
 
 1. Initialize the imeall app:
 ```
