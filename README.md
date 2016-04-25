@@ -38,15 +38,15 @@ in degrees (4 decimal places should be sufficient) AAA, the
 rotation axis ooo, and nnn the miller index of the boundary plane.
 
 ## Dependencies
-  - [Flask](http://flask.pocoo.org/)
+	- [Flask](http://flask.pocoo.org/)
 	- [ASE](https://wiki.fysik.dtu.dk/ase/)
 
 1. Initialize the imeall app:
 ```
     python runserver.py
 ```
-  This will launch the web app hosted locally and can be accessed through
-  your browser at http://127.0.0.1:5000/.
+This will launch the web app hosted locally and can be accessed through
+your browser at http://127.0.0.1:5000/.
 
 The home page contains a list of links to the data view for each grain boundary
 in the database. Each grain boundary page has various attributes that can be read
@@ -65,5 +65,4 @@ be extended to include sub calculations. Of particular relevance is a sub folder
 Nx3 atomic displacements which allows for the creation of an associated force constant
 matrix at the DFT level, and defect subfolders. The design of this scheme is to make
 the database suitably structured for training GAP models.
-
 
