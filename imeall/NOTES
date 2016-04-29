@@ -1,0 +1,27 @@
+why would trying to access the flask
+
+g.gbid give me this:
+
+OSError: [Errno 2] No such file or directory:
+'/Users/lambert/pymodules/imeall/imeall/./grain_boundaries/apple-touch-icon.png'
+
+
+
+Dealing with routing errors. If you are appending paths to a url (or
+you want the paths to be reflected in the url Flask deals with trailing
+flashes in a particular way. From the Docs:
+
+1.) If a rule ends with a slash and is requested without a slash
+    by the user, the user is automatically redirected to the same page with a
+    trailing slash attached.
+2.) If a rule does not end with a trailing slash and the user requests the page
+    with a trailing slash, a 404 not found is raised.
+
+
+On the flask example page it mentioned reddits link tricks so that you could 
+concatenate two views in the url.
+
+
+
+
+print app.url_map lists all the routes

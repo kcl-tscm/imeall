@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 import os
 import re
-import peewee
 from imeall  import app
-from flask   import Flask, request, session, g, redirect, url_for, abort, render_template, flash
-
-
+from flask   import Flask, request, session, g, redirect, url_for, abort,\
+                    render_template, flash, send_file
 #
 # Unique key is BBBAAAACCC
 # Common axis=[BBB], misorientation angle=AAAA, and GB plane = (CCC).
@@ -18,35 +16,98 @@ from flask   import Flask, request, session, g, redirect, url_for, abort, render
 # Each CalculationTable will have its own unique tag (DFT-VASP-PBE) along with the properties
 # calculate: total energy, forces, atoms, magnetic moments.
 #
-
 grain_boundaries = {}
 calculations      = {}
-
-
 grain_boundaries['0000000000'] = {'title': 'Ideal Crystal ',  'gb_id':'0000000000'}
 grain_boundaries['1107053111'] = {'title': 'Sigma(3)  (111)', 'gb_id':'1107053111'}
 grain_boundaries['1105048332'] = {'title': 'Sigma(11) (332)', 'gb_id':'1105048332'}
 grain_boundaries['1106000112'] = {'title': 'Sigma(3) (112)',  'gb_id':'1106000112'}
-
-#
 # Table energies should be populated in eV:
 # Each calculation should have the atoms object attached to it.
-#
-calculations['0000000000'] = {'VASP-DFT-PBE': {'E0':-8.23807, 'DFT-mag': 2.2238, 'nat':1}, 'IP-EAM-MISH':{'E0': -4.2701, 'nat':1}}
+calculations['0000000000'] = {'VASP-DFT-PBE' : {'E0':-8.23807, 'DFT-mag': 2.2238, 'nat':1}, 'IP-EAM-MISH':{'E0': -4.2701, 'nat':1}}
 calculations['1107053111'] = {'VASP-DFT-PBE' : {'E0':-406.154623782, 'nat':96, 'A': 27.7436434255}}
-calculations['1105048332'] = {'IP-EAM-MISH' : {'E0':-382.847802363, 'nat':90, 'A':18.7825353894 }}
-calculations['1106000112'] = {'IP-EAM-MISH' : {'E0':-196.171, 'nat':46, 'A': 9.80885920049}}
-# def pretty_index(index):
-# string_regex = '([0-9])(4[0-9])(3[0-9])(3[0-9])'
-# a,b,c = title.findall(string_regex)
-# index = 'Sigma ({0}) {1} degrees Orientation axis: [{2}] Miller plane: ({3}) '.format(a,b,c)
+calculations['1105048332'] = {'IP-EAM-MISH'  : {'E0':-382.847802363, 'nat':90, 'A':18.7825353894 }}
+calculations['1106000112'] = {'IP-EAM-MISH'  : {'E0':-196.171, 'nat':46, 'A': 9.80885920049}}
+# Currently the database connection is just a path name to our grain boundary
+# database stored as a file tree. I don't necessarily see any reason not to exploit
+# the existing filesystem and tools associated for searching. Why?
+#   1) The nature of the work pattern is I'll want to be able to rummage around
+#      in the different grain directories and subgrain directories to run quippy
+#      scripts etc, or copy subgraindirs with DFT stuff in them 
+#      Any work generated during this should just reside in the
+#      directory and I will only make what I want visible to the imeall browser
+#      xyz files for structures/forces, POSCAR, svg files for images, and json
+#      the rest will be invisible.
+#   2) By storing everything in the file system and only making what I want
+#      visible we still preserve a hierarchical relationship for all the grain
+#      boundaries within a class of materials and for different classes of
+#      materials. This tree structure would resemble a collection of documents and
+#      could be mapped onto a NoSQL type of database fairly easily. 
+@app.before_request
+def before_request():
+  g.gb_dir = app.config['GRAIN_DATABASE']
+
 @app.route('/')
 def home_page():
-	return render_template('imeall.html', grain_boundaries=grain_boundaries.values())
+  materials = os.listdir(g.gb_dir)
+  return render_template('imeall.html', materials=materials)
 
-@app.route('/grains/<gb_id>')
-def grain_boundary(gb_id):
-	gb = grain_boundaries[gb_id]
-	calc = calculations[gb_id]
-	print calc
-	return render_template('grain_boundary.html', grain=gb, calculations=calc)
+@app.route('/<material>/')
+def material(material):
+  path     = os.path.join(g.gb_dir, material)
+  url_path = material
+  orientations     = os.listdir(path)
+  return render_template('material.html', url_path=url_path, orientations=orientations)
+
+@app.route('/orientation/<path:url_path>/<orientation>/')
+def orientations(url_path, orientation):
+  url_path = url_path+'/'+orientation
+  path     = os.path.join(g.gb_dir, url_path)
+  print 'Orientation path', path
+  print  url_path
+  grains    = []
+#Only valid directories beginning with orientation axis will be shown.
+  for thing in os.listdir(path):
+    if thing[:3] == orientation: 
+      grains.append(thing.strip()) 
+      print thing.strip()
+  return render_template('orientation.html', url_path=url_path, grains=grains)
+
+@app.route('/grain/<path:url_path>/<gbid>/')
+def grain_boundary(url_path, gbid):
+  url_path  = url_path+'/'+gbid
+  path = os.path.join(g.gb_dir, url_path)
+  stuff = os.listdir(path)
+  print 'PATH', path, 'stuff'
+  print 'URL_PATH', url_path 
+  return render_template('grain_boundary.html', gbid=gbid, url_path=url_path, stuff=stuff)
+
+@app.route('/ovito/<path:target_dir>/<gbid>/<input_type>')
+def run_ovito(target_dir, gbid, input_type):
+  """ run_ovito is meant to launch the ovito viewer application with the
+      associated grainboundary trajectory file loaded, the os command should
+      ensure we are in the working directory so that any modifications, or
+      videos generated will be saved in the correct place.
+  """
+  ovito = "~/ovito-2.6.1-x86_64/bin/ovito"
+#Check for Ovito in different paths.
+  if os.path.isfile(ovito):
+    os.system("cd {0}; {1} {2}.xyz".format(target_dir, ovito, os.path.join(target_dir, gbid)))
+    variable = raw_input('Continue?')
+  elif os.path.isfile('/Users/lambert/Ovito.app/Contents/MacOS/ovito'):
+    os.system('cd {0}; /Users/lambert/Ovito.app/Contents/MacOS/ovito {0}.xyz'.format(os.path.join(target_dir, gbid)))
+  else: 
+    return flash('Ovito not installed in one of the usual locations.')
+
+#This route serves images from the grain boundary directory.
+@app.route('/img/<path:filename>/<gbid>/<img_type>')
+def serve_img(filename, gbid, img_type):
+  #filename = '/Users/lambert/pymodules/imeall/imeall/grain_boundaries/alphaFe/110/1101665661/1101665661.png'
+  print 'FILENAME', filename
+  print 'GBID', gbid
+  img  = os.path.join(filename,'{0}.png'.format(gbid))
+  if img_type =='struct':
+    img  = app.config['GRAIN_DATABASE']+'/'+filename+'/{0}.png'.format(gbid)
+  elif img_type =='csl':
+    img  = app.config['GRAIN_DATABASE']+'/'+filename+'/csl_{0}.svg'.format(gbid)
+  return send_file(img)

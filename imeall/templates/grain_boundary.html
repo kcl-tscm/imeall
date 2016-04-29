@@ -1,41 +1,15 @@
-{% extends "layout.html"%}
+{% extends "layout.html" %}
 {% block body %}
-  <h2> {{grain.title}} </h2>
-	<h4> Grain ID: {{grain.gb_id}} </h4>
-	<h3> Coincident Site Lattice </h3>
-  <img src="{{ url_for('static', filename='{0}/csl_{0}.png'.format(grain.gb_id)) }}" alt="Coincident Site Lattice">
-	<h3> Coincident Site Lattice Simplified across Plane</h3>
-  <img src="{{ url_for('static', filename='{0}/csl_{0}_dual.png'.format(grain.gb_id)) }}" alt="Coincident Site Lattice Dual">
-	<h3> Crystal Structure </h3>
-	<img class="fblogo" border="0" src="{{ url_for('static', filename='{0}/struct_{0}.png'.format(grain.gb_id)) }}"   alt=" Unit Cell Lattice">
-
-	<h3> Pair Distribution Function </h3>
-	<img class="fblogo" border="0" src="{{ url_for('static', filename='{0}/pairdistance.png'.format(grain.gb_id)) }}" alt="Pair Correlation Function">
-	<dl>
-	{% for key, value in calculations.iteritems() %}
-		<dt> {{key}} </dt> 
- 	  <dd> 	Total Energy {{ value.E0 }} Number of Atoms {{ value.nat }}</dd>
-	{% endfor %}
-	</dl>
-{#<h3> Ball and Stick Grain Boundary Model </h3>
-	<div>
-		<script type="text/javascript" src={{ url_for('static', filename='jquery.js') }}>    </script>
-		<script type="text/javascript" src={{ url_for('static', filename='three.min.js') }}> </script>
-		<script type="text/javascript" src={{ url_for('static', filename='ArcballControls.js') }}>    </script>
-		<script type="text/javascript" src={{ url_for('static', filename='base64-arraybuffer.js') }}> </script>
-		<script type="text/javascript" src={{ url_for('static', filename='chemview.js') }}>           </script>
-		<script type="text/javascript">
-    	$(document).ready(function () {
-        var canvas = $("#molecular_viewer").css({width: 400, height: 400});
-        var mv = new MolecularViewer(canvas);
-        $.getJSON('{{ url_for('static', filename='protein_rendered.json') }}', function (data){
-            mv.deserialize(data);
-            mv.animate();
-            mv.zoomInto(mv.representations[0].options.startCoords);
-        });
-        mv.resize(canvas.width(), canvas.height());
-	    });
-		</script>
-		<canvas id="molecular_viewer"></canvas>
-	</div> #}
+  <h2> Grain Boundary Structure </h2>
+  <h3> {{gbid}} </h3>
+  <img src = "{{url_for('serve_img', filename=url_path, gbid=gbid, img_type='struct')}}" alt="GB structure" width=700>
+	<h2> Coincident Site Lattice  </h2>
+  <img src = "{{url_for('serve_img', filename=url_path, gbid=gbid, img_type='csl')}}" alt="GB structure" width=700>
+  <h2> Path: {{url_path}}       </h2>
+  <h3> Files Associated with {{gbid}}: </h3> 
+  <ul>
+  {% for thing in stuff %}
+    <li> {{ thing }} </li>
+  {% endfor %}
+  </ul>
 {% endblock %}

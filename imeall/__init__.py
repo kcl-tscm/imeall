@@ -1,12 +1,7 @@
 from flask import Flask, render_template
 import os
 
-app = Flask(__name__)
+app             = Flask(__name__, instance_relative_config=True)
+app.config.from_pyfile('config.py')
 
-import imeall.views
-
-#@app.errorhandler(404)
-#def not_found(error):
-#	return render_template('404.html'), 404
-
-
+from imeall import views
