@@ -6,11 +6,9 @@ from ase.lattice.cubic   import BodyCenteredCubic
 from ase.utils.geometry  import get_duplicate_atoms
 from collections import Counter
 import json
-
 import os
 import numpy as np
 import transformations as quat
-
 from quippy import io
 from qlab import set_fortran_indexing, view
 set_fortran_indexing(False)
@@ -62,12 +60,10 @@ def rotate_plane_z(grain, miller):
 
 def build_tilt_sym_gb(gbid, bp = [3,3,2], v=[1,1,0],
                       c_space=None, target_dir='./'):
-
 # Generate grain with appropriate configurations: boundary
-# plane oriented along z axis and orthogonal directions in the 
-# the other two planes given the boundary plane and an orthogonal vector generate
-# the second orthogonal vector bpxv so we have a proper cube:
-# Now generate the unit cell
+# plane (bp) oriented along z axis and orthogonal directions in the 
+# the other two planes given the orientation axis (v) and an orthogonal vector
+# bpxv so we have a proper cube:
   bpxv = [(bp[1]*v[2]-v[1]*bp[2]),(bp[2]*v[0]-bp[0]*v[2]),(bp[0]*v[1]- v[0]*bp[1])]
   grain_a = BodyCenteredCubic(directions = [v, bpxv, bp],
                            size = (1,1,1), symbol='Fe', pbc=(1,1,1),
@@ -76,7 +72,8 @@ def build_tilt_sym_gb(gbid, bp = [3,3,2], v=[1,1,0],
 # For the Chamati EAM potential the cutoff radius is 5.67 A
 # We want to separate the grain boundaries by at least this much,
   n = 2
-  while(grain_a.get_cell()[2,2]< 24.0 and n < 10):
+#  while(grain_a.get_cell()[2,2]< 24.0 and n < 10):
+  while(grain_a.get_cell()[2,2]< 12.0 and n < 10):
     grain_a = BodyCenteredCubic(directions = [v, bpxv, bp],
                            size = (1,1,n), symbol='Fe', pbc=(1,1,1),
                            latticeconstant = 2.83)
@@ -679,7 +676,7 @@ if __name__=='__main__':
         orientation_axis[2]) + angle_str + '{0}{1}{2}'.format(int(abs(gb[1][0])), int(abs(gb[1][1])), int(abs(gb[1][2])))
     print '\t Grain Boundary ID',  gbid
 #Dump GBs in this directory:
-    gb_dir     = os.path.join('./alphaFeII','110')
+    gb_dir     = os.path.join('./alphaFeDFT','110')
     target_dir = os.path.join(gb_dir, gbid)
     print '\t Grain Boundary Dir', gb_dir
     if not os.path.isdir(target_dir):

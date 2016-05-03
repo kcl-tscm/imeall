@@ -1,0 +1,9 @@
+{% extends "layout.html" %}
+{% block body %}
+  <h2>Grain Boundaries: </h2>
+  <ul class=entries>
+  {% for grain in grains %}
+    <li> <a href={{ url_for('grain_boundary', url_path=url_path, gbid=grain)}}>{{grain}}</a></em> </li>
+  {% endfor%}
+  </ul>
+{% endblock %}

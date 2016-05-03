@@ -4,7 +4,6 @@ import re
 from imeall  import app
 from flask   import Flask, request, session, g, redirect, url_for, abort,\
                     render_template, flash, send_file
-#
 # Unique key is BBBAAAACCC
 # Common axis=[BBB], misorientation angle=AAAA, and GB plane = (CCC).
 # temporary table should be replaced by database.
@@ -14,16 +13,15 @@ from flask   import Flask, request, session, g, redirect, url_for, abort,\
 # One GrainBoundary table with grain_boundary id (unique tag), name, raw atom structure
 # coincident site lattice etc, and a bunch of pointers to a CalculationTable
 # Each CalculationTable will have its own unique tag (DFT-VASP-PBE) along with the properties
-# calculate: total energy, forces, atoms, magnetic moments.
-#
+# Calculate: total energy, forces, atoms, magnetic moments.
+# Table energies should be populated in eV:
+# Each calculation should have the atoms object attached to it.
 grain_boundaries = {}
 calculations      = {}
 grain_boundaries['0000000000'] = {'title': 'Ideal Crystal ',  'gb_id':'0000000000'}
 grain_boundaries['1107053111'] = {'title': 'Sigma(3)  (111)', 'gb_id':'1107053111'}
 grain_boundaries['1105048332'] = {'title': 'Sigma(11) (332)', 'gb_id':'1105048332'}
 grain_boundaries['1106000112'] = {'title': 'Sigma(3) (112)',  'gb_id':'1106000112'}
-# Table energies should be populated in eV:
-# Each calculation should have the atoms object attached to it.
 calculations['0000000000'] = {'VASP-DFT-PBE' : {'E0':-8.23807, 'DFT-mag': 2.2238, 'nat':1}, 'IP-EAM-MISH':{'E0': -4.2701, 'nat':1}}
 calculations['1107053111'] = {'VASP-DFT-PBE' : {'E0':-406.154623782, 'nat':96, 'A': 27.7436434255}}
 calculations['1105048332'] = {'IP-EAM-MISH'  : {'E0':-382.847802363, 'nat':90, 'A':18.7825353894 }}
@@ -33,7 +31,7 @@ calculations['1106000112'] = {'IP-EAM-MISH'  : {'E0':-196.171, 'nat':46, 'A': 9.
 # the existing filesystem and tools associated for searching. Why?
 #   1) The nature of the work pattern is I'll want to be able to rummage around
 #      in the different grain directories and subgrain directories to run quippy
-#      scripts etc, or copy subgraindirs with DFT stuff in them 
+#      scripts etc, or copy subgraindirs with DFT stuff in them.
 #      Any work generated during this should just reside in the
 #      directory and I will only make what I want visible to the imeall browser
 #      xyz files for structures/forces, POSCAR, svg files for images, and json
@@ -77,11 +75,15 @@ def orientations(url_path, orientation):
 def grain_boundary(url_path, gbid):
   url_path  = url_path+'/'+gbid
   path = os.path.join(g.gb_dir, url_path)
-  stuff = os.listdir(path)
+  stuff = []
+  for thing in os.listdir(path):
+    if os.path.isdir(os.path.join(path,thing)):
+      stuff.append(thing) 
   print 'PATH', path, 'stuff'
   print 'URL_PATH', url_path 
   return render_template('grain_boundary.html', gbid=gbid, url_path=url_path, stuff=stuff)
 
+#Check for Ovito in different paths.
 @app.route('/ovito/<path:target_dir>/<gbid>/<input_type>')
 def run_ovito(target_dir, gbid, input_type):
   """ run_ovito is meant to launch the ovito viewer application with the
@@ -90,7 +92,6 @@ def run_ovito(target_dir, gbid, input_type):
       videos generated will be saved in the correct place.
   """
   ovito = "~/ovito-2.6.1-x86_64/bin/ovito"
-#Check for Ovito in different paths.
   if os.path.isfile(ovito):
     os.system("cd {0}; {1} {2}.xyz".format(target_dir, ovito, os.path.join(target_dir, gbid)))
     variable = raw_input('Continue?')
@@ -102,7 +103,7 @@ def run_ovito(target_dir, gbid, input_type):
 #This route serves images from the grain boundary directory.
 @app.route('/img/<path:filename>/<gbid>/<img_type>')
 def serve_img(filename, gbid, img_type):
-  #filename = '/Users/lambert/pymodules/imeall/imeall/grain_boundaries/alphaFe/110/1101665661/1101665661.png'
+#should consider security stuff here as well... flas.safe_join()
   print 'FILENAME', filename
   print 'GBID', gbid
   img  = os.path.join(filename,'{0}.png'.format(gbid))
@@ -110,4 +111,5 @@ def serve_img(filename, gbid, img_type):
     img  = app.config['GRAIN_DATABASE']+'/'+filename+'/{0}.png'.format(gbid)
   elif img_type =='csl':
     img  = app.config['GRAIN_DATABASE']+'/'+filename+'/csl_{0}.svg'.format(gbid)
+#Might want to use flask.send_from_directory() here.
   return send_file(img)

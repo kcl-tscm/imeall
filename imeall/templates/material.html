@@ -1,0 +1,9 @@
+{% extends "layout.html" %}
+{% block body %}
+  <h2> {{url_path}} </h2>
+  <ul class=entries>
+  {% for orientation in orientations %}
+    <li> <a href={{ url_for('orientations', url_path=url_path, orientation=orientation)}}>{{orientation}}</a></em> </li>
+  {% endfor%}
+  </ul>
+{% endblock %}

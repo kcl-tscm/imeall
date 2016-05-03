@@ -66,3 +66,8 @@ Nx3 atomic displacements which allows for the creation of an associated force co
 matrix at the DFT level, and defect subfolders. The design of this scheme is to make
 the database suitably structured for training GAP models.
 
+## Installation
+To get the development branch of Imeall:
+```
+  git clone https://github.com/Montmorency/imeall.git
+```
