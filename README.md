@@ -48,23 +48,33 @@ rotation axis ooo, and nnn the miller index of the boundary plane.
 This will launch the web app hosted locally and can be accessed through
 your browser at http://127.0.0.1:5000/.
 
-The home page contains a list of links to the data view for each grain boundary
-in the database. Each grain boundary page has various attributes that can be read
-off and visualized.
-An embedded snapshot of the grain boundary structure can be visualized,
-and a 2d schematic of the grain boundary is also generated.
-The database stores atomic scale properties according to calculation type
-( e.g. tight binding models, EAM, DFT).
+The home page contains a list of links to the data view for each material
+in the database. This leads to a view of different orientation axes vectors for 
+which grain boundary properties have been computed. For instance /alphaFe/110 
+contains all 110 grain boundaries for iron etc. The 000 
+orientation axes implies a perfect crystal, and different cleavage planes 
+and singular defects. Within each orientation axes is a list of 
+full grain boundaries. Each of these should contain a snap shot
+of the unrelaxed grain boundary structure, the coincident site lattice, and a
+list of sub-directories containing the type of calculations performed on the
+grain boundary. The subdirectories (subgrains) stores atomic scale 
+properties according to calculation type (e.g. tight binding models, 
+EAM, DFT, EAM_Mishin, DFT_PW, DFT_VASP) 
+and within each of them a series of directories with the pattern 
+gbid_'suffix'. The suffix denotes the modification to the base grain
+structure. This could constitute a pattern like _d2.0. Which denotes:
+delete one of a pair of atoms from the original grain 
+boundary structure with nearest neighbour distance less than 2 A.
+Another suffix pattern might be displace the grain along x by distance 0.25:
+_tx0.25. These can be combined _d2.0_tx0.25. A key for these patterns is given
+here:
 
-Tables of key properties: total energy, grain boundary energy,
-elastic constants, Young's modulus, poisson ratio are displayed for
-each calculation type.
+_d2.0   : delete one of pair of atoms with distance < 2,0 A.
+_tx2,0  : displace one grain along x 2.0 A.
+_ty2.0  : displace one grain along y 2,0 A.
+_vn123  : vacany created by deleting atom 123.
+_h1     : 1 additional hydrogen atom in system.
 
-In terms of the database structure sub-folders of each grain boundary object can
-be extended to include sub calculations. Of particular relevance is a sub folder of
-Nx3 atomic displacements which allows for the creation of an associated force constant
-matrix at the DFT level, and defect subfolders. The design of this scheme is to make
-the database suitably structured for training GAP models.
 
 ## Installation
 To get the development branch of Imeall:
