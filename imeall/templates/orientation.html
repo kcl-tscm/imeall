@@ -3,7 +3,9 @@
   <h2>Grain Boundaries: </h2>
   <ul class=entries>
   {% for grain in grains %}
-    <li> <a href={{ url_for('grain_boundary', url_path=url_path, gbid=grain)}}>{{grain}}</a></em> </li>
+    <li> <a href={{ url_for('grain_boundary', url_path=url_path, gbid=grain)}}>{{grain}}</a></em> 
+   <img src= "{{url_for('serve_img',filename=url_path+'/'+grain, gbid=grain, img_type='struct')}}" 
+   alt="GB structure" width=600> </li>
   {% endfor%}
   </ul>
 {% endblock %}

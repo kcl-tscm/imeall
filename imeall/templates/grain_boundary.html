@@ -2,14 +2,38 @@
 {% block body %}
   <h2> Grain Boundary Structure </h2>
   <h3> {{gbid}} </h3>
+  <ul>
+    <li> Grain Boundary Type:  <em> {{ gb_info.type }}</em>      </li>
+    <li> Orientation Axis:     [{{ gb_info.orientation_axis | join(' ')  }}]  </li>
+    <li> Boundary Plane:       [{{ gb_info.boundary_plane | join(' ') }}]  </li>
+    <li> (Mis)Orientation Angle: {{ (gb_info.angle*(180.0/3.14159265)) | round(3,'floor') }}      </li>
+    <li> Number of Atoms in Unit Cell: {{ gb_info.n_at }}      </li>
+    <li> Coincident Sites:             {{ gb_info.coincident_sites }}      </li>
+    <li> Sigma({{ (gb_info.n_at/gb_info.coincident_sites) | round(0, 'floor') }})</li>
+  </ul>
   <img src = "{{url_for('serve_img', filename=url_path, gbid=gbid, img_type='struct')}}" alt="GB structure" width=700>
 	<h2> Coincident Site Lattice  </h2>
   <img src = "{{url_for('serve_img', filename=url_path, gbid=gbid, img_type='csl')}}" alt="GB structure" width=700>
-  <h2> Path: {{url_path}}       </h2>
-  <h3> Subdirectories of {{gbid}}: </h3> 
+  <h2> Total Energy </h2>
   <ul>
-  {% for thing in stuff %}
-    <li> {{ thing }} </li>
-  {% endfor %}
+    {% if 'E_gb' in gb_info %} 
+      <li> Number of Atoms in Unit Cell:  {{ gb_info.n_unit_cell }}                        </li>
+    {% else %}
+      <li> Number of Atoms in Unit Cell:  {{ gb_info.n_at }}                        </li>
+    {% endif %}
+    {% if 'E_gb' in gb_info %} 
+      <li> Total Energy:                  {{ gb_info.E_gb | round(3,'floor') }} eV </li>
+      <li> Total Energy per Atom:         {{ (gb_info.E_gb/gb_info.n_at) | round(3,'floor') }} eV </li>
+    {% endif %}
   </ul>
-{% endblock %}
+  <h3> Subgrains of {{gbid}}: </h3> 
+  <ul>
+    {%- for item in tree.children recursive %}
+      <li> <a href="{{url_for('serve_file', textpath=item.fullpath)}}"> {{item.name}}  </a>
+        {%- if item.children -%}
+         <ul class="submenu">{{ loop(item.children) }}</ul>
+        {%- endif %}</li>
+    {%- endfor %}
+  </ul>
+  <h3> Directory Path: ./grain_boundaries/{{url_path}} </h3>
+{% endblock body %}

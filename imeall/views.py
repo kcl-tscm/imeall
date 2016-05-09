@@ -3,7 +3,8 @@ import os
 import re
 from imeall  import app
 from flask   import Flask, request, session, g, redirect, url_for, abort,\
-                    render_template, flash, send_file
+                    render_template, flash, send_file, jsonify
+import json
 # Unique key is BBBAAAACCC
 # Common axis=[BBB], misorientation angle=AAAA, and GB plane = (CCC).
 # temporary table should be replaced by database.
@@ -26,6 +27,13 @@ calculations['0000000000'] = {'VASP-DFT-PBE' : {'E0':-8.23807, 'DFT-mag': 2.2238
 calculations['1107053111'] = {'VASP-DFT-PBE' : {'E0':-406.154623782, 'nat':96, 'A': 27.7436434255}}
 calculations['1105048332'] = {'IP-EAM-MISH'  : {'E0':-382.847802363, 'nat':90, 'A':18.7825353894 }}
 calculations['1106000112'] = {'IP-EAM-MISH'  : {'E0':-196.171, 'nat':46, 'A': 9.80885920049}}
+
+
+valid_extensions = ['xyz']
+vasp_files       = ['IBZKPT', 'INCAR', 'CHG', 'CHGCAR', 'DOSCAR', 'EIGENVAL', 
+                    'KPOINTS', 'OSZICAR', 'OUTCAR', 'PCDAT', 'POSCAR',
+                    'POTCAR', 'WAVECAR', 'XDATCAR']
+
 # Currently the database connection is just a path name to our grain boundary
 # database stored as a file tree. I don't necessarily see any reason not to exploit
 # the existing filesystem and tools associated for searching. Why?
@@ -71,17 +79,42 @@ def orientations(url_path, orientation):
       print thing.strip()
   return render_template('orientation.html', url_path=url_path, grains=grains)
 
+#This seems like a very useful pattern to learn!
+def make_tree(path):
+  tree = dict(name=os.path.basename(path), children=[], fullpath='')
+  try: 
+    lst = os.listdir(path)
+  except OSError:
+    pass  
+  else:
+    for name in lst:
+      filename = os.path.join(path,name)
+      if os.path.isdir(filename):
+        tree['children'].append(make_tree(filename))
+      else:
+#append file if it is a relevantwith its route:
+        extension = name.split(".")[-1]
+        if name in vasp_files or extension in valid_extensions:
+          tree['children'].append(dict(name=name, fullpath=filename))
+  return tree
+
 @app.route('/grain/<path:url_path>/<gbid>/')
 def grain_boundary(url_path, gbid):
   url_path  = url_path+'/'+gbid
   path = os.path.join(g.gb_dir, url_path)
+  with open(os.path.join(path, 'gb.json'),'r') as json_file:
+    gb_info = json.load(json_file)
   stuff = []
-  for thing in os.listdir(path):
-    if os.path.isdir(os.path.join(path,thing)):
-      stuff.append(thing) 
+# really  what we want to do here is to 
+# walk through the subdirectories
+#  for thing in os.listdir(path):
+#    if os.path.isdir(os.path.join(path,thing)):
+#      stuff.append(thing) 
+  tree = make_tree(path)
   print 'PATH', path, 'stuff'
   print 'URL_PATH', url_path 
-  return render_template('grain_boundary.html', gbid=gbid, url_path=url_path, stuff=stuff)
+  return render_template('grain_boundary.html', gbid=gbid, url_path=url_path, 
+                          stuff=stuff, gb_info=gb_info, tree=tree)
 
 #Check for Ovito in different paths.
 @app.route('/ovito/<path:target_dir>/<gbid>/<input_type>')
@@ -113,3 +146,12 @@ def serve_img(filename, gbid, img_type):
     img  = app.config['GRAIN_DATABASE']+'/'+filename+'/csl_{0}.svg'.format(gbid)
 #Might want to use flask.send_from_directory() here.
   return send_file(img)
+
+@app.route('/textfile/<path:textpath>')
+def serve_file(textpath):
+#serves txt files should we want to inspect these in the browser.
+  with open('{0}'.format(textpath),'r') as text_file:
+    text = text_file.read()
+  return 'Hello World'
+
+

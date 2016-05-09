@@ -35,7 +35,6 @@ class ImeallIO(object):
     self.vasp_dict         = {'kpar'  :32, 'npar':16, 'magmom':3.0, 'n_at':'NOTSET',
 					      		        	'ediffg': -0.05}
     self.kpt_grid          = {'kx':12, 'ky':12, 'kz':1}
-#   self.runsh             = {'nodes':256, 'time':60}
     self.runsh             = {'nodes':512, 'time':360}
 
   def make_dir(self, target_dir, dir_name):
@@ -200,6 +199,36 @@ class GBRelax(object):
     self.fmax        = 0.5E-2
     self.traj_file   = traj_file
 
+  def gen_super(self, rcut=2.0):
+# Create a grainboundary super cell we use the parameters of
+# Rittner and Seidman.
+    io = ImeallIO()
+    x = Atoms('{0}.xyz'.format(os.path.join(self.grain_dir, self.gbid)))
+    x.set_cutoff(3.0)
+    x.calc_connect()
+    x.calc_dists()
+    rem=[]
+# First remove atoms that are too close.
+    for j in frange(x.n):
+      for i in frange(j, x.n):
+        if 0. < x.distance_min_image(i, j) < rcut and j!=i:
+          rem.append(sorted([j,i]))
+    rem = list(set([a[0] for a in rem]))
+    if len(rem) >0:
+      x.remove_atoms(rem)
+    else:
+      print 'No duplicate atoms in list.'
+# Now create super cell
+    m = 6
+    n = 2
+    x = x*(m,n,1)
+    x.set_scaled_positions(x.get_scaled_positions())
+# Now Generate Subgrain directory
+    self.name    = '{0}_v{1}bxv{2}'.format(self.gbid, str(m), str(n)) 
+    self.struct_file  = self.name
+    self.subgrain_dir = io.make_dir(self.calc_dir, self.name)
+    x.write('{0}.xyz'.format(os.path.join(self.subgrain_dir, self.name)))
+
   def delete_atoms(self, rcut=2.0):
 # Delete atoms below a certain threshold
     io = ImeallIO()
@@ -217,7 +246,7 @@ class GBRelax(object):
       x.remove_atoms(rem)
     else:
       print 'No duplicate atoms in list.'
-    self.name    = '{0}_d{1}'.format(gbid, str(rcut)) 
+    self.name    = '{0}_d{1}'.format(self.gbid, str(rcut)) 
     self.subgrain_dir = io.make_dir(self.calc_dir, self.name)
     self.struct_file  = gbid + '_' + 'n' + str(len(rem)) + 'd' + str(rcut)  
     x.write('{0}.xyz'.format(os.path.join(self.subgrain_dir, self.struct_file)))
@@ -249,7 +278,7 @@ class GBRelax(object):
       traj        = ase.io.Trajectory(traj_loc, 'w', grain)
       E_gb_init   = grain.get_potential_energy()
       opt         = BFGS(ucf)
-      opt.attach(traj.write)
+      opt.attach(traj.write, interval=25)
 #Cant get printing the output from bfgs to behave...
       #with open(os.path.join(self.subgrain_dir, 'bfgsmin.txt'), 'w') as outfile:
       #  sysold = sys.stdout
@@ -276,16 +305,17 @@ class GBRelax(object):
         json.dump(gb_dict, outfile, indent=2)
 
 if __name__=='__main__':
-#  job_dir = sys.argv[1]
   jobdirs = []
+#string for orientation axis e.g. '110'
+  or_string = sys.argv[1]
   for thing in os.listdir('./'):
-    if os.path.isdir(thing) and thing[:3]=='110':
+    if os.path.isdir(thing) and thing[:3]==or_string:
       jobdirs.append(thing)
-####################################
-####################################
-##RELAX EAM FOR LIST OF DIRECTORIES#
-####################################
-####################################
+#######################################
+#######################################
+## RELAX EAM FOR LIST OF DIRECTORIES ##
+#######################################
+#######################################
 ##  for job_dir in jobdirs[:]:
 ##    gbid    = job_dir.strip('/')
 ##    print '\n'
@@ -295,6 +325,17 @@ if __name__=='__main__':
 ##                      potential = 'IP EAM_ErcolAd', param_file='./iron_mish.xml')
 ##    gbrelax.delete_atoms()
 ##    gbrelax.go_relax()
+#########################################################################
+#########################################################################
+for job_dir in jobdirs[:2]:
+  gbid    = job_dir.strip('/')
+  print '\n'
+  print '\t', gbid
+  print '\n'
+  gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type='EAM', 
+                    potential = 'IP EAM_ErcolAd', param_file='./iron_mish.xml')
+  gbrelax.gen_super()
+  gbrelax.go_relax()
 #########################################################################
 #########################################################################
 ## COPY Directories across im_io.copy_struct(dir, sub_dir, dir, sub_dir)#

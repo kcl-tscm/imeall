@@ -7,7 +7,7 @@ a uniform process  indicated by the following notation:
 sig(A)Theta[XXX](YYY)
 
 A is the reciprocal density of the coincident sites
-in the Coincident Site lattice i.e.:
+in the Coincident Site Lattice i.e.:
 
 sigma = (number of coincident sites in an elementary cell)/
 (total number of all lattice sites in an elementary cell)
@@ -42,6 +42,7 @@ rotation axis ooo, and nnn the miller index of the boundary plane.
   - [ASE](https://wiki.fysik.dtu.dk/ase/)
 
 1. Initialize the imeall app:
+
 ```
     python runserver.py
 ```
@@ -68,13 +69,13 @@ boundary structure with nearest neighbour distance less than 2 A.
 Another suffix pattern might be displace the grain along x by distance 0.25:
 _tx0.25. These can be combined _d2.0_tx0.25. A key for these patterns is given
 here:
-
-_d2.0   : delete one of pair of atoms with distance < 2,0 A.
-_tx2,0  : displace one grain along x 2.0 A.
-_ty2.0  : displace one grain along y 2,0 A.
-_vn123  : vacany created by deleting atom 123.
-_h1     : 1 additional hydrogen atom in system.
-
+```
+  _d2.0   : delete one of pair of atoms with distance < 2.0 A.
+  _tx2,0  : displace one grain along x 2.0 A.
+  _ty2.0  : displace one grain along y 2.0 A.
+  _vn123  : vacany created by deleting atom index 123.
+  _h1     : 1 additional hydrogen atom in system.
+```
 
 ## Installation
 To get the development branch of Imeall:
