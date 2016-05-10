@@ -29,7 +29,8 @@ calculations['1105048332'] = {'IP-EAM-MISH'  : {'E0':-382.847802363, 'nat':90, '
 calculations['1106000112'] = {'IP-EAM-MISH'  : {'E0':-196.171, 'nat':46, 'A': 9.80885920049}}
 
 
-valid_extensions = ['xyz']
+#files to display in browser:
+valid_extensions = ['xyz', 'json']
 vasp_files       = ['IBZKPT', 'INCAR', 'CHG', 'CHGCAR', 'DOSCAR', 'EIGENVAL', 
                     'KPOINTS', 'OSZICAR', 'OUTCAR', 'PCDAT', 'POSCAR',
                     'POTCAR', 'WAVECAR', 'XDATCAR']
@@ -147,11 +148,31 @@ def serve_img(filename, gbid, img_type):
 #Might want to use flask.send_from_directory() here.
   return send_file(img)
 
-@app.route('/textfile/<path:textpath>')
-def serve_file(textpath):
-#serves txt files should we want to inspect these in the browser.
+@app.route('/textfile/<gbid>/<path:filename>')
+def serve_file(gbid, filename):
+#Serves text files should we want to inspect these in the browser:
+  textpath = request.args.get('textpath')
   with open('{0}'.format(textpath),'r') as text_file:
     text = text_file.read()
-  return 'Hello World'
-
-
+  if filename != 'OSZICAR': 
+#Pull out all lines RMM
+    text = text.split('\n')
+    return render_template('text.html', text=text)
+  else:  
+    rmm_regex  = re.compile(r'RMM:\s+([-+0-9.E\s]+)')
+    osz_list = rmm_regex.findall(text)
+    osz = []
+    line     = {}
+    for i in range(len(osz_list[:80])):
+      split_list = map(float, osz_list[i].split())
+      if i + 1  == split_list[0]:
+        osz.append({'N'     : split_list [0],
+                    'E'     : split_list [1],
+                    'dE'    : split_list [2],
+                    'd_eps' : split_list [3],
+                    'ncg'   : split_list [4],
+                    'rms'   : split_list [5]})
+      else:
+        break
+    print osz
+    return render_template('oszicar.html', osz=json.dumps(osz))

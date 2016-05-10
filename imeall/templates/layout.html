@@ -2,6 +2,7 @@
 <title> Imeall</title>
 <link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css')}}">
 <link rel="shortcut icon" href="{{ url_for('static', filename='imeall111icon.ico') }}">
+<script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
 <div class=page>
   <h1>Imeall</h1>
   {% for message in get_flashed_messages() %}
