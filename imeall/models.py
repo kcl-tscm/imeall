@@ -40,6 +40,19 @@ class GBMaintenance(object):
     elif var =='n':
       pass
 
+  def add_key_to_dict(self, dirname):
+    os.path.join(dirname, 'subgb.json')
+    new_json = {}
+    with open(json_path,'r') as json_old:
+      old_json = json.load(json_old)
+    for key in old_json.keys():
+      new_json[key] = old_json[key]
+    at = Atoms('{0}.xyz'.format(os.path.join(dirname, )))
+    cell = at.get_cell()
+    A    = cell[0,0]*cell[1,1]
+    new_json['A']    = A
+    new_json['n_at'] = len(at) 
+
   def update_json(self, dirname):
     ''' This function was originally written to update all keys in the
     json dictionaries in the grain boundary directories.
@@ -47,7 +60,7 @@ class GBMaintenance(object):
     new keys delete old keys consider it a dictionary migration
     routine.'''
     os.path.join(dirname,'gb.json')
-    new_json
+    new_json = {}
     with open(json_path,'r') as json_old:
       old_json = json.load(json_old)
       new_json['zplanes'] = old_json['zplanes']
