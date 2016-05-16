@@ -66,7 +66,7 @@ def rotate_plane_z(grain, miller):
   grain = rotate_grain(grain, q=rotation_quaternion)
   return rotation_quaternion
 
-def build_tilt_sym_gb(gbid, bp = [3,3,2], v=[1,1,0],
+def build_tilt_sym_gb(gbid='', bp = [3,3,2], v=[1,1,0],
                       c_space=None, target_dir='./', rbt = None):
   ''' 
       Generate symmetric tilt grain boundary with appropriate configurations: boundary
@@ -155,11 +155,11 @@ def build_tilt_sym_gb(gbid, bp = [3,3,2], v=[1,1,0],
 	  grain_c.center(vacuum=c_space/2., axis=2)
   else:
     grain_c.center(vacuum=c_space/4., axis=2)
-  print '\t Writing {0}.xyz to file'.format(gbid)
 # if we specify a target directory take a picture and
 # write the file there directly, otherwise just return the grain
 # for further processing.
   if target_dir != None:
+    print '\t Writing {0}.xyz to file'.format(gbid)
     io.write('{0}.xyz'.format(os.path.join(target_dir, gbid)), grain_c)
     try:
       take_pic(os.path.join(target_dir, gbid))
