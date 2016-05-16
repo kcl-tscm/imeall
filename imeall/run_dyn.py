@@ -6,7 +6,7 @@ from   cStringIO       import StringIO
 import ase.io        
 from   ase.constraints import UnitCellFilter
 from   ase.optimize    import BFGS, FIRE
-from   quippy          import Atoms, Potential, frange
+from   quippy          import Atoms, Potential, frange, farray, fzeros
 from   quippy.io       import AtomsWriter, AtomsReader, write
 
 from pprint import pprint
@@ -208,23 +208,25 @@ class GBRelax(object):
     x.calc_connect()
     x.calc_dists()
     rem=[]
-# First remove atoms that are too close.
-    for j in frange(x.n):
-      for i in frange(j, x.n):
-        if 0. < x.distance_min_image(i, j) < rcut and j!=i:
-          rem.append(sorted([j,i]))
+    r = farray(0.0)
+    u = fzeros(3)
+    for i in frange(x.n):
+      for n in frange(x.n_neighbours(i)):
+      	j = x.neighbour(i, n, distance=3.0, diff=u)
+        if 0. < x.distance_min_image(i,j)< rcut and j!=i:
+       	  rem.append(sorted([j,i]))
     rem = list(set([a[0] for a in rem]))
     if len(rem) >0:
       x.remove_atoms(rem)
     else:
       print 'No duplicate atoms in list.'
 # Now create super cell
-    m = 6
     n = 2
+    m = 6
     x = x*(m,n,1)
-    x.set_scaled_positions(x.get_scaled_positions())
 # Now Generate Subgrain directory
-    self.name    = '{0}_v{1}bxv{2}'.format(self.gbid, str(m), str(n)) 
+    x.set_scaled_positions(x.get_scaled_positions())
+    self.name    = '{0}_v{1}bxv{2}_d{3}z'.format(self.gbid, str(m),str(n),str(rcut)) 
     self.struct_file  = self.name
     self.subgrain_dir = io.make_dir(self.calc_dir, self.name)
     x.write('{0}.xyz'.format(os.path.join(self.subgrain_dir, self.name)))
@@ -251,6 +253,13 @@ class GBRelax(object):
     self.struct_file  = gbid + '_' + 'n' + str(len(rem)) + 'd' + str(rcut)  
     x.write('{0}.xyz'.format(os.path.join(self.subgrain_dir, self.struct_file)))
     return len(rem)
+
+  def gen_pbs(self, time='12:00:00'):
+		pbs_str = open('/users/k1511981/pymodules/templates/calc_ada.pbs','r').read()
+		pbs_str = pbs_str.format(jname = 'fe'+self.name, xyz_file='{0}.xyz'.format(self.struct_file), time=time)
+		print os.path.join(self.subgrain_dir, 'fe{0}.pbs'.format(self.name))
+		with open(os.path.join(self.subgrain_dir, 'fe{0}.pbs'.format(self.name)) ,'w') as pbs_file:
+			print >> pbs_file, pbs_str
 
   def translate(self):
     pass
@@ -310,6 +319,7 @@ if __name__=='__main__':
   or_string = sys.argv[1]
   for thing in os.listdir('./'):
     if os.path.isdir(thing) and thing[:3]==or_string:
+      print thing
       jobdirs.append(thing)
 #######################################
 #######################################
@@ -327,15 +337,17 @@ if __name__=='__main__':
 ##    gbrelax.go_relax()
 #########################################################################
 #########################################################################
-for job_dir in jobdirs[:2]:
+print jobdirs
+for job_dir in jobdirs[:]:
   gbid    = job_dir.strip('/')
   print '\n'
   print '\t', gbid
   print '\n'
   gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type='EAM', 
                     potential = 'IP EAM_ErcolAd', param_file='./iron_mish.xml')
-  gbrelax.gen_super()
-  gbrelax.go_relax()
+  gbrelax.gen_super(rcut=2.3)
+  gbrelax.gen_pbs()
+#  gbrelax.go_relax()
 #########################################################################
 #########################################################################
 ## COPY Directories across im_io.copy_struct(dir, sub_dir, dir, sub_dir)#
@@ -361,8 +373,8 @@ for job_dir in jobdirs[:2]:
 ## This is going to require a few intelligent parsers of the VASP OSZICAR ##
 ## And an autoroutine for                                                 ##
 ############################################################################
-  im_io = ImeallIO()
-  for job_dir in jobdirs[1:]:
-    print job_dir
-    im_io.submit_job(job_dir, 'DFT')
+#  im_io = ImeallIO()
+#  for job_dir in jobdirs[1:]:
+#    print job_dir
+#    im_io.submit_job(job_dir, 'DFT')
 
