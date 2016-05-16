@@ -13,21 +13,18 @@ from quippy import io
 from qlab import set_fortran_indexing, view, gcat
 set_fortran_indexing(False)
 
-def make_interface(slab_a, slab_b, dist):
-  interface = slab_a.copy()
-# We will fuse along z direction so fe the highest z-component 
-# of bottom slab. Then align the top of the slab according to this.
-  zmax = interface.get_positions()[:,2].max()
-  slab_b.center(vacuum = zmax + dist , axis=2)
-  interface.extend(slab_b)
-  interface.center(vacuum=0.0)
-  return interface
-# Works for orthorhombic cells:
 def compare_latt_vecs(cell_a, cell_b):
+  '''
+  Obtain the vector of the ratios of each component of two vectors
+  useful for finding lcm of two vectors. Works for orthorhombic cells.
+  '''
   ratios = [a[0]/a[1] for a in zip(np.diag(cell_a), np.diag(cell_a))]
   return ratios
 
 def take_pic(fname, translate=False, toggle=False):
+  '''
+    Rotate and align xyz file for snapshot using AtomEye. 
+  '''
   v = view('{0}.xyz'.format(fname))
   v.toggle_bond_mode()
   v.toggle_coordination_coloring()
@@ -44,13 +41,13 @@ def take_pic(fname, translate=False, toggle=False):
     v.toggle_parallel_projection()
   v.capture('{0}.png'.format(fname))
   v.close()
-  print fname
-  print 'This is Z', z
 
 def rotate_plane_z(grain, miller):
-# Rotates atoms in grain so that planes parallel to plane
-# defined by miller index n are parallel to the xy 
-# plotting plane.
+  ''' 
+      Rotates atoms in grain so that planes parallel to plane
+      defined by miller index n are parallel to the xy 
+      plotting plane.
+  '''
   z = np.array([0.,0., 1.])
   p = np.cross(miller, z)
   p *= 1./np.linalg.norm(p)
@@ -70,18 +67,23 @@ def rotate_plane_z(grain, miller):
   return rotation_quaternion
 
 def build_tilt_sym_gb(gbid, bp = [3,3,2], v=[1,1,0],
-                      c_space=None, target_dir='./'):
-# Generate grain with appropriate configurations: boundary
-# plane (bp) oriented along z axis and orthogonal directions in the 
-# the other two planes given the orientation axis (v) and an orthogonal vector
-# bpxv so we have a proper cube:
+                      c_space=None, target_dir='./', rbt = None):
+  ''' 
+      Generate symmetric tilt grain boundary with appropriate configurations: boundary
+      plane (bp) oriented along z axis and orthogonal directions in the 
+      the other two planes given the orientation axis (v) and an orthogonal vector
+      bpxv so we have a proper cube. If rbt is not None then rigid body
+      translations are present, this is passed as a list of two numbers
+      abs(rbt[0]) < 1. The cell is then displaced as a fxn of these numbers. 
+  '''
   bpxv = [(bp[1]*v[2]-v[1]*bp[2]),(bp[2]*v[0]-bp[0]*v[2]),(bp[0]*v[1]- v[0]*bp[1])]
   grain_a = BodyCenteredCubic(directions = [v, bpxv, bp],
                               size = (1,1,1), symbol='Fe', pbc=(1,1,1),
                               latticeconstant = 2.83)
   n_grain_unit = len(grain_a)
 # For the Chamati EAM potential the cutoff radius is 5.67 A
-# We want to separate the grain boundaries by at least this much,
+# We want to separate the grain boundaries by at least this much, A safe
+# minimum value is 12 A. 
   n = 2
   while(grain_a.get_cell()[2,2]< 12.0 and n < 10):
     grain_a = BodyCenteredCubic(directions = [v, bpxv, bp],
@@ -134,35 +136,19 @@ def build_tilt_sym_gb(gbid, bp = [3,3,2], v=[1,1,0],
   for at in shared_atoms:
     print '\t', at.index, at.position
   print '\t There are {0} shared atoms'.format(len(shared_atoms))
-# The shared atoms(coincident sites) could now be spaced out.
-# However this might not be correct. The lattice spacing along z will be
-# correct for both grains at the coincident site. Therefore explicitly spacing
-# will just introduce additional strain into the grain boundary. Neighbouring
-# atoms with a distance below a certain crierion can then be deleted. let us
-# compare the energetics arrived at in this fashion.
-  if (not True):
-	  if sum([int(n)%2 for n in bp])%2 == 0 :
-	    double = 1.
-	  else:
-	    double = 0.5
-	  grain_c.center(vacuum=2.*c_space*double, axis=2)
-	  z_planes = [round(atom.position[2],4) for atom in shared_atoms]
-	  z_planes = list(sorted(set(z_planes)))
-	  if len(z_planes) > 2: 
-	    print '\t MULTIPLE Z PLANES DETECTED SOMETHING WRONG!'
-	  for grain in grain_c:
-	      if grain.position[2].round(4) < z_planes[0]:
-	          grain.position[2] -= 2.*c_space*double
-	      if grain.position[2].round(4) > z_planes[1]:
-	          grain.position[2] += 2.*c_space*double
-	  for grain in grain_c:
-	      if grain.position[2].round(4) == z_planes[0]:
-	          grain.position[2] -= 1.*c_space*double
-	      if grain.position[2].round(4) == z_planes[1]:
-	          grain.position[2] += 1.*c_space*double    
-  else:
-	  z_planes = [round(atom.position[2],4) for atom in shared_atoms]
-	  z_planes = list(sorted(set(z_planes)))
+  z_planes = [round(atom.position[2],4) for atom in shared_atoms]
+  z_planes = list(sorted(set(z_planes)))
+  cell = grain_c.get_cell()
+  if rbt != None:
+    for grain in grain_c:
+      if (z_planes[0] < grain.position[2].round(4) < z_planes[1]):
+        grain.position[0] += rbt[0]*cell[0][0]
+        grain.position[1] += rbt[1]*cell[1][1]
+#so move one of the coincident atoms if there are any.
+    for atom in shared_atoms:
+      grain_c.positions[atom.index, 0] += rbt[0]*cell[0][0]
+      grain_c.positions[atom.index, 1] += rbt[1]*cell[1][1]
+    grain_c.wrap()
 #Grain was explicitly set to 2*grain A before so we need 
 #to space out an additional layer.
   if sum([int(n)%2 for n in bp])%2 == 0 :
@@ -170,13 +156,18 @@ def build_tilt_sym_gb(gbid, bp = [3,3,2], v=[1,1,0],
   else:
     grain_c.center(vacuum=c_space/4., axis=2)
   print '\t Writing {0}.xyz to file'.format(gbid)
-  io.write('{0}.xyz'.format(os.path.join(target_dir, gbid)), grain_c)
-  try:
-    take_pic(os.path.join(target_dir, gbid))
-  except:
-    'atomeye not pleased!'
-
-  return [z_planes, len(dups), n_grain_unit]
+# if we specify a target directory take a picture and
+# write the file there directly, otherwise just return the grain
+# for further processing.
+  if target_dir != None:
+    io.write('{0}.xyz'.format(os.path.join(target_dir, gbid)), grain_c)
+    try:
+      take_pic(os.path.join(target_dir, gbid))
+    except:
+      'atomeye not pleased!'
+    return [z_planes, len(dups), n_grain_unit]
+  else:
+    return grain_c
 
 def rotate_plane_y(grain, miller):
   # rotates atoms in grain so that the miller plane 
@@ -344,7 +335,9 @@ def csl_lattice_vecs(m,n):
   return np.array([a,b,c,d])
 
 def rotate_vec(q, vec):
-#rotate 3 vector with quaternion
+  '''
+    Rotate 3 vector with quaternion
+  '''
   vec = np.array([0., vec[0], vec[1], vec[2]])
   qm = quat.quaternion_conjugate(q)
   pos_prime = quat.quaternion_multiply(q, vec)
@@ -353,13 +346,13 @@ def rotate_vec(q, vec):
   return vec
 
 def rotate_grain(grain, theta=0., x=[0.,0.,0.], q=[]):
-# rotate the grain according to quaternion = [Theta, u,v,w] = [w,x,y,z]
-# need theta/2 but this is handled correctly in quaternion_about_axis
-# from the transformation library:
-# Standard routine is passed angle and vector
-# this generates the quaternion to do the rotation 
-# however if a quaternion, q!=None, is passed to routine the plane is rotated
-# using q.
+  '''
+    Rotate the grain according to quaternion = [Theta, u,v,w] = [w,x,y,z]
+    Standard routine is passed angle and vector
+    this generates the quaternion to do the rotation 
+    however if a quaternion, q!=None, is passed to routine the plane is rotated
+    using q.
+  '''
   if q==[]:
     q = quat.quaternion_about_axis(theta, x)
     qm = quat.quaternion_conjugate(q)
@@ -511,7 +504,8 @@ def gen_csl(orientation_axis, gb, target_dir='./', gbid='0000000000'):
 
 def csl_factory(orientation_axis, boundary_plane, m, n, grain_a, grain_b,
                 mode='Zeiner', theta=0, target_dir='./'):
-  """ Builds a plot of the coincident site lattice oriented along a suitable
+  """ 
+      Builds a plot of the coincident site lattice oriented along a suitable
       plane for viewing purposes. In the gnuplot plane we think of x,y,z
       General orientation axis = N = z
       Vector specifying 0 Angle (for the case of tilt) = v = x
@@ -716,46 +710,46 @@ if __name__=='__main__':
                  ]
 
   sym_tilt_111 = [ 
-   [np.pi*(19.65/180.), np.array([9.0, -11.0, 2.0])],
-   [np.pi*(19.65/180.), np.array([-13.0, -7.0, 20.0])],
-   [np.pi*(21.79/180.), np.array([4.0, -5.0, 1.0])],
-   [np.pi*(21.79/180.), np.array([-2.0, -1.0, 3.0])],
-   [np.pi*(24.43/180.), np.array([7.0, -9.0, 2.0])],
-   [np.pi*(24.43/180.), np.array([-11.0, -5.0, 16.0])],
-   [np.pi*(27.8/180.),  np.array([3.0, -4.0, 1.0])],
-   [np.pi*(27.8/180.),  np.array([-5.0, -2.0, 7.0])],
-   [np.pi*(32.2/180.),  np.array([5.0, -7.0, 2.0])],
-   [np.pi*(32.2/180.),  np.array([-3.0, -1.0, 4.0])],
-   [np.pi*(38.21/180.), np.array([2.0, -3.0, 1.0])],
-   [np.pi*(38.21/180.), np.array([-4.0, -1.0, 5.0])],
-   [np.pi*(42.1/180.),  np.array([2.0, -3.0, 1.0])],
-   [np.pi*(46.83/180.), np.array([3.0, -5.0, 2.0])],
-   [np.pi*(46.83/180.), np.array([-7.0, -1.0, 8.0])],
-   [np.pi*(60.0/180.),  np.array([1.0, -2.0, 1.0])],
-   [np.pi*(75.18/180.), np.array([1.0, -3.0, 2.0])],
-   [np.pi*(81.79/180.), np.array([1.0, -3.0, 2.0])],
-   [np.pi*(81.79/180.), np.array([-5.0, 1.0, 4.0])],
-   [np.pi*(89.41/180.), np.array([1.0, -3.0, 2.0])],
-   [np.pi*(89.41/180.), np.array([-5.0, 1.0, 4.0])],
-   [np.pi*(92.2/180.),  np.array([1.0, -3.0, 2.0])],
-   [np.pi*(92.2/180.),  np.array([-5.0, 1.0, 3.0])],
-   [np.pi*(104.82/180.), np.array([-4.0, 2.0, 3.0])],
-   [np.pi*(108.36/180.), np.array([-2.0, 1.0, 1.0])],
-   [np.pi*(120.0/180.),  np.array([-2.0, 1.0, 1.0])],
-   [np.pi*(133.17/180.), np.array([-2.0, 1.0, 1.0])],
-   [np.pi*(137.9/180.), np.array([-3.0, 2.0, 1.0])],
-   [np.pi*(147.8/180.), np.array([-1.0, -3.0, 4.0])],
-   [np.pi*(147.8/180.), np.array([-7.0, 5.0, 2.0])],
-   [np.pi*(158.21/180.), np.array([-1.0, -2.0, 3.0])],
-   [np.pi*(158.21/180.), np.array([-5.0, 4.0, 1.0])],
-   [np.pi*(163.57/180.), np.array([-3.0, -5.0, 8.0])],
-   [np.pi*(163.57/180.), np.array([-13.0, 11.0, 2.0])]
-   ]
+				   [np.pi*(19.65/180.), np.array([9.0, -11.0, 2.0])],
+				   [np.pi*(19.65/180.), np.array([-13.0, -7.0, 20.0])],
+				   [np.pi*(21.79/180.), np.array([4.0, -5.0, 1.0])],
+				   [np.pi*(21.79/180.), np.array([-2.0, -1.0, 3.0])],
+				   [np.pi*(24.43/180.), np.array([7.0, -9.0, 2.0])],
+				   [np.pi*(24.43/180.), np.array([-11.0, -5.0, 16.0])],
+				   [np.pi*(27.8/180.),  np.array([3.0, -4.0, 1.0])],
+				   [np.pi*(27.8/180.),  np.array([-5.0, -2.0, 7.0])],
+				   [np.pi*(32.2/180.),  np.array([5.0, -7.0, 2.0])],
+				   [np.pi*(32.2/180.),  np.array([-3.0, -1.0, 4.0])],
+				   [np.pi*(38.21/180.), np.array([2.0, -3.0, 1.0])],
+				   [np.pi*(38.21/180.), np.array([-4.0, -1.0, 5.0])],
+				   [np.pi*(42.1/180.),  np.array([2.0, -3.0, 1.0])],
+				   [np.pi*(46.83/180.), np.array([3.0, -5.0, 2.0])],
+				   [np.pi*(46.83/180.), np.array([-7.0, -1.0, 8.0])],
+				   [np.pi*(60.0/180.),  np.array([1.0, -2.0, 1.0])],
+				   [np.pi*(75.18/180.), np.array([1.0, -3.0, 2.0])],
+				   [np.pi*(81.79/180.), np.array([1.0, -3.0, 2.0])],
+				   [np.pi*(81.79/180.), np.array([-5.0, 1.0, 4.0])],
+				   [np.pi*(89.41/180.), np.array([1.0, -3.0, 2.0])],
+				   [np.pi*(89.41/180.), np.array([-5.0, 1.0, 4.0])],
+				   [np.pi*(92.2/180.),  np.array([1.0, -3.0, 2.0])],
+				   [np.pi*(92.2/180.),  np.array([-5.0, 1.0, 3.0])],
+				   [np.pi*(104.82/180.), np.array([-4.0, 2.0, 3.0])],
+				   [np.pi*(108.36/180.), np.array([-2.0, 1.0, 1.0])],
+				   [np.pi*(120.0/180.),  np.array([-2.0, 1.0, 1.0])],
+				   [np.pi*(133.17/180.), np.array([-2.0, 1.0, 1.0])],
+				   [np.pi*(137.9/180.), np.array([-3.0, 2.0, 1.0])],
+				   [np.pi*(147.8/180.), np.array([-1.0, -3.0, 4.0])],
+				   [np.pi*(147.8/180.), np.array([-7.0, 5.0, 2.0])],
+				   [np.pi*(158.21/180.), np.array([-1.0, -2.0, 3.0])],
+				   [np.pi*(158.21/180.), np.array([-5.0, 4.0, 1.0])],
+				   [np.pi*(163.57/180.), np.array([-3.0, -5.0, 8.0])],
+           [np.pi*(163.57/180.), np.array([-13.0, 11.0, 2.0])]
+              ]
 
-  #orientation_axis = np.array([1, 1, 0])
   #for gb in sym_tilt_110[:]:
-  orientation_axis = np.array([0, 0, 1])
-  for gb in sym_tilt_100[-2:]:
+  #orientation_axis = np.array([0, 0, 1])
+  orientation_axis = np.array([1, 1, 0])
+  for gb in sym_tilt_110[8:10]:
   #orientation_axis = np.array([1, 1, 1])
   #for gb in sym_tilt_111[:]:
     angle_str      = str(round((gb[0]*180./np.pi),2)).replace('.', '')
@@ -767,7 +761,7 @@ if __name__=='__main__':
         orientation_axis[2]) + angle_str + '{0}{1}{2}'.format(int(abs(gb[1][0])), int(abs(gb[1][1])), int(abs(gb[1][2])))
     print '\t Grain Boundary ID',  gbid
 #Dump GBs in this directory:
-    gb_dir     = os.path.join('./alphaFeDFT','001')
+    gb_dir     = os.path.join('./alphaFeDFT','110')
     target_dir = os.path.join(gb_dir, gbid)
     print '\t Grain Boundary Dir', gb_dir
     if not os.path.isdir(target_dir):
@@ -778,7 +772,9 @@ if __name__=='__main__':
     gen_csl(orientation_axis, gb, target_dir=target_dir, gbid=gbid)
 # Drop the grain.xyz file in the target directory
     zplanes, dups, nunitcell = build_tilt_sym_gb(gbid, bp=gb[1], v = orientation_axis, 
-                                                 c_space=None, target_dir=target_dir)
+                                                 c_space=None,
+                                                 target_dir=target_dir,
+                                                 rbt=[0.0, 0.75])
 # json id file contains, gbid, boundaryplane, zplanes(coordinates of center of
 # grain boundary
     gb_dict = { "gbid"  : gbid, "boundary plane" : list(gb[1]),
@@ -786,6 +782,7 @@ if __name__=='__main__':
                 "type": "symmetric tilt boundary",
                 "angle": gb[0], "zplanes" : zplanes, "coincident sites": dups,
                 "n_unit_cell" : nunitcell}
+
     with open(os.path.join(target_dir, 'gb.json'), 'w') as outfile:
       json.dump(gb_dict, outfile, indent=2)
     ovito = "~/ovito-2.6.1-x86_64/bin/ovito"
