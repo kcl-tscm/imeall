@@ -77,8 +77,8 @@ def build_tilt_sym_gb(gbid, bp = [3,3,2], v=[1,1,0],
 # bpxv so we have a proper cube:
   bpxv = [(bp[1]*v[2]-v[1]*bp[2]),(bp[2]*v[0]-bp[0]*v[2]),(bp[0]*v[1]- v[0]*bp[1])]
   grain_a = BodyCenteredCubic(directions = [v, bpxv, bp],
-                           size = (1,1,1), symbol='Fe', pbc=(1,1,1),
-                           latticeconstant = 2.83)
+                              size = (1,1,1), symbol='Fe', pbc=(1,1,1),
+                              latticeconstant = 2.83)
   n_grain_unit = len(grain_a)
 # For the Chamati EAM potential the cutoff radius is 5.67 A
 # We want to separate the grain boundaries by at least this much,

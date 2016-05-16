@@ -9,7 +9,7 @@
     <li> (Mis)Orientation Angle: {{ (gb_info.angle*(180.0/3.14159265)) | round(3,'floor') }}      </li>
     <li> Number of Atoms in Unit Cell: {{ gb_info.n_at }}      </li>
     <li> Coincident Sites:             {{ gb_info.coincident_sites }}      </li>
-    <li> Sigma({{ (gb_info.n_at/gb_info.coincident_sites) | round(0, 'floor') }})</li>
+    <li> Sigma({{ (gb_info.n_at/gb_info.coincident_sites) | round(2, 'floor') }})</li>
   </ul>
   <img src = "{{url_for('serve_img', filename=url_path, gbid=gbid, img_type='struct')}}" alt="GB structure" width=700>
 	<h2> Coincident Site Lattice  </h2>
@@ -26,10 +26,22 @@
       <li> Total Energy per Atom:         {{ (gb_info.E_gb/gb_info.n_at) | round(3,'floor') }} eV </li>
     {% endif %}
   </ul>
-  <h3> Subgrains of {{gbid}}: </h3> 
+  <h3> Subgrain Properties of {{gbid}}: </h3> 
+    {% for subgrain, id in subgrains %}
+    <h3> Subgrain {{id}} </h3>
+    <ul>
+      <li> Number of Atoms: {{subgrain.n_at}}  </li>
+      <li> Grain Boundary Area (A^{2}): {{subgrain.A | round(3,'floor') }} </li>
+      <li> E_GB (j*M^-2):
+      {{16.02*((subgrain.E_gb-(-1.0*subgrain.n_at*4.2731))/(2.0*subgrain.A)) |
+      round(3,'floor')}} </li>  
+    </ul>
+    {% endfor %}
+
+  <h3> Subgrain Directories of {{gbid}}: </h3> 
   <ul>
     {%- for item in tree.children recursive %}
-      <li> <a href="{{url_for('serve_file', textpath=item.fullpath)}}"> {{item.name}}  </a>
+      <li> <a href="{{url_for('serve_file', gbid=gbid, filename=item.name, url_path=url_path, textpath=item.fullpath)}}"> {{item.name}}  </a>
         {%- if item.children -%}
          <ul class="submenu">{{ loop(item.children) }}</ul>
         {%- endif %}</li>

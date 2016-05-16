@@ -70,21 +70,18 @@ def material(material):
 def orientations(url_path, orientation):
   url_path = url_path+'/'+orientation
   path     = os.path.join(g.gb_dir, url_path)
-  print 'Orientation path', path
-  print  url_path
   grains    = []
 #Only valid directories beginning with orientation axis will be shown.
   for thing in os.listdir(path):
     if thing[:3] == orientation: 
       grains.append(thing.strip()) 
-      print thing.strip()
   return render_template('orientation.html', url_path=url_path, grains=grains)
 
-#This seems like a very useful pattern to learn!
 def make_tree(path):
   tree = dict(name=os.path.basename(path), children=[], fullpath='')
   try: 
     lst = os.listdir(path)
+    lst = map(os.path.basename, lst)
   except OSError:
     pass  
   else:
@@ -99,6 +96,18 @@ def make_tree(path):
           tree['children'].append(dict(name=name, fullpath=filename))
   return tree
 
+def extract_json(path, json_files):
+  lst = os.listdir(path)
+  for f in lst:
+    f = os.path.join(path,f)
+    if os.path.isdir(f):
+      extract_json(f, json_files)
+    else:
+      if f.split(".")[-1] == 'json' and (f.split("/")[-1])[:3]=='sub':
+        json_files.append(f)
+      else:
+        pass
+
 @app.route('/grain/<path:url_path>/<gbid>/')
 def grain_boundary(url_path, gbid):
   url_path  = url_path+'/'+gbid
@@ -112,25 +121,39 @@ def grain_boundary(url_path, gbid):
 #    if os.path.isdir(os.path.join(path,thing)):
 #      stuff.append(thing) 
   tree = make_tree(path)
+# Get all the subdirectory json files so that
+# we can easily compare normalized grain boundary formation
+# energies, hydrogen interstitials etc.
+  json_files = []
+  extract_json(path, json_files)
+  subgrains = []
+  for i, path in enumerate(json_files):
+    try: 
+      subgrains.append([json.load(open(path,'r')), i])
+    except:
+      pass
   print 'PATH', path, 'stuff'
   print 'URL_PATH', url_path 
   return render_template('grain_boundary.html', gbid=gbid, url_path=url_path, 
-                          stuff=stuff, gb_info=gb_info, tree=tree)
+                          stuff=stuff, gb_info=gb_info, tree=tree,
+                          subgrains=subgrains)
 
 #Check for Ovito in different paths.
-@app.route('/ovito/<path:target_dir>/<gbid>/<input_type>')
-def run_ovito(target_dir, gbid, input_type):
+def run_ovito(target_dir, filename):
   """ run_ovito is meant to launch the ovito viewer application with the
       associated grainboundary trajectory file loaded, the os command should
       ensure we are in the working directory so that any modifications, or
       videos generated will be saved in the correct place.
   """
   ovito = "~/ovito-2.6.1-x86_64/bin/ovito"
+  target_dir = '/'.join(target_dir.split('/')[:-1])
+  print target_dir
+  print filename
   if os.path.isfile(ovito):
-    os.system("cd {0}; {1} {2}.xyz".format(target_dir, ovito, os.path.join(target_dir, gbid)))
+    os.system("cd {0}; {1} {2}&".format(target_dir, ovito, filename))
     variable = raw_input('Continue?')
   elif os.path.isfile('/Users/lambert/Ovito.app/Contents/MacOS/ovito'):
-    os.system('cd {0}; /Users/lambert/Ovito.app/Contents/MacOS/ovito {0}.xyz'.format(os.path.join(target_dir, gbid)))
+    os.system('cd {0}; /Users/lambert/Ovito.app/Contents/MacOS/ovito {1}&'.format(target_dir, filename))
   else: 
     return flash('Ovito not installed in one of the usual locations.')
 
@@ -154,11 +177,11 @@ def serve_file(gbid, filename):
   textpath = request.args.get('textpath')
   with open('{0}'.format(textpath),'r') as text_file:
     text = text_file.read()
-  if filename != 'OSZICAR': 
-#Pull out all lines RMM
+  if filename.split(".")[-1] == 'xyz':
     text = text.split('\n')
+    run_ovito(textpath, filename)
     return render_template('text.html', text=text)
-  else:  
+  elif filename == 'OSZICAR':  
     rmm_regex  = re.compile(r'RMM:\s+([-+0-9.E\s]+)')
     osz_list = rmm_regex.findall(text)
     osz = []
@@ -174,5 +197,7 @@ def serve_file(gbid, filename):
                     'rms'   : split_list [5]})
       else:
         break
-    print osz
     return render_template('oszicar.html', osz=json.dumps(osz))
+  else:
+    text = text.split('\n')
+    return render_template('text.html', text=text)
