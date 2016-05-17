@@ -127,7 +127,8 @@ class GBAnalysis():
         with open(subgrain[1],'r') as f:
           sub_dict = json.load(f)
         try:
-          gb_ener = 16.02*((sub_dict['E_gb']-(-4.2731*sub_dict['n_at']))/(2*sub_dict['A']))
+          #gb_ener = 16.02*((sub_dict['E_gb']-(-4.2731*sub_dict['n_at']))/(2*sub_dict['A']))
+          gb_ener = 16.02*((sub_dict['E_gb_init']-(-4.2731*sub_dict['n_at']))/(2*sub_dict['A']))
           grain_energy_dict['energies'].append(gb_ener)
         except:
           print 'Error on Atoms'
