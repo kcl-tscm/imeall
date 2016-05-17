@@ -1,39 +1,99 @@
 import os
 import sys
-from flask  import Flask, request, session, g, redirect
-from  flask import    url_for, abort, render_template, flash
 from   quippy import Atoms
 from   imeall import app
 import imeall.slabmaker.slabmaker as slabmaker
 import json
 import numpy as np
 
+try:
+  from flask  import Flask, request, session, g, redirect
+  from  flask import    url_for, abort, render_template, flash
+except:
+  pass
+
 # Currently Our models are stored by hand
 # and then we handle the interactions with 
 # directory structure manually. Which should allow us to serve
 # files.
 
+class Job(object):
+  def __init__(self):
+    self.pbs_file = ''
+    self.job_dir  = ''
+    self.job_id   = ''
+
+  def sub_pbs(self, job_dir, exclude='DFT', suffix='v6bxv2z', regex=None):
+  ''' 
+    Given an explicit suffix, or a regex this routine recurses through
+    the directory structure and submits any pbs files that 
+    match the suffix or regex pattern. Exclude keeps track of 
+    directories that (we mightn't want for instance DFT on Ada
+    or EAM on Mira.)
+    Useful submission patterns include:
+    REGEX:
+      submit all pbs files with a rigid body translation 
+      and any atom deletion criterion hydrogen concentration etc.: 
+        tv[.0-9]+bxv[.0-9]+_.*?
+      submit all sub-pbs files with a rigid body translation
+      and different atom _deletion criterion: 
+        tv[.0-9]+bxv[.0-9]+_d[.0-9]+
+      all translations with a specific deletion criterion
+      in this case 2.3 A:
+        tv[.0-9]+bxv[.0-9]+_d2.3
+      etc.
+    SUFFIX:
+      submit all super cells: 
+        v6bxv2z
+  '''
+    lst = os.listdir(job_dir)
+    for dir in lst:
+      dir = os.path.join(job_dir, dir)
+      if regex == None:
+        if os.path.isdir(dir) and dir != 'DFT':
+          print dir
+          self.sub_pbs(dir, suffix=suffix, regex=regex)
+        elif dir.split('_')[-1] == suffix:
+          pbs_dir = os.path.join(sub_dir, dir)
+          os.system("cd {0}; qsub fe{1}.pbs".format(pbs_dir, job_dir+'_'+suffix))
+        else:
+          pass
+      else:
+        if os.path.isdir(dir) and dir != 'DFT':
+          self.sub_pbs(dir, suffix=suffix, regex=regex)
+        elif regex.match(dir):
+          try:
+            dir  = '/'.join(dir.split('/')[:-1])
+            name = dir.split('/')[-1]
+            os.system("cd {0}; qsub fe{1}.pbs".format(dir, name))
+          except:
+            print 'Job Submit Failed'
+        else:
+          pass
+
 class GBMaintenance(object):
   '''
-  Collection of maintenance routines for the GB database.
+   Collection of maintenance routines for the GB database.
    Possible usages: regenerate all the csl lattices in the database
    or a subdirectory of the database, take a new grain boundary profile 
    picture for multiple directories, update the gb json information if a
    new grain boundary property is desired. This really is 
-   turning into facebook for grain boundaries!'''
+   turning into facebook for grain boundaries!
+  '''
   def __init__(self):
     self.materials = ['alphaFe']
 
   def retake_pic(self,fname, translate=False,toggle=False, confirm=True):
-    ''' retake grain boundary profile pic in directory
+    ''' 
+      Take grain boundary profile pic in directory
       requires gb directory with gbid.xyz file in it.
-      set confirm = False to not prompt for overwrite'''
+      set confirm = False to not prompt for overwrite.
+    '''
     if confirm:
       var = 'n'
       var = raw_input('Retake photo (y/n)?')
     else:
       var = 'y'
-
     if var =='y':
       fname = os.path.join(fname,fname)
       slabmaker.take_pic(fname, translate=translate, toggle=toggle)
@@ -55,11 +115,13 @@ class GBMaintenance(object):
     new_json['n_at'] = len(at) 
 
   def update_json(self, dirname):
-    ''' This function was originally written to update all keys in the
+    ''' 
+    This function was originally written to update all keys in the
     json dictionaries in the grain boundary directories.
     The pattern is quite general and can be adapted to just add
-    new keys delete old keys consider it a dictionary migration
-    routine.'''
+    new keys, delete old keys, consider it a dictionary migration
+    routine.
+    '''
     os.path.join(dirname,'gb.json')
     new_json = {}
     with open(json_path,'r') as json_old:
@@ -131,10 +193,7 @@ class GBAnalysis():
           grain_energy_dict['energies'].append(gb_ener)
         except:
           print 'Error on Atoms'
-        #except KeyError:
-        #  print subgrain[0], 'Key Missing'
       grain_energies.append(grain_energy_dict)
-          
     return grain_energies
 
 if __name__ == '__main__':
