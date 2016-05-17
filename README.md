@@ -5,7 +5,7 @@ The grain boundaries are generated and labeled according to
 a uniform process  indicated by the following notation:
 
 ```
-  sig(A)Theta\[XXX\]\(YYY\)
+  sig(A)Theta[XXX](YYY)
 ```
 
 A is the reciprocal density of the coincident sites
@@ -31,7 +31,7 @@ then a possibility to represent different rigid body translations.
 We assign the ideallized crystalline bulk structure the notation:
 
 ```
-sigma(0)0[000](000)
+  0000000000
 ```
 
 Computationally each grain boundary so identified can be considered an
