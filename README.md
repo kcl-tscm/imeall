@@ -1,4 +1,4 @@
-`imeall` is a database framework for the calculation of 
+`Imeall` is a database framework for the calculation of 
 the atomistic properties of grain boundaries.
 The grain boundaries are generated and labeled according to 
 a uniform process  indicated by the following notation:
@@ -20,14 +20,11 @@ to uniquely characterize all grain boundaries.
 
 An additional set of three degrees of freedom is then used to extend 
 the above definition. These degrees of freedom correspond to a 
-rigid body translation of one grain relative to the other. These
-however are limited to rigid translation the result in stable 
-atomic configurations of the grain boundary. Hence for the purposes
-of this database the Grain boundary is determined by the first
-five degrees of freedom, within each of the Grainboundaries there is
-then a possibility to represent different rigid body translations.
-
-We assign the ideallized crystalline bulk structure the notation:
+rigid body translation in the two dimensional plain of the 
+grain boundary one relative to the other, and a volume relaxation
+orthogonal to the grainboundary plane. These atomic scale degrees
+of freedom compose subgrains of the canonical parent grain.
+Finally, we assign the ideallized crystalline bulk structure the notation:
 
 ```
   0000000000
@@ -35,15 +32,18 @@ We assign the ideallized crystalline bulk structure the notation:
 
 Computationally each grain boundary so identified can be considered an
 object with all its physical properties as attributes (to be described below).
-The structures are stored locally in the database as ASE atoms objects.
-For access and comparison the grain boundary objects are stored as
-a dictionary with key 'CCCCooonnn' i.e. CCCC the angular misorientation
-in degrees (4 decimal places should be sufficient) AAA, the
-rotation axis ooo, and nnn the miller index of the boundary plane.
+The structures are stored locally in the database as xyz files.
 
 ## Dependencies
   - [Flask](http://flask.pocoo.org/)
   - [ASE](https://wiki.fysik.dtu.dk/ase/)
+
+## Using Imeall
+
+0. To get the development branch of Imeall:
+```
+  git clone https://github.com/Montmorency/imeall.git
+```
 
 1. Initialize the imeall app:
 
@@ -108,8 +108,3 @@ in the usual key:value format. Some common keys are.
 Upon subsequent analysis new key:values pairs can be added to the 
 json dictionaries for additional relevant properties
 
-## Installation
-To get the development branch of Imeall:
-```
-  git clone https://github.com/Montmorency/imeall.git
-```
