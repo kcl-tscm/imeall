@@ -31,11 +31,13 @@ class TestDB (object):
           pass
 
   def update_json(self, filename):
-    ''' This function was originally written to update all keys in the
+    ''' 
+    This function was originally written to update all keys in the
     json dictionaries in the grain boundary directories.
     The pattern is quite general and can be adapted to just add
     new keys delete old keys consider it a dictionary migration
-    routine. '''
+    routine.
+    '''
     new_json = {}
     with open(filename,'r') as json_old:
       old_json = json.load(json_old)
@@ -55,6 +57,36 @@ class TestDB (object):
       json_path = filename
     with open(json_path,'w') as json_new_file:
       json.dump(new_json, json_new_file, indent=2)
+
+	def fix_json(self, path):
+    '''
+    Once my json files had two {}{} dictionaries written to them
+    this parser opened all the subgb files, 
+    and selected the dictionary I actually wanted.
+    '''
+	  lst = os.listdir(path)
+	  for filename in lst:
+	    new_path = os.path.join(path, filename)
+	    if os.path.isdir(new_path):
+	      fix_json(new_path)
+	    elif new_path[-10:] == 'subgb.json':
+	      try: 
+	        with open(new_path,'r') as f:
+	          j_file = json.load(f)
+	      except ValueError:
+	        print 'Value Error', new_path
+	        with open(new_path,'r') as f:
+	          j_file = f.read()
+	        with open(new_path,'w') as f:
+	          print >> f, j_file.split('}')[1]+'}'
+	      try:
+	        with open(new_path,'r') as f:
+	          j_file = json.load(f)
+	        print 'j_file fixed'
+	      except:
+	        print new_path, 'Still Broken'
+	    else:
+        pass
 
 if __name__ == '__main__':
   j_files = []

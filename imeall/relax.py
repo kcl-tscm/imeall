@@ -36,21 +36,11 @@ ucf         = UnitCellFilter(grain)
 opt         = FIRE(grain)
 #print grain.get_stress()
 #while not converged(grain, smax=0.05, fmax=0.05):
-for i in range(25):
-  opt.run(fmax=0.05, steps=25)
+for i in range(32):
+  opt.run(fmax=0.01, steps=25)
   out.write(grain)
-##### RELAX CELL #######
-#opt         =  LBFGS(ucf)
-#for i in range(16):
-#	opt.run(fmax = 10, steps=25)
-#	out.write(grain)
-#### RELAX ATOMIC POSITIONS ###
-#strain_mask = [0,0,0,0,0,0]
-#ucf         = UnitCellFilter(grain, mask=strain_mask)
-#opt         = FIRE(ucf)
-#for i in range(16):
-#	opt.run(fmax = 0.01, steps=25)
-#	out.write(grain)
+  if max(np.sum(grain.get_forces()**2,axis=1)**0.5) < 0.01:
+    break
 
 out.close()
 E_gb = grain.get_potential_energy()
@@ -59,5 +49,10 @@ A    = cell[0][0]*cell[1][1]
 H    = cell[2][2]
 # Calculation dumps total energyenergy and grainboundary area data to json file.
 gb_dict = {'gbid':gbid,'E_gb':E_gb, 'E_gb_init':E_gb_init, 'A': A, 'H':H, 'n_at':len(grain)}
+#add keys  
+with open('subgb.json', 'r') as outfile:
+  j_dict = json.load(outfile)
 with open('subgb.json', 'w') as outfile:
-  json.dump(gb_dict, outfile, indent=2)
+  for key, value in gb_dict.items():
+    j_dict[key] = value
+  json.dump(j_dict, outfile, indent=2)

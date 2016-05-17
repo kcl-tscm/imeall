@@ -10,7 +10,12 @@ import os
 import numpy as np
 import transformations as quat
 from quippy import io
-from qlab import set_fortran_indexing, view, gcat
+from quippy import set_fortran_indexing
+try:
+  from qlab import set_fortran_indexing, view, gcat
+except:
+  pass
+
 set_fortran_indexing(False)
 
 def compare_latt_vecs(cell_a, cell_b):
@@ -67,7 +72,7 @@ def rotate_plane_z(grain, miller):
   return rotation_quaternion
 
 def build_tilt_sym_gb(gbid='', bp = [3,3,2], v=[1,1,0],
-                      c_space=None, target_dir='./', rbt = None):
+                      c_space=None, target_dir=None, rbt = None):
   ''' 
       Generate symmetric tilt grain boundary with appropriate configurations: boundary
       plane (bp) oriented along z axis and orthogonal directions in the 
@@ -128,7 +133,6 @@ def build_tilt_sym_gb(gbid='', bp = [3,3,2], v=[1,1,0],
   grain_c.set_cell([grain_c.get_cell()[0,0], grain_c.get_cell()[1,1], 2.*grain_c.get_cell()[2,2]])
   grain_c.positions[:,2] += abs(grain_c.positions[:,2].min())
   dups = get_duplicate_atoms(grain_c)
-  print 'Dimensions cell A', grain_a.get_cell()[2,2]
 # Displace replicated atoms along the unit cell
   for dup in dups:
       grain_c[dup[1]].position[2] += grain_a.get_cell()[2,2]
