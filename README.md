@@ -32,7 +32,8 @@ Finally, we assign the ideallized crystalline bulk structure the notation:
 
 Computationally each grain boundary so identified can be considered an
 object with all its physical properties as attributes (to be described below).
-The structures are stored locally in the database as xyz files.
+The structures are stored locally in the database as [Extended
+XYZ](https://libatoms.github.io/QUIP/io.html#module-ase.io.extxyz) files.
 
 ## Dependencies
   - [Flask](http://flask.pocoo.org/)
@@ -98,7 +99,7 @@ subsequent directories each contain a file:
   subgb.json
 ```
 This json file contains information about relevant grain boundary properties
-in the usual key:value format. Some common keys are. 
+in the usual key:value format. Some common keys are: 
 ```
   E_gb_init : Unrelaxed Grain Boundary Energy.
   E_gb      : Relaxed Grain Boundary Energy.
@@ -106,5 +107,5 @@ in the usual key:value format. Some common keys are.
   A         : Grain Boundary area in the unit cell.
 ```
 Upon subsequent analysis new key:values pairs can be added to the 
-json dictionaries for additional relevant properties
+json dictionaries as required.
 
