@@ -1,6 +1,5 @@
 `imeall` is a database framework for the calculation of 
-atomistic grainboundary structure, energy, and forces.
-
+the atomistic properties of grain boundaries.
 The grain boundaries are generated and labeled according to 
 a uniform process  indicated by the following notation:
 
@@ -17,7 +16,7 @@ sigma = (number of coincident sites in an elementary cell)/
 Theta is the angle of misorientation about the vector [XXX]
 and (YYY) determines the plane of the interface between
 the misoriented grain b and grain a. In this way it is possible
-to uniquely characterize all the grain boundaries. 
+to uniquely characterize all grain boundaries. 
 
 An additional set of three degrees of freedom is then used to extend 
 the above definition. These degrees of freedom correspond to a 
