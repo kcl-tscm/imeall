@@ -31,16 +31,13 @@ E_gb_init   = grain.get_potential_energy()
 alpha       = E_gb_init
 out         = AtomsWriter('{0}'.format('{0}_traj.xyz'.format(sys.argv[1][:-4])))
 gbid        = (sys.argv[1][:-4]).split('/')[-1]
-#mdmin_cell  = MDMin(strain_mask,dt=0.1)
 strain_mask = [0,0,1,0,0,0]
-ucf         = UnitCellFilter(grain)
+ucf         = UnitCellFilter(grain, strain_mask)
 opt         = FIRE(grain)
-#print grain.get_stress()
-#while not converged(grain, smax=0.05, fmax=0.05):
 for i in range(32):
-  opt.run(fmax=0.01, steps=25)
+  opt.run(fmax=0.008, steps=25)
   out.write(grain)
-  if max(np.sum(grain.get_forces()**2,axis=1)**0.5) < 0.01:
+  if max(np.sum(grain.get_forces()**2, axis=1)**0.5) < 0.008:
     break
 
 out.close()
@@ -49,7 +46,7 @@ cell = grain.get_cell()
 A    = cell[0][0]*cell[1][1]
 H    = cell[2][2]
 # Calculation dumps total energyenergy and grainboundary area data to json file.
-gb_dict = {'gbid':gbid,'E_gb':E_gb, 'E_gb_init':E_gb_init, 'A': A, 'H':H, 'n_at':len(grain)}
+gb_dict = {'gbid':gbid, 'E_gb':E_gb, 'E_gb_init':E_gb_init, 'A': A, 'H':H, 'n_at':len(grain)}
 #add keys  
 with open('subgb.json', 'r') as outfile:
   j_dict = json.load(outfile)
