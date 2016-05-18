@@ -30,63 +30,6 @@ class TestDB (object):
         else:
           pass
 
-  def update_json(self, filename):
-    ''' 
-    This function was originally written to update all keys in the
-    json dictionaries in the grain boundary directories.
-    The pattern is quite general and can be adapted to just add
-    new keys delete old keys consider it a dictionary migration
-    routine.
-    '''
-    new_json = {}
-    with open(filename,'r') as json_old:
-      old_json = json.load(json_old)
-      new_json['zplanes'] = old_json['zplanes']
-      new_json['orientation_axis'] = old_json['orientation axis']
-      new_json['boundary_plane']   = old_json['boundary plane']
-      new_json['coincident_sites'] = old_json['coincident sites']
-      new_json['angle'] = old_json['angle']
-      new_json['gbid']  = old_json['gbid']
-      new_json['n_at']  = old_json['n_unit_cell']
-      new_json['type']  = 'symmetric tilt boundary'
-      dir_path = os.path.join('/'.join((filename.split('/'))[:-1]), old_json['gbid'])
-      at = Atoms('{0}.xyz'.format(dir_path, old_json['gbid']))
-      cell = at.get_cell()
-      A    = cell[0,0]*cell[1,1]
-      new_json['A']  = A
-      json_path = filename
-    with open(json_path,'w') as json_new_file:
-      json.dump(new_json, json_new_file, indent=2)
-
-	def fix_json(self, path):
-    '''
-    Once my json files had two {}{} dictionaries written to them
-    this parser opened all the subgb files, 
-    and selected the dictionary I actually wanted.
-    '''
-	  lst = os.listdir(path)
-	  for filename in lst:
-	    new_path = os.path.join(path, filename)
-	    if os.path.isdir(new_path):
-	      fix_json(new_path)
-	    elif new_path[-10:] == 'subgb.json':
-	      try: 
-	        with open(new_path,'r') as f:
-	          j_file = json.load(f)
-	      except ValueError:
-	        print 'Value Error', new_path
-	        with open(new_path,'r') as f:
-	          j_file = f.read()
-	        with open(new_path,'w') as f:
-	          print >> f, j_file.split('}')[1]+'}'
-	      try:
-	        with open(new_path,'r') as f:
-	          j_file = json.load(f)
-	        print 'j_file fixed'
-	      except:
-	        print new_path, 'Still Broken'
-	    else:
-        pass
 
 if __name__ == '__main__':
   j_files = []

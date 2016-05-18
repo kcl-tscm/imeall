@@ -38,10 +38,11 @@ XYZ](https://libatoms.github.io/QUIP/io.html#module-ase.io.extxyz) files.
 ## Dependencies
   - [Flask](http://flask.pocoo.org/)
   - [ASE](https://wiki.fysik.dtu.dk/ase/)
+  - [QUIP](https://libatoms.github.io/QUIP/quippy.html)
 
 ## Using Imeall
 
-0. To get the development branch of Imeall:
+(0) To get the development branch of Imeall:
 ```
   git clone https://github.com/Montmorency/imeall.git
 ```
@@ -58,7 +59,7 @@ The home page contains a list of links for each material
 in the database. Each link leads to a view of different orientation axes vectors for 
 which grain boundary properties have been computed. 
 
-For instance /alphaFe/110 contains all 110 grain boundaries for iron. The 000 
+For instance /alphaFe/110 contains all computed 110 grain boundaries for iron. The 000 
 orientation axes implies a perfect crystal, different cleavage planes 
 and singular defects and vacancies in a perfect crystal. 
 
@@ -72,14 +73,14 @@ tight binding models, EAMs, DFT. If multiple "flavours" of each calculation
 type are to be used the directories can take more specific 
 names: EAM_Mishin, DFT_PW, DFT_VASP etc.
 Within each calc_type of directories is the pattern 
-gbid_'suffix'. The suffix denotes the modification to the base grainboundary
-structure. This could constitute a pattern like _d2.0. Which denotes:
+gbid_'suffix'. The suffix denotes the modification to the canonical grain boundary
+structure. This could constitute a pattern like ```_d2.0``` which denotes:
 delete one of a pair of atoms from the original grain 
 boundary structure with nearest neighbour distance less than 2 A.
-Another suffix pattern might be displace the canonical grain along the inplane
+Another suffix pattern might be displace the canonical grain along the in-plane
 lattice vectors by a distance 0.25*lattice vector:
-_tv0.25bxv0.25. Suffices can be combined _d2.0_tx0.25.
-A key for some common patterns is given here:
+_tv0.25bxv0.25. Suffices can be combined ```_tv0.25bxv0.25_d2.0```.
+A key for some common suffix patterns is given here:
 ```
   _v2bxv6        : supercell 2 times along v 6 times along bxv.
   _tv0.13bxv0.25 : displace one grain along the 0.13*v along v and 0.13*bxv along bxv.

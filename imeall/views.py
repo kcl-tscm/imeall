@@ -5,6 +5,7 @@ from imeall  import app
 from flask   import Flask, request, session, g, redirect, url_for, abort,\
                     render_template, flash, send_file, jsonify
 import json
+from imeall.models import GBAnalysis
 # Unique key is BBBAAAACCC
 # Common axis=[BBB], misorientation angle=AAAA, and GB plane = (CCC).
 # temporary table should be replaced by database.
@@ -63,8 +64,39 @@ def home_page():
 def material(material):
   path     = os.path.join(g.gb_dir, material)
   url_path = material
-  orientations     = os.listdir(path)
+  orientations = []
+  files =  os.listdir(path)
+  for filename in files: 
+    tmp_file = os.path.join(path, filename)
+    if os.path.isdir(tmp_file):
+      orientations.append(filename)
   return render_template('material.html', url_path=url_path, orientations=orientations)
+
+@app.route('/analysis/')
+def analysis():
+  '''
+    This view collates data from the grainboundary database.
+  '''
+  or_axis = request.args.get('or_axis', '001')
+  analyze = GBAnalysis()
+  gb_list = analyze.extract_energies(or_axis=or_axis)
+  gbdat = []
+  for gb in sorted(gb_list, key = lambda x: x['angle']):
+     min_en = min([x for x in gb['energies'] if x > 0.])
+     max_en = max(gb['energies'])
+     try:
+      gbdat.append({'or_axis':' '.join(map(str, gb['orientation_axis'])), 'angle': gb['angle'], 
+      'min_en': min_en,
+      'max_en':max(gb['energies']),'bp': ' '.join(map(str,map(int,
+      gb['boundary_plane'])))})
+     except KeyError:
+      gbdat.append({'or_axis':'000','bp':'000', 'angle': gb['angle'], 'min_en': min_en, 'max_en':max(gb['energies'])})
+  gbdat.append({'angle':   0.0, 'min_en':0.0, 'max_en':0.0,
+  'or_axis':'000','bp':'000'})
+  gbdat.append({'angle': 180.0, 'min_en':0.0, 'max_en':0.0,
+  'or_axis':'000','bp':'000'})
+  gbdat = sorted(gbdat, key=lambda x: x['angle'])
+  return render_template('analysis.html', gbdat=json.dumps(gbdat))
 
 @app.route('/orientation/<path:url_path>/<orientation>/')
 def orientations(url_path, orientation):

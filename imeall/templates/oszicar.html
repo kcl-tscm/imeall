@@ -1,5 +1,6 @@
 {% extends "layout.html" %}
 {% block body  %}
+
 <style>
 body {font: 12px Arial;}
 path {
@@ -47,10 +48,8 @@ var data = jQuery.parseJSON('{{ osz|safe }}');
 var valueline = d3.svg.line()
     .x(function(d) { return x(d.N); })
     .y(function(d) { return y(d.E); });
-
 x.domain(d3.extent(data, function(d) { return d.N; }));
 y.domain([d3.min(data, function(d) { return d.E; }), 0]);
-
 svg.append("path")
   .attr("class", "line")
   .attr("d", valueline(data));
@@ -65,5 +64,4 @@ svg.append("g")
   .call(yAxis)
   });
 </script>
-
 {% endblock body %}
