@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 {% block body %}
   <h2> Grain Boundary Structure </h2>
-  <h3> {{gbid}} </h3>
+  <h3> {{ gbid }} </h3>
   <ul>
     <li> Grain Boundary Type:  <em> {{ gb_info.type }}</em>      </li>
     <li> Orientation Axis:     [{{ gb_info.orientation_axis | join(' ')  }}]  </li>
@@ -30,11 +30,21 @@
     {% for subgrain, id in subgrains %}
     <h3> Subgrain {{id}} </h3>
     <ul>
+      <li> Name: {{subgrain.name}}  </li>
+      {% if subgrain.n_at %}
       <li> Number of Atoms: {{subgrain.n_at}}  </li>
+      {% endif %}
+      {% if subgrain.A %}
       <li> Grain Boundary Area (A^{2}): {{subgrain.A | round(3,'floor') }} </li>
+      {% endif %}
+      {% if subgrain.H %}
+      <li> Height:                      {{subgrain.H | round(3,'floor') }} </li>
+      {% endif %}
+      {% if subgrain.n_at %}
       <li> E_GB (j*M^-2):
       {{16.02*((subgrain.E_gb-(-1.0*subgrain.n_at*4.2731))/(2.0*subgrain.A)) |
       round(3,'floor')}} </li>  
+      {% endif %}
     </ul>
     {% endfor %}
 

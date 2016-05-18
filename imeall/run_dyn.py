@@ -72,8 +72,10 @@ class ImeallIO(object):
 # This is useful if there are a number of subgrains with different deletion
 # criteria or defect concentrations etc. calculated in the EAM directory
 # and we want to copy those over to a DFT calc, or a Tightbinding representation of the
-# grain boundary. Another intended use is if I have a EAM grain boundary or cleavage plane
-# md run and I want to copy across snap shots of the trajectory to do some DFT on.
+# grain boundary. Another intended use is if I have a
+# eam grain boundary or cleavage plane
+# md run and I want to copy across snap 
+# shots of the trajectory to do some DFT on.
     json_file = os.path.join(from_dir, 'gb.json')
     gb_data = self.load_json(json_file)
     from_dir = os.path.join(from_dir, from_sub_dir)	

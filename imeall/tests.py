@@ -6,6 +6,7 @@ from   quippy import Atoms
 from   imeall import app
 import imeall.slabmaker.slabmaker as slabmaker
 import json
+from imeall.models import GBAnalysis
 
 class TestDB (object):
   '''
@@ -24,79 +25,48 @@ class TestDB (object):
       if os.path.isdir(f):
         self.extract_json(f, json_files)
       else:
-        #if f.split(".")[-1] == 'json' and (f.split("/")[-1])[:3]=='sub':
         if f.split(".")[-1] == 'json':
           json_files.append(f)
         else:
           pass
 
-  def update_json(self, filename):
-    ''' 
-    This function was originally written to update all keys in the
-    json dictionaries in the grain boundary directories.
-    The pattern is quite general and can be adapted to just add
-    new keys delete old keys consider it a dictionary migration
-    routine.
-    '''
-    new_json = {}
-    with open(filename,'r') as json_old:
-      old_json = json.load(json_old)
-      new_json['zplanes'] = old_json['zplanes']
-      new_json['orientation_axis'] = old_json['orientation axis']
-      new_json['boundary_plane']   = old_json['boundary plane']
-      new_json['coincident_sites'] = old_json['coincident sites']
-      new_json['angle'] = old_json['angle']
-      new_json['gbid']  = old_json['gbid']
-      new_json['n_at']  = old_json['n_unit_cell']
-      new_json['type']  = 'symmetric tilt boundary'
-      dir_path = os.path.join('/'.join((filename.split('/'))[:-1]), old_json['gbid'])
-      at = Atoms('{0}.xyz'.format(dir_path, old_json['gbid']))
-      cell = at.get_cell()
-      A    = cell[0,0]*cell[1,1]
-      new_json['A']  = A
-      json_path = filename
-    with open(json_path,'w') as json_new_file:
-      json.dump(new_json, json_new_file, indent=2)
-
-	def fix_json(self, path):
-    '''
-    Once my json files had two {}{} dictionaries written to them
-    this parser opened all the subgb files, 
-    and selected the dictionary I actually wanted.
-    '''
-	  lst = os.listdir(path)
-	  for filename in lst:
-	    new_path = os.path.join(path, filename)
-	    if os.path.isdir(new_path):
-	      fix_json(new_path)
-	    elif new_path[-10:] == 'subgb.json':
-	      try: 
-	        with open(new_path,'r') as f:
-	          j_file = json.load(f)
-	      except ValueError:
-	        print 'Value Error', new_path
-	        with open(new_path,'r') as f:
-	          j_file = f.read()
-	        with open(new_path,'w') as f:
-	          print >> f, j_file.split('}')[1]+'}'
-	      try:
-	        with open(new_path,'r') as f:
-	          j_file = json.load(f)
-	        print 'j_file fixed'
-	      except:
-	        print new_path, 'Still Broken'
-	    else:
-        pass
 
 if __name__ == '__main__':
   j_files = []
   db_test = TestDB()
-  db_test.extract_json('./grain_boundaries', j_files)
+  gb_extract = GBAnalysis()
+  j_files    = []
+  gb_extract.find_gb_json('./110', j_files,'subgb.json')
   for j_file in j_files:
-    j_dict = json.load(open(j_file,'r'))
+    j_dict = json.load(open(j_file[1],'r'))
     if 'n_at' not in j_dict.keys():
       print j_file, 'POORLY FORMED'
+      with open(j_file[1] ,'r') as f:
+        json_file = json.load(f)
+      print j_file
+      gbid              = j_file[0].split('/')[-1]
+      print j_file, gbid
+      try:
+        at = Atoms('{0}.xyz'.format(os.path.join(j_file[0],gbid.split('_')[0]+'_n12d2.0')))
+      except:
+        try:
+          at = Atoms('{0}.xyz'.format(os.path.join(j_file[0],gbid.split('_')[0]+'_n0d2.0')))
+        except:
+          try:
+            at = Atoms('{0}.xyz'.format(os.path.join(j_file[0],gbid.split('_')[0]+'_n16d2.0')))
+          except:
+            try:
+              at = Atoms('{0}.xyz'.format(os.path.join(j_file[0],gbid.split('_')[0]+'_n16d2.0')))
+            except:
+              try:
+                at = Atoms('{0}.xyz'.format(os.path.join(j_file[0],gbid.split('_')[0]+'_n8d2.0')))
+              except:
+                print 'FAILED'
+                break
+      json_file['n_at'] = len(at)
+      json_file['gbid'] = gbid
+      with open(j_file[1] ,'w') as f:
+        json.dump(json_file, f)
     if 'n_unit_cell' in j_dict.keys():
       print j_file, 'HAS n_unit_cell'
       db_test.update_json(j_file)
-

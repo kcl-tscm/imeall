@@ -2,17 +2,16 @@ import os
 import sys
 import json
 import shutil
-from   cStringIO       import StringIO
 import ase.io        
-from   ase.constraints import UnitCellFilter, StrainFilter
-from   ase.optimize    import BFGS, FIRE, LBFGS, MDMin, QuasiNewton
+from   cStringIO           import StringIO
 from   ase.optimize.sciopt import SciPyFminCG
 from   quippy              import Atoms, Potential, frange
+from   ase.constraints     import UnitCellFilter, StrainFilter
 from   quippy.io           import AtomsWriter, AtomsReader, write
+from   ase.optimize        import BFGS, FIRE, LBFGS, MDMin, QuasiNewton
 import numpy as np
 
 from pprint import pprint
-
 
 def converged(grain, smax, fmax):
   maxstress = max(grain.get_stress().ravel())

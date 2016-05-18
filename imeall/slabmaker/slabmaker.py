@@ -166,10 +166,10 @@ def build_tilt_sym_gb(gbid='', bp = [3,3,2], v=[1,1,0],
     print '\t Writing {0}.xyz to file'.format(gbid)
     io.write('{0}.xyz'.format(os.path.join(target_dir, gbid)), grain_c)
     try:
-      take_pic(os.path.join(target_dir, gbid))
+      take_pic(os.path.join(target_dir, gbid),toggle=True)
     except:
       'atomeye not pleased!'
-    return [z_planes, len(dups), n_grain_unit]
+    return [z_planes, len(dups), n_grain_unit, grain_c]
   else:
     return grain_c
 
@@ -241,27 +241,17 @@ def gnu_plot_gb(boundary_plane, m, invm, gbid, mb=0.0, invmb=0.0,target_dir='./'
 # in svg format for visualization in imeall.
   f = open(os.path.join(target_dir, 'plot.gnu'), 'w')
   script = " \
-# g(x) = {2}*x   \n \
   h(x) = {3}*x   \n \
-# gb(x) = {4}*x  \n \
-# hb(x) = {5}*x  \n \
   set xr[-10:10] \n \
   set yr[-15:15] \n \
   pl   'grainaT.dat' u 1:2 w p pt 7 ps 1.3 lt 1 t 'Grain A' \n \
   repl 'grainaB.dat' u 1:2 w p pt 6 lt 1.0      t ''        \n \
   repl 'grainbT.dat' u 1:2 w p pt 7 ps 1 lt 3 t 'Grain B'   \n \
   repl 'grainbB.dat' u 1:2 w p pt 6 ps 1 lt 3 t ''          \n \
-# repl g(x) lt -1 t '({0})' \n \
   repl h(x) lt -1 t '({0})' \n \
-# repl gb(x) lt 3 t ''      \n \
-# repl hb(x) lt 3 t ''      \n \
-  set terminal pngcairo     \n \
-  set output 'csl_{1}.png'  \n \
-  repl                      \n \
   set terminal svg          \n \
   set output 'csl_{1}.svg'  \n \
-  repl                      \n \
-  set terminal aquaterm          \n".format(boundary_plane, gbid, m, invm, mb, invmb)
+  repl                      ".format(boundary_plane, gbid, m, invm, mb, invmb)
   print >> f, script
   f.close()
 
@@ -736,8 +726,6 @@ if __name__=='__main__':
 				   [np.pi*(89.41/180.), np.array([1.0, -3.0, 2.0])],
 				   [np.pi*(89.41/180.), np.array([-5.0, 1.0, 4.0])],
 				   [np.pi*(92.2/180.),  np.array([1.0, -3.0, 2.0])],
-				   [np.pi*(92.2/180.),  np.array([-5.0, 1.0, 3.0])],
-				   [np.pi*(104.82/180.), np.array([-4.0, 2.0, 3.0])],
 				   [np.pi*(108.36/180.), np.array([-2.0, 1.0, 1.0])],
 				   [np.pi*(120.0/180.),  np.array([-2.0, 1.0, 1.0])],
 				   [np.pi*(133.17/180.), np.array([-2.0, 1.0, 1.0])],
@@ -749,12 +737,18 @@ if __name__=='__main__':
 				   [np.pi*(163.57/180.), np.array([-3.0, -5.0, 8.0])],
            [np.pi*(163.57/180.), np.array([-13.0, 11.0, 2.0])]
               ]
+#Orphan Boundaries:
+  test = [[np.pi*(92.2/180.),  np.array([2.0, 3.0, -5.0])]]
 
-  #for gb in sym_tilt_110[:]:
-  #orientation_axis = np.array([0, 0, 1])
-  orientation_axis = np.array([1, 1, 0])
-  for gb in sym_tilt_110[8:10]:
-  #orientation_axis = np.array([1, 1, 1])
+#These do not appear to form symmetric tilt boundaries
+  Random = [[np.pi*(92.2/180.),  np.array([-5.0, 1.0, 3.0])],
+				  [np.pi*(104.82/180.), np.array([-4.0, 2.0, 3.0])]]
+#for gb in sym_tilt_110[:]:
+#orientation_axis = np.array([0, 0, 1])
+#orientation_axis = np.array([1, 1, 0])
+#for gb in sym_tilt_110[8:10]:
+  orientation_axis = np.array([1, 1, 1])
+  for gb in test:
   #for gb in sym_tilt_111[:]:
     angle_str      = str(round((gb[0]*180./np.pi),2)).replace('.', '')
     if len(angle_str) > 4:
@@ -765,7 +759,7 @@ if __name__=='__main__':
         orientation_axis[2]) + angle_str + '{0}{1}{2}'.format(int(abs(gb[1][0])), int(abs(gb[1][1])), int(abs(gb[1][2])))
     print '\t Grain Boundary ID',  gbid
 #Dump GBs in this directory:
-    gb_dir     = os.path.join('./alphaFeDFT','110')
+    gb_dir     = os.path.join('./alphaFeDFT','111')
     target_dir = os.path.join(gb_dir, gbid)
     print '\t Grain Boundary Dir', gb_dir
     if not os.path.isdir(target_dir):
@@ -775,17 +769,20 @@ if __name__=='__main__':
 # Drop the coincident site lattice stuff in the directory
     gen_csl(orientation_axis, gb, target_dir=target_dir, gbid=gbid)
 # Drop the grain.xyz file in the target directory
-    zplanes, dups, nunitcell = build_tilt_sym_gb(gbid, bp=gb[1], v = orientation_axis, 
+    zplanes, dups, nunitcell, grain_c = build_tilt_sym_gb(gbid, bp=gb[1], v = orientation_axis, 
                                                  c_space=None,
                                                  target_dir=target_dir,
                                                  rbt=[0.0, 0.75])
 # json id file contains, gbid, boundaryplane, zplanes(coordinates of center of
 # grain boundary
-    gb_dict = { "gbid"  : gbid, "boundary plane" : list(gb[1]),
-                "orientation axis" : list(orientation_axis), 
+    cell = grain_c.get_cell()
+    A    = cell[0][0]*cell[1][1]
+    H    = cell[2][2]
+    gb_dict = { "gbid"  : gbid, "boundary_plane" : list(gb[1]),
+                "orientation_axis" : list(orientation_axis), 
                 "type": "symmetric tilt boundary",
-                "angle": gb[0], "zplanes" : zplanes, "coincident sites": dups,
-                "n_unit_cell" : nunitcell}
+                "angle": gb[0], "zplanes" : zplanes, "coincident_sites": dups,
+                "n_at" : nunitcell, 'A':A , 'H':H}
 
     with open(os.path.join(target_dir, 'gb.json'), 'w') as outfile:
       json.dump(gb_dict, outfile, indent=2)

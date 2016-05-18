@@ -1,10 +1,11 @@
 import os
+import re
 import sys
+import json
+import numpy as np
 from   quippy import Atoms
 from   imeall import app
 import imeall.slabmaker.slabmaker as slabmaker
-import json
-import numpy as np
 
 try:
   from flask  import Flask, request, session, g, redirect
@@ -24,7 +25,7 @@ class Job(object):
     self.job_id   = ''
 
   def sub_pbs(self, job_dir, exclude='DFT', suffix='v6bxv2z', regex=None):
-  ''' 
+    ''' 
     Given an explicit suffix, or a regex this routine recurses through
     the directory structure and submits any pbs files that 
     match the suffix or regex pattern. Exclude keeps track of 
@@ -45,7 +46,7 @@ class Job(object):
     SUFFIX:
       submit all super cells: 
         v6bxv2z
-  '''
+    '''
     lst = os.listdir(job_dir)
     for dir in lst:
       dir = os.path.join(job_dir, dir)
@@ -101,6 +102,23 @@ class GBMaintenance(object):
     elif var =='n':
       pass
 
+  def remove_eo_files(self, path):
+    '''
+      In case the rsync brings across a bunch of log files
+      we can get rid of those.
+    '''
+    eo_regex = re.compile(r'[eo][0-9]+')
+    lst = os.listdir(path)
+    for filename in lst:
+      filename = os.path.join(path, filename)
+      if os.path.isdir(filename):
+        self.remove_eo_files(filename)
+      elif eo_regex.match(filename.split('.')[-1]):
+        print filename
+        os.remove(filename)
+      else:
+        pass
+
   def add_key_to_dict(self, dirname):
     os.path.join(dirname, 'subgb.json')
     new_json = {}
@@ -141,6 +159,64 @@ class GBMaintenance(object):
     with open(json_path,'w') as json_new_file:
       json.dump(new_json, json_new_file, indent=2)
 
+  def fix_json(self, path):
+    '''
+    Once my json files had two {}{} dictionaries written to them
+    this parser opened all the subgb files, 
+    and selected the dictionary I actually wanted.
+    '''
+    lst = os.listdir(path)
+    for filename in lst:
+      new_path = os.path.join(path, filename)
+      if os.path.isdir(new_path):
+	      fix_json(new_path)
+      elif new_path[-10:] == 'subgb.json':
+	      try: 
+	        with open(new_path,'r') as f:
+	          j_file = json.load(f)
+	      except ValueError:
+	        print 'Value Error', new_path
+	        with open(new_path,'r') as f:
+	          j_file = f.read()
+	        with open(new_path,'w') as f:
+	          print >> f, j_file.split('}')[1]+'}'
+	      try:
+	        with open(new_path,'r') as f:
+	          j_file = json.load(f)
+	        print 'j_file fixed'
+	      except:
+	        print new_path, 'Still Broken'
+      else:
+        pass
+
+  def update_json(self, filename):
+    ''' 
+    This function was originally written to update all keys in the
+    json dictionaries in the grain boundary directories.
+    The pattern is quite general and can be adapted to just add
+    new keys delete old keys consider it a dictionary migration
+    routine.
+    '''
+    new_json = {}
+    with open(filename,'r') as json_old:
+      old_json = json.load(json_old)
+      new_json['zplanes'] = old_json['zplanes']
+      new_json['orientation_axis'] = old_json['orientation axis']
+      new_json['boundary_plane']   = old_json['boundary plane']
+      new_json['coincident_sites'] = old_json['coincident sites']
+      new_json['angle'] = old_json['angle']
+      new_json['gbid']  = old_json['gbid']
+      new_json['n_at']  = old_json['n_unit_cell']
+      new_json['type']  = 'symmetric tilt boundary'
+      dir_path = os.path.join('/'.join((filename.split('/'))[:-1]), old_json['gbid'])
+      at = Atoms('{0}.xyz'.format(dir_path, old_json['gbid']))
+      cell = at.get_cell()
+      A    = cell[0,0]*cell[1,1]
+      new_json['A']  = A
+      json_path = filename
+    with open(json_path,'w') as json_new_file:
+      json.dump(new_json, json_new_file, indent=2)
+
 
 class GBAnalysis():
   def __init__(self):
@@ -164,7 +240,7 @@ class GBAnalysis():
       else:
         pass
 
-  def extract_energies(self):
+  def extract_energies(self, or_axis='001'):
 #   pull GB formation energies in two stage recursive process
 #   go into a grain boundary directory, recurse down through
 #   grain boundary to find gb_energies pull them out and plot them
@@ -172,7 +248,7 @@ class GBAnalysis():
 #   the database should only contain unique grain boundaries
 #   so no key should be overwritten.
     gb_files = []
-    self.find_gb_json('./grain_boundaries/alphaFe/110/', gb_files, 'gb.json')
+    self.find_gb_json('./imeall/grain_boundaries/alphaFe/{0}/'.format(or_axis), gb_files, 'gb.json')
     grain_energies = []
     for grain in  gb_files:
       grain_energy_dict = {}
@@ -190,17 +266,19 @@ class GBAnalysis():
           sub_dict = json.load(f)
         try:
           gb_ener = 16.02*((sub_dict['E_gb']-(-4.2731*sub_dict['n_at']))/(2*sub_dict['A']))
+          #gb_ener = 16.02*((sub_dict['E_gb_init']-(-4.2731*sub_dict['n_at']))/(2*sub_dict['A']))
           grain_energy_dict['energies'].append(gb_ener)
         except:
-          print 'Error on Atoms'
+          print 'Couldnt Extract GB energy'
       grain_energies.append(grain_energy_dict)
     return grain_energies
 
 if __name__ == '__main__':
   analyze =  GBAnalysis()
-  gb_list = analyze.extract_energies()
+  or_axis = sys.argv[1]
+  gb_list = analyze.extract_energies(or_axis=or_axis)
   print '0.0 0.0 0.0 0.0'
   for gb in sorted(gb_list, key = lambda x: x['angle']):
-    print gb['angle'], ' '.join(map(str, gb['energies']))
+    print gb['angle'], min([x for x in gb['energies'] if x > 0.]), gb['energies'][len(gb['energies'])/2], max(gb['energies'])
   print '180.0 0.0 0.0 0.0'
  
