@@ -347,7 +347,7 @@ for job_dir in jobdirs[:]:
   print '\n'
   gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type='EAM', 
                     potential = 'IP EAM_ErcolAd', param_file='./iron_mish.xml')
-  gbrelax.gen_super(rcut=2.3)
+  gbrelax.gen_super(rcut=2.0)
   gbrelax.gen_pbs()
 #  gbrelax.go_relax()
 #########################################################################

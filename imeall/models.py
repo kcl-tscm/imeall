@@ -169,7 +169,7 @@ class GBMaintenance(object):
     for filename in lst:
       new_path = os.path.join(path, filename)
       if os.path.isdir(new_path):
-	      fix_json(new_path)
+	      self.fix_json(new_path)
       elif new_path[-10:] == 'subgb.json':
 	      try: 
 	        with open(new_path,'r') as f:
@@ -233,7 +233,8 @@ class GBAnalysis():
       pass
     for filename in lst:
       filename = os.path.join(path,filename)
-      if os.path.isdir(filename) and filename.split('/')[-1] != 'DFT':
+      #if os.path.isdir(filename) and filename.split('/')[-1] == calc_type:
+      if os.path.isdir(filename):
         self.find_gb_json(filename, j_list, filetype)
       elif filename.split('/')[-1] == filetype:
         j_list.append([path,filename])
@@ -263,10 +264,12 @@ class GBAnalysis():
       self.find_gb_json(path, subgb_files, 'subgb.json')
       for subgrain in subgb_files:
         with open(subgrain[1],'r') as f:
-          sub_dict = json.load(f)
+          try:
+            sub_dict = json.load(f)
+          except:
+            print subgrain[1], 'Corrupted'
         try:
           gb_ener = 16.02*((sub_dict['E_gb']-(-4.2731*sub_dict['n_at']))/(2*sub_dict['A']))
-          #gb_ener = 16.02*((sub_dict['E_gb_init']-(-4.2731*sub_dict['n_at']))/(2*sub_dict['A']))
           grain_energy_dict['energies'].append(gb_ener)
         except:
           print 'Couldnt Extract GB energy'
