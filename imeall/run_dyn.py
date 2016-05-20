@@ -10,8 +10,7 @@ from   quippy          import Atoms, Potential, frange, farray, fzeros
 from   quippy.io       import AtomsWriter, AtomsReader, write
 from   slabmaker.slabmaker  import build_tilt_sym_gb
 import numpy as np
-
-from pprint import pprint
+from   pprint import pprint
 
 class Capturing(list):
   def __enter__(self):
@@ -221,7 +220,7 @@ class GBRelax(object):
     grain = self.delete_atoms(grain=grain, rcut=rcut)
 # Finally deposit json and grain file with translation information.
     try:
-      f = open('{0}/subgb.json'.format(self.subgrain_dir), 'rw')
+      f = open('{0}/subgb.json'.format(self.subgrain_dir), 'r+')
       j_dict = json.load(f)
     except IOError:
        f = open('{0}/subgb.json'.format(self.subgrain_dir), 'w')
@@ -230,6 +229,7 @@ class GBRelax(object):
     j_dict['rbt']  = rbt
     j_dict['rcut'] = rcut
     json.dump(j_dict,f, indent=2)
+    f.close()
     grain.write('{0}.xyz'.format(os.path.join(self.subgrain_dir, self.name)))
 
   def gen_super(self, grain=None, rbt=None, rcut=2.0, n=2, m=6):
@@ -266,9 +266,22 @@ class GBRelax(object):
     x = x*(m,n,1)
     x.set_scaled_positions(x.get_scaled_positions())
     if rbt == None:
-      self.name    = '{0}_v{1}bxv{2}_d{3}z'.format(self.gbid, str(m),str(n),str(rcut)) 
+      self.name  = '{0}_v{1}bxv{2}_tv{3}bxv{4}_d{5}z'.format(self.gbid,
+      str(m), str(n), '0.0', '0.0', str(rcut))
       self.struct_file  = self.name
       self.subgrain_dir = io.make_dir(self.calc_dir, self.name)
+      try:
+        with  open('{0}/subgb.json'.format(self.subgrain_dir), 'r') as f:
+          j_dict = json.load(f)
+      except IOError:
+        j_dict             = {}
+
+      j_dict['name']       = self.name
+      j_dict['param_file'] = self.param_file
+      j_dict['rbt']        = [0.0, 0.0]
+      j_dict['rcut']       = rcut
+      with  open('{0}/subgb.json'.format(self.subgrain_dir), 'w') as f:
+        json.dump(j_dict, f, indent=2)
       x.write('{0}.xyz'.format(os.path.join(self.subgrain_dir, self.name)))
     else:
       return m, n, x
@@ -306,7 +319,7 @@ class GBRelax(object):
       return x
       
 
-  def gen_pbs(self, time='12:00:00'):
+  def gen_pbs(self, time='00:30:00'):
 		pbs_str = open('/users/k1511981/pymodules/templates/calc_ada.pbs','r').read()
 		pbs_str = pbs_str.format(jname = 'fe'+self.name,xyz_file='{0}.xyz'.format(self.name), time=time)
 		print os.path.join(self.subgrain_dir, 'fe{0}.pbs'.format(self.name))
@@ -326,7 +339,7 @@ class GBRelax(object):
     else:
       print '\t Print Relaxing {0}.xyz with {1} potential'.format(self.struct_file, self.calc_type)
       print '\t In directory {0}'.format(self.subgrain_dir) 
-    if self.calc_type == 'EAM':
+    if self.calc_type[:3] == 'EAM':
       grain       = Atoms('{0}.xyz'.format(os.path.join(self.subgrain_dir,
                             self.struct_file)))
 # Load potential and Attach calculator
@@ -366,53 +379,63 @@ class GBRelax(object):
         json.dump(gb_dict, outfile, indent=2)
 
 if __name__=='__main__':
-  jobdirs = []
 #string for orientation axis e.g. '110'
+  jobdirs = []
   or_string = sys.argv[1]
   print or_string
   for thing in os.listdir('./'):
     if os.path.isdir(thing) and thing[:len(or_string)]==or_string:
       print thing
       jobdirs.append(thing)
+
+  gbrelax = GBRelax(grain_dir='./', gbid=1109337334, calc_type='EAM_Men', 
+                    potential = 'IP EAM_ErcolAd', param_file='./Fe_Mendelev.xml')
+  grain   =  Atoms(sys.argv[1])
+  grain   =gbrelax.delete_atoms(grain=grain, rcut=2.2)
+  grain.write('./del_frac.xyz')
 #######################################
 #######################################
 ## RELAX EAM FOR LIST OF DIRECTORIES ##
 #######################################
 #######################################
-##  for job_dir in jobdirs[:]:
-##    gbid    = job_dir.strip('/')
-##    print '\n'
-##    print '\t', gbid
-##    print '\n'
-##    gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type='EAM', 
-##                      potential = 'IP EAM_ErcolAd', param_file='./iron_mish.xml')
-##    gbrelax.delete_atoms()
-##    gbrelax.go_relax()
+#  for job_dir in jobdirs[:]:
+#    gbid    = job_dir.strip('/')
+#    print '\n'
+#    print '\t', gbid
+#    print '\n'
+#    gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type='EAM', 
+#                      potential = 'IP EAM_ErcolAd', param_file='./iron_mish.xml')
+#    gbrelax.delete_atoms()
+#    gbrelax.go_relax()
 #########################################################################
 #########################################################################
-print jobdirs
-for job_dir in jobdirs:
-  print job_dir
-  gbid    = job_dir.strip('/')
-  gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type='EAM', 
-                    potential = 'IP EAM_ErcolAd', param_file='./iron_mish.xml')
-  with open(os.path.join(job_dir,'gb.json')) as f:
-    grain_dict = json.load(f)
-  bp = grain_dict['boundary_plane']
-  v  = grain_dict['orientation_axis']
-  for i in np.linspace(0.25,1.0,4):
-    for j in np.linspace(0.125,1.0,8):
-      gbrelax.gen_super_rbt(bp=bp, v=v, rbt=[i,j], rcut=2.0)
-      gbrelax.gen_pbs()
+#print jobdirs
+#for job_dir in jobdirs[1:]:
+#  print job_dir
+#  gbid    = job_dir.strip('/')
+#  gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type='EAM_Men', 
+#                    potential='IP EAM_ErcolAd', param_file='Fe_Mendelev.xml')
+##                    potential = 'IP EAM_ErcolAd', param_file='./iron_mish.xml')
+#  with open(os.path.join(job_dir,'gb.json')) as f:
+#    grain_dict = json.load(f)
+#  bp = grain_dict['boundary_plane']
+#  v  = grain_dict['orientation_axis']
+#  for i in np.linspace(0.25,1.0,4):
+#    for j in np.linspace(0.125,1.0,8):
+#      gbrelax.gen_super_rbt(bp=bp, v=v, rbt=[i,j], rcut=2.0)
+#      gbrelax.gen_pbs()
+#########################################################################
+#########################################################################
 #Super Cell no rigid body translation
-#for job_dir in jobdirs[:]:
+#for job_dir in jobdirs:
 #  gbid    = job_dir.strip('/')
 #  print '\n'
 #  print '\t', gbid
 #  print '\n'
-#  gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type='EAM', 
-#                    potential = 'IP EAM_ErcolAd', param_file='./iron_mish.xml')
-#  gbrelax.gen_super(rcut=2.3)
+#  gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type='EAM_Men', 
+#                    potential='IP EAM_ErcolAd', param_file='Fe_Mendelev.xml')
+#                   potential='IP EAM_ErcolAd', param_file='./iron_mish.xml')
+#  gbrelax.gen_super(rcut=2.0)
 #  gbrelax.gen_pbs()
 #  gbrelax.go_relax()
 #########################################################################

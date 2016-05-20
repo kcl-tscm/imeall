@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 import os
 import re
-from imeall  import app
+import json
 from flask   import Flask, request, session, g, redirect, url_for, abort,\
                     render_template, flash, send_file, jsonify
-import json
+from imeall  import app
 from imeall.models import GBAnalysis
 # Unique key is BBBAAAACCC
 # Common axis=[BBB], misorientation angle=AAAA, and GB plane = (CCC).

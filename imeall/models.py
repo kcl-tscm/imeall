@@ -4,14 +4,12 @@ import sys
 import json
 import numpy as np
 from   quippy import Atoms
-from   imeall import app
-import imeall.slabmaker.slabmaker as slabmaker
-
 try:
-  from flask  import Flask, request, session, g, redirect
+  import imeall.slabmaker.slabmaker as slabmaker
+  from  flask  import Flask, request, session, g, redirect
   from  flask import    url_for, abort, render_template, flash
 except:
-  pass
+  print 'no flask'
 
 # Currently Our models are stored by hand
 # and then we handle the interactions with 
