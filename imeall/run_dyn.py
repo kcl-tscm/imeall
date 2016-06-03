@@ -8,8 +8,9 @@ from   ase.constraints import UnitCellFilter
 from   ase.optimize    import BFGS, FIRE
 from   quippy          import Atoms, Potential, frange, farray, fzeros
 from   quippy.io       import AtomsWriter, AtomsReader, write
-
-from pprint import pprint
+from   slabmaker.slabmaker  import build_tilt_sym_gb
+import numpy as np
+from   pprint import pprint
 
 class Capturing(list):
   def __enter__(self):
@@ -65,8 +66,8 @@ class ImeallIO(object):
   def copy_struct(self, from_dir, target_dir, from_sub_dir, 
       target_sub_dir, calc_suffix='_d2.0', calc_point='final', md_step=1):
 # The calc_suffix determines which subgrain directories to
-# copy across. For instance _d2.0 which search for all subgrains
-# generated with the deletion critera for atoms of anything under 2.0 A.
+# copy across. For instance _d2.0 will search for all subgrains
+# generated with the deletion critera for atoms with nn distance < 2.0 A.
 # This is useful if there are a number of subgrains with different deletion
 # criteria or defect concentrations etc. calculated in the EAM directory
 # and we want to copy those over to a DFT calc, or a Tightbinding representation of the
@@ -161,7 +162,7 @@ class ImeallIO(object):
 
   def submit_job(self, target_dir, target_sub_dir, calc_suffix='_d2.0'):
     target_dir = os.path.join(target_dir, target_sub_dir)
-    #Identify the subdirectory by the calculation suffix:
+#Identify the subdirectory by the calculation suffix:
     target_dir, target_dir_name = self.find_subdir(target_dir, calc_suffix)
     try:
       gb_data = json.load(open(os.path.join(target_dir,'gb.json')))
@@ -169,7 +170,7 @@ class ImeallIO(object):
     except:
       print 'Error Opening JSON FILE'
     try:
-      #os.system('cd {0}; ./run.sh'.format(target_dir))
+#os.system('cd {0}; ./run.sh'.format(target_dir))
       pass
     except:
       print 'Error submitting ', target_dir
@@ -201,11 +202,97 @@ class GBRelax(object):
     self.fmax        = 0.5E-2
     self.traj_file   = traj_file
 
-  def gen_super(self, rcut=2.0):
-# Create a grainboundary super cell we use the parameters of
-# Rittner and Seidman.
+  def gen_super_rbt(self, bp=[],v=[], rbt=[0.0, 0.0], rcut=2.0):
     io = ImeallIO()
-    x = Atoms('{0}.xyz'.format(os.path.join(self.grain_dir, self.gbid)))
+    grain = build_tilt_sym_gb(bp=bp, v=v, rbt=rbt)
+# For RBT we build a top level dir with just the translated supercell and no
+# deleted atoms then we create subdirectories with particular deletion criteria
+# to them.
+    m, n, grain  = self.gen_super(grain=grain, rbt=rbt, rcut=0.0)
+    self.name    = '{0}_v{1}bxv{2}_tv{3}bxv{4}'.format(self.gbid,
+    str(m),str(n), str(round(rbt[0],2)), str(round(rbt[1],2)))
+    self.subgrain_dir = io.make_dir(self.calc_dir, self.name)
+    grain.write('{0}.xyz'.format(os.path.join(self.subgrain_dir, self.name)))
+# Now create sub_dir with the appropriate deletion criteria:
+    self.name    = '{0}_v{1}bxv{2}_tv{3}bxv{4}_d{5}z'.format(self.gbid,
+    str(m), str(n), str(round(rbt[0],2)), str(round(rbt[1],2)), str(rcut))
+    self.subgrain_dir = io.make_dir(self.subgrain_dir, self.name)
+    grain = self.delete_atoms(grain=grain, rcut=rcut)
+# Finally deposit json and grain file with translation information.
+    try:
+      f = open('{0}/subgb.json'.format(self.subgrain_dir), 'r+')
+      j_dict = json.load(f)
+    except IOError:
+       f = open('{0}/subgb.json'.format(self.subgrain_dir), 'w')
+       j_dict = {}
+    j_dict['name'] = self.name
+    j_dict['rbt']  = rbt
+    j_dict['rcut'] = rcut
+    json.dump(j_dict,f, indent=2)
+    f.close()
+    grain.write('{0}.xyz'.format(os.path.join(self.subgrain_dir, self.name)))
+
+  def gen_super(self, grain=None, rbt=None, rcut=2.0, n=2, m=6):
+    ''' 
+       To create a grain boundary super cell we use the parameters of
+       Rittner and Seidman.
+    '''
+    io = ImeallIO()
+    if rbt == None:
+      x = Atoms('{0}.xyz'.format(os.path.join(self.grain_dir, self.gbid)))
+    else:
+      x = Atoms(grain)
+    if rcut > 0.0:
+      x.set_cutoff(3.0)
+      x.calc_connect()
+      x.calc_dists()
+      rem=[]
+      r = farray(0.0)
+      u = fzeros(3)
+      for i in frange(x.n):
+        for n in frange(x.n_neighbours(i)):
+      	  j = x.neighbour(i, n, distance=3.0, diff=u)
+          if 0. < x.distance_min_image(i,j) < rcut and j!=i:
+       	    rem.append(sorted([j,i]))
+      rem = list(set([a[0] for a in rem]))
+      if len(rem) >0:
+        x.remove_atoms(rem)
+      else:
+        print 'No duplicate atoms in list.'
+    else:
+      pass
+# Now create super cell
+# Now Generate Subgrain directory
+    x = x*(m,n,1)
+    x.set_scaled_positions(x.get_scaled_positions())
+    if rbt == None:
+      self.name  = '{0}_v{1}bxv{2}_tv{3}bxv{4}_d{5}z'.format(self.gbid,
+      str(m), str(n), '0.0', '0.0', str(rcut))
+      self.struct_file  = self.name
+      self.subgrain_dir = io.make_dir(self.calc_dir, self.name)
+      try:
+        with  open('{0}/subgb.json'.format(self.subgrain_dir), 'r') as f:
+          j_dict = json.load(f)
+      except IOError:
+        j_dict             = {}
+
+      j_dict['name']       = self.name
+      j_dict['param_file'] = self.param_file
+      j_dict['rbt']        = [0.0, 0.0]
+      j_dict['rcut']       = rcut
+      with  open('{0}/subgb.json'.format(self.subgrain_dir), 'w') as f:
+        json.dump(j_dict, f, indent=2)
+      x.write('{0}.xyz'.format(os.path.join(self.subgrain_dir, self.name)))
+    else:
+      return m, n, x
+
+  def delete_atoms(self, grain=None, rcut=2.0):
+# Delete atoms below a certain threshold
+    io = ImeallIO()
+    if grain == None:
+      x = Atoms('{0}.xyz'.format(os.path.join(self.grain_dir, self.gbid)))
+    else:
+      x = Atoms(grain)
     x.set_cutoff(3.0)
     x.calc_connect()
     x.calc_dists()
@@ -214,35 +301,7 @@ class GBRelax(object):
     u = fzeros(3)
     for i in frange(x.n):
       for n in frange(x.n_neighbours(i)):
-      	j = x.neighbour(i, n, distance=3.0, diff=u)
-        if 0. < x.distance_min_image(i,j)< rcut and j!=i:
-       	  rem.append(sorted([j,i]))
-    rem = list(set([a[0] for a in rem]))
-    if len(rem) >0:
-      x.remove_atoms(rem)
-    else:
-      print 'No duplicate atoms in list.'
-# Now create super cell
-    n = 2
-    m = 6
-    x = x*(m,n,1)
-# Now Generate Subgrain directory
-    x.set_scaled_positions(x.get_scaled_positions())
-    self.name    = '{0}_v{1}bxv{2}_d{3}z'.format(self.gbid, str(m),str(n),str(rcut)) 
-    self.struct_file  = self.name
-    self.subgrain_dir = io.make_dir(self.calc_dir, self.name)
-    x.write('{0}.xyz'.format(os.path.join(self.subgrain_dir, self.name)))
-
-  def delete_atoms(self, rcut=2.0):
-# Delete atoms below a certain threshold
-    io = ImeallIO()
-    x = Atoms('{0}.xyz'.format(os.path.join(self.grain_dir, self.gbid)))
-    x.set_cutoff(3.0)
-    x.calc_connect()
-    x.calc_dists()
-    rem=[]
-    for j in frange(x.n):
-      for i in frange(j, x.n):
+        j = x.neighbour(i, n, distance=3.0, diff=u)
         if 0. < x.distance_min_image(i, j) < rcut and j!=i:
           rem.append(sorted([j,i]))
     rem = list(set([a[0] for a in rem]))
@@ -250,15 +309,19 @@ class GBRelax(object):
       x.remove_atoms(rem)
     else:
       print 'No duplicate atoms in list.'
-    self.name    = '{0}_d{1}'.format(self.gbid, str(rcut)) 
-    self.subgrain_dir = io.make_dir(self.calc_dir, self.name)
-    self.struct_file  = gbid + '_' + 'n' + str(len(rem)) + 'd' + str(rcut)  
-    x.write('{0}.xyz'.format(os.path.join(self.subgrain_dir, self.struct_file)))
-    return len(rem)
+    if grain == None:
+      self.name    = '{0}_d{1}'.format(self.gbid, str(rcut)) 
+      self.subgrain_dir = io.make_dir(self.calc_dir, self.name)
+      self.struct_file  = gbid + '_' + 'n' + str(len(rem)) + 'd' + str(rcut)  
+      x.write('{0}.xyz'.format(os.path.join(self.subgrain_dir, self.struct_file)))
+      return len(rem)
+    else:
+      return x
+      
 
-  def gen_pbs(self, time='12:00:00'):
+  def gen_pbs(self, time='00:30:00'):
 		pbs_str = open('/users/k1511981/pymodules/templates/calc_ada.pbs','r').read()
-		pbs_str = pbs_str.format(jname = 'fe'+self.name, xyz_file='{0}.xyz'.format(self.struct_file), time=time)
+		pbs_str = pbs_str.format(jname = 'fe'+self.name,xyz_file='{0}.xyz'.format(self.name), time=time)
 		print os.path.join(self.subgrain_dir, 'fe{0}.pbs'.format(self.name))
 		with open(os.path.join(self.subgrain_dir, 'fe{0}.pbs'.format(self.name)) ,'w') as pbs_file:
 			print >> pbs_file, pbs_str
@@ -276,7 +339,7 @@ class GBRelax(object):
     else:
       print '\t Print Relaxing {0}.xyz with {1} potential'.format(self.struct_file, self.calc_type)
       print '\t In directory {0}'.format(self.subgrain_dir) 
-    if self.calc_type == 'EAM':
+    if self.calc_type[:3] == 'EAM':
       grain       = Atoms('{0}.xyz'.format(os.path.join(self.subgrain_dir,
                             self.struct_file)))
 # Load potential and Attach calculator
@@ -316,27 +379,51 @@ class GBRelax(object):
         json.dump(gb_dict, outfile, indent=2)
 
 if __name__=='__main__':
-  jobdirs = []
 #string for orientation axis e.g. '110'
+  jobdirs = []
   or_string = sys.argv[1]
+  print or_string
   for thing in os.listdir('./'):
-    if os.path.isdir(thing) and thing[:3]==or_string:
+    if os.path.isdir(thing) and thing[:len(or_string)]==or_string:
       print thing
       jobdirs.append(thing)
+
+  gbrelax = GBRelax(grain_dir='./', gbid=1109337334, calc_type='EAM_Men', 
+                    potential = 'IP EAM_ErcolAd', param_file='./Fe_Mendelev.xml')
+  grain   =  Atoms(sys.argv[1])
+  grain   =gbrelax.delete_atoms(grain=grain, rcut=2.2)
+  grain.write('./del_frac.xyz')
 #######################################
 #######################################
 ## RELAX EAM FOR LIST OF DIRECTORIES ##
 #######################################
 #######################################
-##  for job_dir in jobdirs[:]:
-##    gbid    = job_dir.strip('/')
-##    print '\n'
-##    print '\t', gbid
-##    print '\n'
-##    gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type='EAM', 
-##                      potential = 'IP EAM_ErcolAd', param_file='./iron_mish.xml')
-##    gbrelax.delete_atoms()
-##    gbrelax.go_relax()
+#  for job_dir in jobdirs[:]:
+#    gbid    = job_dir.strip('/')
+#    print '\n'
+#    print '\t', gbid
+#    print '\n'
+#    gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type='EAM', 
+#                      potential = 'IP EAM_ErcolAd', param_file='./iron_mish.xml')
+#    gbrelax.delete_atoms()
+#    gbrelax.go_relax()
+#########################################################################
+#########################################################################
+#print jobdirs
+#for job_dir in jobdirs[1:]:
+#  print job_dir
+#  gbid    = job_dir.strip('/')
+#  gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type='EAM_Men', 
+#                    potential='IP EAM_ErcolAd', param_file='Fe_Mendelev.xml')
+##                    potential = 'IP EAM_ErcolAd', param_file='./iron_mish.xml')
+#  with open(os.path.join(job_dir,'gb.json')) as f:
+#    grain_dict = json.load(f)
+#  bp = grain_dict['boundary_plane']
+#  v  = grain_dict['orientation_axis']
+#  for i in np.linspace(0.25,1.0,4):
+#    for j in np.linspace(0.125,1.0,8):
+#      gbrelax.gen_super_rbt(bp=bp, v=v, rbt=[i,j], rcut=2.0)
+#      gbrelax.gen_pbs()
 #########################################################################
 #########################################################################
 print jobdirs
@@ -349,6 +436,17 @@ for job_dir in jobdirs[:]:
                     potential = 'IP EAM_ErcolAd', param_file='./iron_mish.xml')
   gbrelax.gen_super(rcut=2.0)
   gbrelax.gen_pbs()
+#Super Cell no rigid body translation
+#for job_dir in jobdirs:
+#  gbid    = job_dir.strip('/')
+#  print '\n'
+#  print '\t', gbid
+#  print '\n'
+#  gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type='EAM_Men', 
+#                    potential='IP EAM_ErcolAd', param_file='Fe_Mendelev.xml')
+#                   potential='IP EAM_ErcolAd', param_file='./iron_mish.xml')
+#  gbrelax.gen_super(rcut=2.0)
+#  gbrelax.gen_pbs()
 #  gbrelax.go_relax()
 #########################################################################
 #########################################################################

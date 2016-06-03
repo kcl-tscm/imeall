@@ -1,7 +1,7 @@
 from ase.io import read
 from ase.io import write
 from ase.lattice.spacegroup import crystal
-from ase.lattice.surface import surface,bcc111,bcc110
+from ase.lattice.surface import surface, bcc111,bcc110
 from ase.lattice.cubic   import BodyCenteredCubic
 from ase.utils.geometry  import get_duplicate_atoms
 from collections import Counter

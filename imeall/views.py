@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 import os
 import re
-from imeall  import app
+import json
 from flask   import Flask, request, session, g, redirect, url_for, abort,\
                     render_template, flash, send_file, jsonify
-import json
+from imeall  import app
 from imeall.models import GBAnalysis
 # Unique key is BBBAAAACCC
 # Common axis=[BBB], misorientation angle=AAAA, and GB plane = (CCC).
@@ -75,32 +75,32 @@ def material(material):
 @app.route('/analysis/')
 def analysis():
   '''
-     This view collates data from the grainboundary database.
+    This view collates data from the grainboundary database.
   '''
 # User chooses what orientation angle to look at via a GET argument:
   or_axis = request.args.get('or_axis', '001')
   analyze = GBAnalysis()
-# Ultimately would be better to serve this as a response to JQuery
-# get request, then we could update the view dynamically from
-# within the browser.
   gb_list = analyze.extract_energies(or_axis=or_axis)
   gbdat = []
+# Creates list of grain boundaries ordered by angle.
+  gbdat.append({'angle':0.0, 'param_file':'iron_mish.xml', 'min_en':0.0, 'max_en':0.0, 'or_axis':'000','bp':'000'})
+  gbdat.append({'angle':0.0, 'param_file':'Fe_Mendelev.xml', 'min_en':0.0, 'max_en':0.0, 'or_axis':'000','bp':'000'})
   for gb in sorted(gb_list, key = lambda x: x['angle']):
     try:
       min_en = min([x for x in gb['energies'] if x > 0.])
       max_en = max(gb['energies'])
+      try:
+        gbdat.append({'param_file':gb['param_file'], 'or_axis':' '.join(map(str, gb['orientation_axis'])), 
+                      'angle':gb['angle'], 'min_en':min_en, 
+                      'max_en':max_en,
+                      'bp':' '.join(map(str, map(int, gb['boundary_plane'])))})
+      except KeyError:
+        pass
     except ValueError:
       pass
-    try:
-      gbdat.append({'or_axis':' '.join(map(str, gb['orientation_axis'])), 'angle': gb['angle'], 
-      'min_en': min_en, 'max_en':max_en,'bp': ' '.join(map(str, map(int, gb['boundary_plane'])))})
-    except KeyError:
-      gbdat.append({'or_axis':'000','bp':'000', 'angle': gb['angle'], 'min_en': min_en, 'max_en':max(gb['energies'])})
-    except UnboundLocalError:
-      pass
 # Append zeros of energy to the beginning and end of the grainBoundary Range:
-  gbdat.append({'angle':   0.0, 'min_en':0.0, 'max_en':0.0, 'or_axis':'000','bp':'000'})
-  gbdat.append({'angle': 180.0, 'min_en':0.0, 'max_en':0.0, 'or_axis':'000','bp':'000'})
+  gbdat.append({'angle': 180.0,'param_file':'iron_mish.xml', 'min_en':0.0, 'max_en':0.0, 'or_axis':'000','bp':'000'})
+  gbdat.append({'angle': 180.0, 'param_file':'Fe_Mendelev.xml', 'min_en':0.0, 'max_en':0.0, 'or_axis':'000','bp':'000'})
   gbdat = sorted(gbdat, key=lambda x: x['angle'])
   return render_template('analysis.html', gbdat=json.dumps(gbdat))
 

@@ -4,14 +4,9 @@ import sys
 import json
 import numpy as np
 from   quippy import Atoms
-from   imeall import app
 import imeall.slabmaker.slabmaker as slabmaker
-
-try:
-  from flask  import Flask, request, session, g, redirect
-  from  flask import    url_for, abort, render_template, flash
-except:
-  pass
+from  flask  import Flask, request, session, g, redirect
+from  flask import    url_for, abort, render_template, flash
 
 # Currently Our models are stored by hand
 # and then we handle the interactions with 
@@ -224,7 +219,8 @@ class GBAnalysis():
 
   def find_gb_json(self, path, j_list, filetype):
     ''' 
-    Returns list of directories containing grain json files
+    populates j_list with list of lists containing 
+    the directory containing a grain json file
     and the filename of the json files.
     '''
     try:
@@ -233,7 +229,6 @@ class GBAnalysis():
       pass
     for filename in lst:
       filename = os.path.join(path,filename)
-      #if os.path.isdir(filename) and filename.split('/')[-1] == calc_type:
       if os.path.isdir(filename):
         self.find_gb_json(filename, j_list, filetype)
       elif filename.split('/')[-1] == filetype:
@@ -260,19 +255,27 @@ class GBAnalysis():
       grain_energy_dict['angle']            = j_dict['angle']*(180./np.pi)
       grain_energy_dict['boundary_plane']   = j_dict['boundary_plane']
       grain_energy_dict['energies']         = []
-      subgb_files = []
+      subgb_files                           = []
       self.find_gb_json(path, subgb_files, 'subgb.json')
       for subgrain in subgb_files:
         with open(subgrain[1],'r') as f:
           try:
             sub_dict = json.load(f)
           except:
-            print subgrain[1], 'Corrupted'
+            print 'Corrupted', subgrain[1]
         try:
-          gb_ener = 16.02*((sub_dict['E_gb']-(-4.2731*sub_dict['n_at']))/(2*sub_dict['A']))
+          if 'iron_mish' in sub_dict['param_file']:
+            gb_ener = 16.02*((sub_dict['E_gb']-(-4.2731*float(sub_dict['n_at'])))/(2*sub_dict['A']))
+          elif 'Fe_Mendelev' in sub_dict['param_file']:  
+            gb_ener = 16.02*((sub_dict['E_gb']-(-4.11784*float(sub_dict['n_at'])))/(2*sub_dict['A']))
+          else:
+            print 'Ground state energy not know for this potential!'
           grain_energy_dict['energies'].append(gb_ener)
-        except:
-          print 'Couldnt Extract GB energy'
+          grain_energy_dict['param_file']  = sub_dict['param_file']
+          if 'Fe_Mendelev' in sub_dict['param_file']:
+            print subgrain[1]
+        except KeyError:
+          pass
       grain_energies.append(grain_energy_dict)
     return grain_energies
 
@@ -282,6 +285,10 @@ if __name__ == '__main__':
   gb_list = analyze.extract_energies(or_axis=or_axis)
   print '0.0 0.0 0.0 0.0'
   for gb in sorted(gb_list, key = lambda x: x['angle']):
-    print gb['angle'], min([x for x in gb['energies'] if x > 0.]), gb['energies'][len(gb['energies'])/2], max(gb['energies'])
+    try:
+#      print gb['angle'], min([x for x in gb['energies'] if x > 0.]), gb['energies'][len(gb['energies'])/2], max(gb['energies'])
+      print gb['param_file'], gb['angle']
+    except:
+      pass
   print '180.0 0.0 0.0 0.0'
- 
+

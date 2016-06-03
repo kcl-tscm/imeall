@@ -14,48 +14,65 @@
   <img src = "{{url_for('serve_img', filename=url_path, gbid=gbid, img_type='struct')}}" alt="GB structure" width=700>
 	<h2> Coincident Site Lattice  </h2>
   <img src = "{{url_for('serve_img', filename=url_path, gbid=gbid, img_type='csl')}}" alt="GB structure" width=700>
-  <h2> Total Energy </h2>
-  <ul>
-    {% if 'E_gb' in gb_info %} 
-      <li> Number of Atoms in Unit Cell:  {{ gb_info.n_unit_cell }}                        </li>
-    {% else %}
-      <li> Number of Atoms in Unit Cell:  {{ gb_info.n_at }}                        </li>
-    {% endif %}
-    {% if 'E_gb' in gb_info %} 
-      <li> Total Energy:                  {{ gb_info.E_gb | round(3,'floor') }} eV </li>
-      <li> Total Energy per Atom:         {{ (gb_info.E_gb/gb_info.n_at) | round(3,'floor') }} eV </li>
-    {% endif %}
-  </ul>
-  <h3> Subgrain Properties of {{gbid}}: </h3> 
-    {% for subgrain, id in subgrains %}
-    <h3> Subgrain {{id}} </h3>
+  <h3> Total Energy </h3>
+  <p> <button id="subgrainbutton"> Show/Hide Subgrain Energetics </button> </p>
+  <script>
+    $("#subgrainbutton").click(function() {
+        $("#subgraineners").toggle();
+      });
+  </script>
+
+  <div id="subgraineners">
     <ul>
-      <li> Name: {{subgrain.name}}  </li>
-      {% if subgrain.n_at %}
-      <li> Number of Atoms: {{subgrain.n_at}}  </li>
+      {% if 'E_gb' in gb_info %} 
+        <li> Number of Atoms in Unit Cell:  {{ gb_info.n_unit_cell }}                        </li>
+      {% else %}
+        <li> Number of Atoms in Unit Cell:  {{ gb_info.n_at }}                        </li>
       {% endif %}
-      {% if subgrain.A %}
-      <li> Grain Boundary Area (A^{2}): {{subgrain.A | round(3,'floor') }} </li>
-      {% endif %}
-      {% if subgrain.H %}
-      <li> Height:                      {{subgrain.H | round(3,'floor') }} </li>
-      {% endif %}
-      {% if subgrain.n_at %}
-      <li> E_GB (j*M^-2):
-      {{16.02*((subgrain.E_gb-(-1.0*subgrain.n_at*4.2731))/(2.0*subgrain.A)) |
-      round(3,'floor')}} </li>  
+      {% if 'E_gb' in gb_info %} 
+        <li> Total Energy:                  {{ gb_info.E_gb | round(3,'floor') }} eV </li>
+        <li> Total Energy per Atom:         {{ (gb_info.E_gb/gb_info.n_at) | round(3,'floor') }} eV </li>
       {% endif %}
     </ul>
-    {% endfor %}
-
+    <h2> Subgrain Properties of {{gbid}}: </h2> 
+      {% for subgrain, id in subgrains %}
+      <h3> Subgrain {{id}} </h3>
+      <ul>
+        <li> Name: {{subgrain.name}}  </li>
+        {% if subgrain.n_at %}
+        <li> Number of Atoms: {{subgrain.n_at}}  </li>
+        {% endif %}
+        {% if subgrain.A %}
+        <li> Grain Boundary Area (A^{2}): {{subgrain.A | round(3,'floor') }} </li>
+        {% endif %}
+        {% if subgrain.H %}
+        <li> Height:                      {{subgrain.H | round(3,'floor') }} </li>
+        {% endif %}
+        {% if subgrain.n_at %}
+        <li> E_GB (j*M^-2):
+        {{16.02*((subgrain.E_gb-(-1.0*subgrain.n_at*4.2731))/(2.0*subgrain.A)) |
+          round(3,'floor')}} </li>  
+        {% endif %}
+      </ul>
+      {% endfor %}
+  </div>
   <h3> Subgrain Directories of {{gbid}}: </h3> 
-  <ul>
-    {%- for item in tree.children recursive %}
-      <li> <a href="{{url_for('serve_file', gbid=gbid, filename=item.name, url_path=url_path, textpath=item.fullpath)}}"> {{item.name}}  </a>
+  <p> <button id="subgraindirbutton"> Show/Hide Subgrain Subdirectories </button> </p>
+  <script>
+    $("#subgraindirbutton").click(function() {
+        $("#subgraindirs").toggle();
+      });
+  </script>
+  <div id="subgraindirs">
+    <ul>
+      {%- for item in tree.children recursive %}
+        <li><a href="{{url_for('serve_file', gbid=gbid, filename=item.name, 
+                       url_path=url_path, textpath=item.fullpath)}}">{{item.name}}</a>
         {%- if item.children -%}
-         <ul class="submenu">{{ loop(item.children) }}</ul>
+          <ul class="submenu">{{loop(item.children)}}</ul>
         {%- endif %}</li>
-    {%- endfor %}
-  </ul>
-  <h3> Directory Path: ./grain_boundaries/{{url_path}} </h3>
+      {%- endfor %}
+    </ul>
+  </div>
+  <h3> Fracture Simulations </h3>
 {% endblock body %}
