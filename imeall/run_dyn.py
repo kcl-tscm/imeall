@@ -235,7 +235,7 @@ class GBRelax(object):
   def gen_super(self, grain=None, rbt=None, rcut=2.0, n=2, m=6):
     ''' 
        To create a grain boundary super cell we use the parameters of
-       Rittner and Seidman.
+       Rittner and Seidman PRB 54 6999.
     '''
     io = ImeallIO()
     if rbt == None:
@@ -302,10 +302,10 @@ class GBRelax(object):
     for i in frange(x.n):
       for n in frange(x.n_neighbours(i)):
         j = x.neighbour(i, n, distance=3.0, diff=u)
-        if 0. < x.distance_min_image(i, j) < rcut and j!=i:
+        if x.distance_min_image(i, j) < rcut and j!=i:
           rem.append(sorted([j,i]))
     rem = list(set([a[0] for a in rem]))
-    if len(rem) >0:
+    if len(rem) > 0:
       x.remove_atoms(rem)
     else:
       print 'No duplicate atoms in list.'
