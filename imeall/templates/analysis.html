@@ -110,13 +110,16 @@ dataByPot.forEach(function(d,i){
 	      tooltip.transition()
 	        .duration(200)
 	        .style("opacity", 0.9)
-	      tooltip.html(d.or_axis+" "+d.bp)
+	      tooltip.html("<p> or: "+d.or_axis + "</p> <p> bp: "+d.bp+"</p>"
+                    +"<p> Angle: " + Math.round(d.angle*100)/100 + "</p>"
+                    +"<p> Energy: "+ Math.round(d.min_en*1000)/1000 + " J/m^2 </p>")
 	    })
 	    .on("mouseout", function(d) {
 	      tooltip.transition()
 	        .duration(500)
 	        .style("opacity",0)
       });
+
 
 //Add legend/add and remove energetics.
   svg.append("text")

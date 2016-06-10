@@ -13,6 +13,16 @@ from  flask import    url_for, abort, render_template, flash
 # directory structure manually. Which should allow us to serve
 # files.
 
+class PotentialParameters(object):
+  def __init__(self):
+    self.name = 'Potential Parameters'
+
+  def gs_ener_per_atom(self): 
+    eperat = {'Fe_Mendelev.xml' : -4.12243503431,
+              'iron_mish.xml'   : -4.28000356875,
+              'Fe_Ackland.xml'  : -4.01298226805 }
+    return eperat
+
 class Job(object):
   def __init__(self):
     self.pbs_file = ''
@@ -243,20 +253,24 @@ class GBAnalysis():
 #   returns dictionary []
 #   the database should only contain unique grain boundaries
 #   so no key should be overwritten.
+    pot_param     = PotentialParameters()
+    ener_per_atom = pot_param.gs_ener_per_atom()
+
     gb_files = []
-    self.find_gb_json('./imeall/grain_boundaries/alphaFe/{0}/'.format(or_axis), gb_files, 'gb.json')
+    self.find_gb_json('/Users/lambert/pymodules/imeall/imeall/grain_boundaries/alphaFe/{0}/'.format(or_axis), gb_files, 'gb.json')
     grain_energies = []
+#   print 'Searching the following directories'
+#    for grain in gb_files:
+#      print grain[0]
     for grain in  gb_files:
-      grain_energy_dict = {}
       path = grain[0]
       with open(grain[1],'r') as f:
         j_dict = json.load(f)
-      grain_energy_dict['orientation_axis'] = j_dict['orientation_axis']
-      grain_energy_dict['angle']            = j_dict['angle']*(180./np.pi)
-      grain_energy_dict['boundary_plane']   = j_dict['boundary_plane']
-      grain_energy_dict['energies']         = []
+
       subgb_files                           = []
       self.find_gb_json(path, subgb_files, 'subgb.json')
+      calc_types = []
+#Find all calculation types associated with this grain
       for subgrain in subgb_files:
         with open(subgrain[1],'r') as f:
           try:
@@ -264,19 +278,45 @@ class GBAnalysis():
           except:
             print 'Corrupted', subgrain[1]
         try:
+          if sub_dict['param_file'] not in calc_types:
+            calc_types.append(sub_dict['param_file'])
+        except KeyError:
+          #print subgrain[0], 'badly formed'
+          pass
+#Initialize a dictionary of dictionaries for each calc type:
+      gb_dict = {}
+      for calc in calc_types:
+        tmp_dict = {}
+        tmp_dict['orientation_axis'] = j_dict['orientation_axis']
+        tmp_dict['angle']            = j_dict['angle']*(180./np.pi)
+        tmp_dict['boundary_plane']   = j_dict['boundary_plane']
+        tmp_dict['energies']         = []
+        tmp_dict['param_file']       = calc
+        gb_dict[calc] = tmp_dict
+
+      for subgrain in subgb_files:
+        with open(subgrain[1],'r') as f:
+          try:
+            sub_dict = json.load(f)
+          except:
+            #print 'Corrupted', subgrain[1]
+            pass
+        try:
           if 'iron_mish' in sub_dict['param_file']:
-            gb_ener = 16.02*((sub_dict['E_gb']-(-4.2731*float(sub_dict['n_at'])))/(2*sub_dict['A']))
+            gb_ener = 16.02*((sub_dict['E_gb']-(ener_per_atom['iron_mish.xml']*float(sub_dict['n_at'])))/(2*sub_dict['A']))
           elif 'Fe_Mendelev' in sub_dict['param_file']:  
-            gb_ener = 16.02*((sub_dict['E_gb']-(-4.11784*float(sub_dict['n_at'])))/(2*sub_dict['A']))
+            gb_ener = 16.02*((sub_dict['E_gb']-(ener_per_atom['Fe_Mendelev.xml']*float(sub_dict['n_at'])))/(2*sub_dict['A']))
           else:
             print 'Ground state energy not know for this potential!'
-          grain_energy_dict['energies'].append(gb_ener)
-          grain_energy_dict['param_file']  = sub_dict['param_file']
-          if 'Fe_Mendelev' in sub_dict['param_file']:
-            print subgrain[1]
+          gb_dict[sub_dict['param_file']]['energies'].append(gb_ener)
+#to debug grain:
+#          if subgrain[1].split('/')[-2] == '0016738320_v6bxv14_tv0.0bxv0.0_d2.0z':
         except KeyError:
+          #print 'Key Error', subgrain[1]
           pass
-      grain_energies.append(grain_energy_dict)
+      for gdict in gb_dict.values():
+        grain_energies.append(gdict)
+
     return grain_energies
 
 if __name__ == '__main__':
@@ -287,7 +327,10 @@ if __name__ == '__main__':
   for gb in sorted(gb_list, key = lambda x: x['angle']):
     try:
 #      print gb['angle'], min([x for x in gb['energies'] if x > 0.]), gb['energies'][len(gb['energies'])/2], max(gb['energies'])
-      print gb['param_file'], gb['angle']
+      #if gb['param_file']=='iron_mish.xml':
+      #  print gb['param_file'], gb['angle'], min(gb['energies'])
+      if gb['param_file']=='Fe_Mendelev.xml':
+        print gb['param_file'], gb['angle'], gb['energies']
     except:
       pass
   print '180.0 0.0 0.0 0.0'

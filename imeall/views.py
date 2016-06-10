@@ -90,7 +90,7 @@ def analysis():
       min_en = min([x for x in gb['energies'] if x > 0.])
       max_en = max(gb['energies'])
       try:
-        gbdat.append({'param_file':gb['param_file'], 'or_axis':' '.join(map(str, gb['orientation_axis'])), 
+        gbdat.append({'param_file': gb['param_file'], 'or_axis':' '.join(map(str, gb['orientation_axis'])), 
                       'angle':gb['angle'], 'min_en':min_en, 
                       'max_en':max_en,
                       'bp':' '.join(map(str, map(int, gb['boundary_plane'])))})
@@ -153,11 +153,6 @@ def grain_boundary(url_path, gbid):
   with open(os.path.join(path, 'gb.json'),'r') as json_file:
     gb_info = json.load(json_file)
   stuff = []
-# really  what we want to do here is to 
-# walk through the subdirectories
-#  for thing in os.listdir(path):
-#    if os.path.isdir(os.path.join(path,thing)):
-#      stuff.append(thing) 
   tree = make_tree(path)
 # Get all the subdirectory json files so that
 # we can easily compare normalized grain boundary formation
@@ -198,7 +193,7 @@ def run_ovito(target_dir, filename):
 #This route serves images from the grain boundary directory.
 @app.route('/img/<path:filename>/<gbid>/<img_type>')
 def serve_img(filename, gbid, img_type):
-#should consider security stuff here as well... flas.safe_join()
+#should consider security stuff here as well... flask.safe_join()
   print 'FILENAME', filename
   print 'GBID', gbid
   img  = os.path.join(filename,'{0}.png'.format(gbid))
@@ -206,8 +201,8 @@ def serve_img(filename, gbid, img_type):
     img  = app.config['GRAIN_DATABASE']+'/'+filename+'/{0}.png'.format(gbid)
   elif img_type =='csl':
     img  = app.config['GRAIN_DATABASE']+'/'+filename+'/csl_{0}.svg'.format(gbid)
-#Might want to use flask.send_from_directory() here.
   return send_file(img)
+
 
 @app.route('/textfile/<gbid>/<path:filename>')
 def serve_file(gbid, filename):

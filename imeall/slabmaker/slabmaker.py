@@ -85,6 +85,7 @@ def build_tilt_sym_gb(gbid='', bp = [3,3,2], v=[1,1,0],
   grain_a = BodyCenteredCubic(directions = [v, bpxv, bp],
                               size = (1,1,1), symbol='Fe', pbc=(1,1,1),
                               latticeconstant = 2.83)
+
   n_grain_unit = len(grain_a)
 # For the Chamati EAM potential the cutoff radius is 5.67 A
 # We want to separate the grain boundaries by at least this much, A safe
@@ -92,8 +93,8 @@ def build_tilt_sym_gb(gbid='', bp = [3,3,2], v=[1,1,0],
   n = 2
   while(grain_a.get_cell()[2,2]< 12.0 and n < 10):
     grain_a = BodyCenteredCubic(directions = [v, bpxv, bp],
-                           size = (1,1,n), symbol='Fe', pbc=(1,1,1),
-                           latticeconstant = 2.83)
+                              size = (1,1,n), symbol='Fe', pbc=(1,1,1),
+                              latticeconstant = 2.83)
     n += 1
   print '\t {0} repeats in z direction'.format(n)
   grain_b = grain_a.copy()
