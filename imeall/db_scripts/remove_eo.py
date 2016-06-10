@@ -1,6 +1,6 @@
 import os
 import sys
-from db_scripts.models import GBMaintenance 
+from models import GBMaintenance 
 
 gbm = GBMaintenance()
 for thing in os.listdir('./'):
