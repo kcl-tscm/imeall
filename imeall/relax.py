@@ -20,30 +20,35 @@ def converged(grain, smax, fmax):
     return True
   return False
 
-
 with open('subgb.json', 'r') as outfile:
   j_dict = json.load(outfile)
 
+#Rescaled to 2.83 which is magic number for the grain boundary canonical case.
+POT_DIR = '/users/k1511981/pymodules/imeall/imeall/potentials' 
 try: 
   param_file = j_dict['param_file']
   if param_file == 'iron_mish.xml':
-    eam_pot = '/users/k1511981/sharedscratch/grain_boundaries/iron_mish.xml'
+    eam_pot = os.path.join(POT_DIR, 'iron_mish.xml')
+    r_scale = 1.0129007626
   elif param_file == 'Fe_Mendelev.xml':
-    eam_pot = '/users/k1511981/sharedscratch/grain_boundaries/Fe_Mendelev.xml'
+    eam_pot = os.path.join(POT_DIR, 'Fe_Mendelev.xml')
+    r_scale = 1.00894848312
+  elif param_file == 'Fe_Ackland.xml':
+    eam_pot = os.path.join(POT_DIR,'Fe_Ackland.xml')
+    r_scale = 1.00894185389
+  elif param_file == 'Fe_Dudarev.xml':
+    eam_pot = os.path.join(POT_DIR,'Fe_Dudarev.xml')
+    r_scale = 1.01279093417 
 except KeyError:
-  print 'No EAM pot specified defaulting to Mendelev'
-  eam_pot = '/users/k1511981/sharedscratch/grain_boundaries/Fe_Mendelev.xml'
+  print 'No EAM pot relax failed!'
+  sys.exit()
 
-eam_pot = '/users/k1511981/sharedscratch/grain_boundaries/Fe_Mendelev.xml'
-
-print eam_pot
-
+print 'Using: ', eam_pot
 pot_file = eam_pot.split('/')[-1]
 grain   = Atoms('{0}'.format(sys.argv[1]))
-pot     = Potential('IP EAM_ErcolAd', param_filename=eam_pot)
+pot     = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=eam_pot)
 grain.set_calculator(pot)
 E_gb_init   = grain.get_potential_energy()
-
 alpha       = E_gb_init
 out         = AtomsWriter('{0}'.format('{0}_traj.xyz'.format(sys.argv[1][:-4])))
 gbid        = (sys.argv[1][:-4]).split('/')[-1]

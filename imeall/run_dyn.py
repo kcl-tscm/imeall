@@ -423,6 +423,8 @@ if __name__=='__main__':
     param_file = 'Fe_Mendelev.xml'
   elif calc_type == 'EAM_Ack':
     param_file = 'Fe_Ackland.xml'
+  elif calc_type == 'EAM_Dud':
+    param_file = 'Fe_Dudarev.xml'
   else:
     print 'No available potential corresponds to this calculation type.'
     sys.exit()
