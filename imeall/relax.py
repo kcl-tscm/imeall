@@ -20,7 +20,6 @@ def converged(grain, smax, fmax):
     return True
   return False
 
-
 with open('subgb.json', 'r') as outfile:
   j_dict = json.load(outfile)
 
@@ -48,8 +47,10 @@ alpha       = E_gb_init
 out         = AtomsWriter('{0}'.format('{0}_traj.xyz'.format(sys.argv[1][:-4])))
 gbid        = (sys.argv[1][:-4]).split('/')[-1]
 strain_mask = [0,0,1,0,0,0]
+
 ucf         = UnitCellFilter(grain, strain_mask)
 opt         = FIRE(grain)
+
 for i in range(32):
   opt.run(fmax=0.008, steps=32)
   out.write(grain)
