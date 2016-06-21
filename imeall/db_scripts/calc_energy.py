@@ -11,7 +11,10 @@ class PotentialParameters(object):
 
   def gs_ener_per_atom(self):
     eperat = {'Fe_Mendelev.xml' :-4.12243503431,
-              'iron_mish.xml'   :-4.28000356875}
+              'Fe_Mendelev_Untruncated.xml' :-4.12243499408,
+              'Fe_Dudarev.xml'  : -4.31608690638,
+              'iron_mish.xml'   :-4.28000356875,
+              'Fe_Ackland.xml'  : -4.01298226805}
     return eperat
 
 def calc_e_gb(at, E_bulk):
@@ -34,17 +37,47 @@ at = AtomsReader(sys.argv[1])
 at = at[-1]
 
 pot_string = 'iron_mish.xml'
-print pot_string
+print ''
+print '\t POTENTIAL: ', pot_string
+print ''
 eam_pot = os.path.join(POT_DIR, pot_string)
 pot_1   = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(1.0129007626), param_filename=eam_pot)
 at.set_calculator(pot_1)
 calc_e_gb(at, ener_bulk[pot_string])
 
 pot_string = 'Fe_Mendelev.xml'
-print pot_string
+print ''
+print 'POTENTIAL: ', pot_string
+print ''
 eam_pot = os.path.join(POT_DIR, pot_string)
 pot_2   = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(1.00894848312), param_filename=eam_pot)
 at.set_calculator(pot_2)
 calc_e_gb(at, ener_bulk[pot_string])
 
+pot_string = 'Fe_Mendelev_Untruncated.xml'
+print ''
+print '\t POTENTIAL:', pot_string
+print ''
+eam_pot = os.path.join(POT_DIR, pot_string)
+pot_2   = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(1.00894848312), param_filename=eam_pot)
+at.set_calculator(pot_2)
+calc_e_gb(at, ener_bulk[pot_string])
+
+pot_string = 'Fe_Ackland.xml'
+print ''
+print '\t POTENTIAL: ', pot_string
+print ''
+eam_pot = os.path.join(POT_DIR, pot_string)
+pot_2   = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(1.00894185389), param_filename=eam_pot)
+at.set_calculator(pot_2)
+calc_e_gb(at, ener_bulk[pot_string])
+
+pot_string = 'Fe_Dudarev.xml'
+print ''
+print 'POTENTIAL:', pot_string
+print ''
+eam_pot = os.path.join(POT_DIR, pot_string)
+pot_2   = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(1.00894185389), param_filename=eam_pot)
+at.set_calculator(pot_2)
+calc_e_gb(at, ener_bulk[pot_string])
 

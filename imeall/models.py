@@ -16,11 +16,13 @@ from  flask import    url_for, abort, render_template, flash
 class PotentialParameters(object):
   def __init__(self):
     self.name = 'Potential Parameters'
-
   def gs_ener_per_atom(self): 
     eperat = {'Fe_Mendelev.xml' : -4.12243503431,
               'iron_mish.xml'   : -4.28000356875,
-              'Fe_Ackland.xml'  : -4.01298226805 }
+              'Fe_Ackland.xml'  : -4.01298226805,
+              'Fe_Dudarev.xml'  : -4.31608690638,
+              'dft_vasp_pbe'    : -8.238035
+              }
     return eperat
 
 class Job(object):
@@ -28,7 +30,6 @@ class Job(object):
     self.pbs_file = ''
     self.job_dir  = ''
     self.job_id   = ''
-
   def sub_pbs(self, job_dir, exclude='DFT', suffix='v6bxv2z', regex=None):
     ''' 
     Given an explicit suffix, or a regex this routine recurses through
@@ -57,7 +58,6 @@ class Job(object):
       dir = os.path.join(job_dir, dir)
       if regex == None:
         if os.path.isdir(dir) and dir != 'DFT':
-          print dir
           self.sub_pbs(dir, suffix=suffix, regex=regex)
         elif dir.split('_')[-1] == suffix:
           pbs_dir = os.path.join(sub_dir, dir)
@@ -79,12 +79,12 @@ class Job(object):
 
 class GBMaintenance(object):
   '''
-   Collection of maintenance routines for the GB database.
-   Possible usages: regenerate all the csl lattices in the database
-   or a subdirectory of the database, take a new grain boundary profile 
-   picture for multiple directories, update the gb json information if a
-   new grain boundary property is desired. This really is 
-   turning into facebook for grain boundaries!
+    Collection of maintenance routines for the GB database.
+    Possible usages: regenerate all the csl lattices in the database
+    or a subdirectory of the database, take a new grain boundary profile 
+    picture for multiple directories, update the gb json information if a
+    new grain boundary property is desired. This really is 
+    turning into facebook for grain boundaries!
   '''
   def __init__(self):
     self.materials = ['alphaFe']
@@ -255,18 +255,13 @@ class GBAnalysis():
 #   so no key should be overwritten.
     pot_param     = PotentialParameters()
     ener_per_atom = pot_param.gs_ener_per_atom()
-
     gb_files = []
     self.find_gb_json('/Users/lambert/pymodules/imeall/imeall/grain_boundaries/alphaFe/{0}/'.format(or_axis), gb_files, 'gb.json')
     grain_energies = []
-#   print 'Searching the following directories'
-#    for grain in gb_files:
-#      print grain[0]
     for grain in  gb_files:
       path = grain[0]
       with open(grain[1],'r') as f:
         j_dict = json.load(f)
-
       subgb_files                           = []
       self.find_gb_json(path, subgb_files, 'subgb.json')
       calc_types = []
@@ -276,7 +271,8 @@ class GBAnalysis():
           try:
             sub_dict = json.load(f)
           except:
-            print 'Corrupted', subgrain[1]
+            #print 'Corrupted', subgrain[1]
+            pass
         try:
           if sub_dict['param_file'] not in calc_types:
             calc_types.append(sub_dict['param_file'])
@@ -298,25 +294,31 @@ class GBAnalysis():
         with open(subgrain[1],'r') as f:
           try:
             sub_dict = json.load(f)
+            try:
+              append_energy = True
+              if 'iron_mish.xml' == sub_dict['param_file']:
+                gb_ener = 16.02*((sub_dict['E_gb']-(ener_per_atom['iron_mish.xml']*float(sub_dict['n_at'])))/(2*sub_dict['A']))
+              elif 'Fe_Mendelev.xml' == sub_dict['param_file']:  
+                gb_ener = 16.02*((sub_dict['E_gb']-(ener_per_atom['Fe_Mendelev.xml']*float(sub_dict['n_at'])))/(2*sub_dict['A']))
+              elif 'Fe_Ackland.xml' == sub_dict['param_file']:  
+                gb_ener = 16.02*((sub_dict['E_gb']-(ener_per_atom['Fe_Ackland.xml']*float(sub_dict['n_at'])))/(2*sub_dict['A']))
+              elif 'Fe_Dudarev.xml' == sub_dict['param_file']:  
+                gb_ener = 16.02*((sub_dict['E_gb']-(ener_per_atom['Fe_Dudarev.xml']*float(sub_dict['n_at'])))/(2*sub_dict['A']))
+              elif 'dft_vasp_pbe' == sub_dict['param_file']:  
+                print subgrain
+                gb_ener = 16.02*((sub_dict['E_gb']-(ener_per_atom['dft_vasp_pbe']*float(sub_dict['n_at'])))/(2*sub_dict['A']))
+              else:
+                append_energy = False
+                print 'Ground state energy not know for this potential!'
+              if append_energy == True:
+                gb_dict[sub_dict['param_file']]['energies'].append(gb_ener)
+            except KeyError:
+              #print subgrain[1], 'Missing Key'
+              pass
           except:
-            #print 'Corrupted', subgrain[1]
             pass
-        try:
-          if 'iron_mish' in sub_dict['param_file']:
-            gb_ener = 16.02*((sub_dict['E_gb']-(ener_per_atom['iron_mish.xml']*float(sub_dict['n_at'])))/(2*sub_dict['A']))
-          elif 'Fe_Mendelev' in sub_dict['param_file']:  
-            gb_ener = 16.02*((sub_dict['E_gb']-(ener_per_atom['Fe_Mendelev.xml']*float(sub_dict['n_at'])))/(2*sub_dict['A']))
-          else:
-            print 'Ground state energy not know for this potential!'
-          gb_dict[sub_dict['param_file']]['energies'].append(gb_ener)
-#to debug grain:
-#          if subgrain[1].split('/')[-2] == '0016738320_v6bxv14_tv0.0bxv0.0_d2.0z':
-        except KeyError:
-          #print 'Key Error', subgrain[1]
-          pass
       for gdict in gb_dict.values():
         grain_energies.append(gdict)
-
     return grain_energies
 
 if __name__ == '__main__':
@@ -326,10 +328,7 @@ if __name__ == '__main__':
   print '0.0 0.0 0.0 0.0'
   for gb in sorted(gb_list, key = lambda x: x['angle']):
     try:
-#      print gb['angle'], min([x for x in gb['energies'] if x > 0.]), gb['energies'][len(gb['energies'])/2], max(gb['energies'])
-      #if gb['param_file']=='iron_mish.xml':
-      #  print gb['param_file'], gb['angle'], min(gb['energies'])
-      if gb['param_file']=='Fe_Mendelev.xml':
+      if gb['param_file']=='dft_vasp_pbe':
         print gb['param_file'], gb['angle'], gb['energies']
     except:
       pass

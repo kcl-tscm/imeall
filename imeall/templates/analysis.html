@@ -20,21 +20,25 @@ path {
   text-anchor: middle;
 }
 </style>
+
 <h2> Grain Boundary Analysis </h2>
 <h3> Energy-Orientation Angle Relationship </h3>
 <h3> <a href='?or_axis=001'> 001 </a> </h3> 
 <h3> <a href='?or_axis=110'> 110 </a> </h3> 
 <h3> <a href='?or_axis=111'> 111 </a> </h3>
+
 <script>
 // http://bl.ocks.org/d3noob/b3ff6ae1c120eea654b5
 // Set dimensions of canvas
 $( document ).ready(function() {
 var margin = {top:30, right: 100, bottom: 80, left: 50},
-    width  = 960 - margin.left - margin.right,
+    width  = 800 - margin.left - margin.right,
     height = 500 - margin.top - margin.bottom;
+
 // Set the DISPLAY ranges
 var x = d3.scale.linear().range([0, width]);
 var y = d3.scale.linear().range([height, 0]);
+
 // Set the axes
 var xAxis = d3.svg.axis().scale(x)
     .orient("bottom").ticks(10);
@@ -42,7 +46,7 @@ var yAxis = d3.svg.axis().scale(y)
     .orient("left").ticks(30);
 
 // Adds the svg canvas
-var svg = d3.select("body")
+var svg = d3.select(".page")
     .append("svg")
     .attr("width",  width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom)
@@ -50,7 +54,7 @@ var svg = d3.select("body")
     .attr("transform",
           "translate(" + margin.left + "," + margin.top + ")");
 
-var tooltip = d3.select("body").append("div")
+var tooltip = d3.select(".page").append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);
 
@@ -60,6 +64,7 @@ x.domain(d3.extent(data, function(d) { return d.angle; }));
 y.domain(d3.extent(data, function(d) { return d.min_en;}));
 
 var valueline = d3.svg.line()
+    .interpolate("cardinal")
     .x(function(d) { return x(d.angle); })
     .y(function(d) { return y(d.min_en); });
 
@@ -87,23 +92,22 @@ console.log('Fe_Mendelev.xml'.replace(/\./,''))
 var color = d3.scale.category10()
 
 dataByPot.forEach(function(d,i){
-
-//Draw lines
   svg.append("path")
     .attr("class", "line")
-    .attr("id", 'tag'+d.key.replace(/\./,''))
     .attr("d", valueline(d.values))
-    .style("stroke", function(){return d.color = color(d.key)})
+    .attr("id", 'tag'+d.key.replace(/[\.\+,\s+\/]/g,''))
+    .style("stroke", function(){
+          return d.color = color(d.key)})
 
-//Draw dots with tooltip information
   svg.selectAll("dot")
     .data(d.values)
-	  .enter().append("circle")
+	  .enter()
+      .append("circle")
+      .attr("id", 'tag'+d.key.replace(/[\.\+,\s+\/]/g,''))
 	    .attr("class", "dot")
-      .attr("id", 'tagdot'+d.key.replace(/\./,''))
-	    .attr("r", 3.5)
 	    .attr("cx", (d.values, function(d) {return x(d.angle); }))
 	    .attr("cy", (d.values, function(d) {return y(d.min_en); }))
+	    .attr("r", 3.5)
       .style("fill", function(){
         return d.color = color(d.key) })
 	    .on("mouseover", function(d){
@@ -120,7 +124,6 @@ dataByPot.forEach(function(d,i){
 	        .style("opacity",0)
       });
 
-
 //Add legend/add and remove energetics.
   svg.append("text")
     .attr("x", width)
@@ -131,27 +134,41 @@ dataByPot.forEach(function(d,i){
     .on("click", function(){
       var active = d.active ? false: true;
       newOpacity = active ? 0:1;
-      d3.select("#tag"+d.key.replace(/\./,''))
-        .transition().duration(100)
+      d3.selectAll("#tag"+d.key.replace(/[\.\+,\s+\/]/g, ''))
+        .transition().duration(250)
         .style("opacity", newOpacity);
-      d3.select("#tagdot"+d.key.replace(/\./,''))
-        .transition().duration(100)
-        .style("opacity", newOpacity);
-
       d.active = active;
       })
     .text(d.key);
   });
-
 svg.append("g")
   .attr("class", "x axis")
   .attr("transform", "translate(0," + height + ")")
   .call(xAxis);
-//
 svg.append("g")
   .attr("class", "y axis")
   .call(yAxis)
   });
 </script>
-{% endblock body %}
 
+<h2> EAM Potentials </h2>
+<p><button id="potentialbutton"> Show/Hide Potentials</button></p>
+<script>	
+	$("#potentialbutton").click(function() {
+		$("#potentials").toggle();
+	});
+</script>
+<style>
+#potentials {display: none;}
+</style>
+<div id="potentials">
+  <h3> Mendelev Potential </h3>
+  <p> <img src = "{{url_for('eam_pot', filename='Fe_Mendelev.xml')}}" alt="EAM Potential" width=500 ></p>
+  <h3> Ackland Potential </h3>
+  <p> <img src = "{{url_for('eam_pot', filename='Fe_Ackland.xml')}}" alt="EAM Potential" width=500 ></p>
+  <h3> Dudarev Potential </h3>
+  <p> <img src = "{{url_for('eam_pot', filename='Fe_Dudarev.xml')}}" alt="EAM Potential" width=500 ></p>
+  <h3> Mishin Potential </h3>
+  <p> <img src = "{{url_for('eam_pot', filename='iron_mish.xml')}}" alt="EAM Potential" width=500 ></p>
+</div>
+{% endblock body %}

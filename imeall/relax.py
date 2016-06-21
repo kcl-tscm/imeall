@@ -24,7 +24,10 @@ with open('subgb.json', 'r') as outfile:
   j_dict = json.load(outfile)
 
 #Rescaled to 2.83 which is magic number for the grain boundary canonical case.
+#Ada
 POT_DIR = '/users/k1511981/pymodules/imeall/imeall/potentials' 
+#Retina
+POT_DIR = '/Users/lambert/pymodules/imeall/imeall/potentials' 
 try: 
   param_file = j_dict['param_file']
   if param_file == 'iron_mish.xml':
@@ -55,6 +58,7 @@ gbid        = (sys.argv[1][:-4]).split('/')[-1]
 strain_mask = [0,0,1,0,0,0]
 ucf         = UnitCellFilter(grain, strain_mask)
 opt         = FIRE(ucf)
+
 for i in range(32):
   opt.run(fmax=0.008, steps=72)
   out.write(grain)
