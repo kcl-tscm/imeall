@@ -3,7 +3,7 @@ import os
 import re
 import json
 from flask   import Flask, request, session, g, redirect, url_for, abort,\
-                    render_template, flash, send_file, jsonify
+                    render_template, flash, send_file, jsonify, make_response
 from imeall  import app
 from imeall.models import GBAnalysis
 # Unique key is BBBAAAACCC
@@ -28,14 +28,11 @@ calculations['0000000000'] = {'VASP-DFT-PBE' : {'E0':-8.23807, 'DFT-mag': 2.2238
 calculations['1107053111'] = {'VASP-DFT-PBE' : {'E0':-406.154623782, 'nat':96, 'A': 27.7436434255}}
 calculations['1105048332'] = {'IP-EAM-MISH'  : {'E0':-382.847802363, 'nat':90, 'A':18.7825353894 }}
 calculations['1106000112'] = {'IP-EAM-MISH'  : {'E0':-196.171, 'nat':46, 'A': 9.80885920049}}
-
-
 #files to display in browser:
 valid_extensions = ['xyz', 'json']
 vasp_files       = ['IBZKPT', 'INCAR', 'CHG', 'CHGCAR', 'DOSCAR', 'EIGENVAL', 
                     'KPOINTS', 'OSZICAR', 'OUTCAR', 'PCDAT', 'POSCAR',
                     'POTCAR', 'WAVECAR', 'XDATCAR']
-
 # Currently the database connection is just a path name to our grain boundary
 # database stored as a file tree. I don't necessarily see any reason not to exploit
 # the existing filesystem and tools associated for searching. Why?
@@ -81,10 +78,8 @@ def analysis():
   or_axis = request.args.get('or_axis', '001')
   analyze = GBAnalysis()
   gb_list = analyze.extract_energies(or_axis=or_axis)
-  gbdat = []
+  gbdat   = []
 # Creates list of grain boundaries ordered by angle.
-  gbdat.append({'angle':0.0, 'param_file':'iron_mish.xml', 'min_en':0.0, 'max_en':0.0, 'or_axis':'000','bp':'000'})
-  gbdat.append({'angle':0.0, 'param_file':'Fe_Mendelev.xml', 'min_en':0.0, 'max_en':0.0, 'or_axis':'000','bp':'000'})
   for gb in sorted(gb_list, key = lambda x: x['angle']):
     try:
       min_en = min([x for x in gb['energies'] if x > 0.])
@@ -98,9 +93,6 @@ def analysis():
         pass
     except ValueError:
       pass
-# Append zeros of energy to the beginning and end of the grainBoundary Range:
-  gbdat.append({'angle': 180.0,'param_file':'iron_mish.xml', 'min_en':0.0, 'max_en':0.0, 'or_axis':'000','bp':'000'})
-  gbdat.append({'angle': 180.0, 'param_file':'Fe_Mendelev.xml', 'min_en':0.0, 'max_en':0.0, 'or_axis':'000','bp':'000'})
   gbdat = sorted(gbdat, key=lambda x: x['angle'])
   return render_template('analysis.html', gbdat=json.dumps(gbdat))
 
@@ -196,13 +188,15 @@ def serve_img(filename, gbid, img_type):
 #should consider security stuff here as well... flask.safe_join()
   print 'FILENAME', filename
   print 'GBID', gbid
-  img  = os.path.join(filename,'{0}.png'.format(gbid))
+  img = os.path.join(filename,'{0}.png'.format(gbid))
   if img_type =='struct':
     img  = app.config['GRAIN_DATABASE']+'/'+filename+'/{0}.png'.format(gbid)
   elif img_type =='csl':
     img  = app.config['GRAIN_DATABASE']+'/'+filename+'/csl_{0}.svg'.format(gbid)
+  elif img_type =='pot':
+    pot_dir = '/Users/lambert/pymodules/imeall/imeall/potentials'
+    img     = pot_dir+'/'+filename
   return send_file(img)
-
 
 @app.route('/textfile/<gbid>/<path:filename>')
 def serve_file(gbid, filename):
@@ -234,3 +228,54 @@ def serve_file(gbid, filename):
   else:
     text = text.split('\n')
     return render_template('text.html', text=text)
+
+@app.route('/eam_pot/<path:filename>')
+def eam_pot(filename):
+#found this gist at https://gist.github.com/wilsaj/862153
+  import random
+  import datetime
+  import StringIO
+  import xml.etree.ElementTree as ET
+  import matplotlib.pyplot as plt
+
+  from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+  from matplotlib.figure import Figure
+  from matplotlib.dates import DateFormatter
+  
+
+  fig = Figure()
+  ax = fig.add_subplot(111)
+  FVR = []
+  pot_dir  = '/Users/lambert/pymodules/imeall/imeall/potentials'
+  pot_xml  = pot_dir+'/'+filename
+  with open(pot_xml, 'r') as f:
+    tree = ET.parse(f)
+  root = tree.getroot()
+  R = [float(x.attrib['y']) for x in root[0][0]]
+  F = [float(x.attrib['y']) for x in root[0][1]]
+  V = [float(x.attrib['y']) for x in root[1][0]]
+  xpts = []
+  for x in root.findall('./per_type_data/spline_rho/'):
+    xpts.append(x.attrib['r'])
+  rho = [float(x.attrib['r']) for x in root[0][1]]
+  fig, ax = plt.subplots(3,1)
+  ax[0].set_ylim([-1,3])
+  ax[0].set_xlim([1.,5.5])
+  ax[1].set_xlim([1.,5.5])
+  ax[0].set_ylabel('Density')
+  ax[0].plot(xpts, R)
+  ax[1].set_ylim([-5,50])
+  ax[1].set_ylabel('V')
+  ax[1].set_xlabel('Radius (A)')
+  ax[1].plot(xpts,V)
+  ax[2].set_ylim([-50,20])
+  ax[2].set_ylabel('Embedding Term')
+  ax[2].set_xlabel('Density (arb. units)')
+  ax[2].plot(rho, F)
+  canvas     = FigureCanvas(fig)
+  png_output = StringIO.StringIO()
+  canvas.print_png(png_output)
+  response   = make_response(png_output.getvalue())
+  response.headers['Content-Type']= 'image/png'
+  return response
+

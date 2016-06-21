@@ -84,5 +84,5 @@ find a double periodic function:
 	http://reference.wolfram.com/language/ref/EllipticTheta.html
 
 Interestingly there are 4 Theta functions suggests they might be useful
-for quaternion multipliation:
+for quaternion multiplication:
 	q = (\Theta_{1}, \Theta_{2}, \Theta_{3}, \Theta_{4})

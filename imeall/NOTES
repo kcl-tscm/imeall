@@ -1,12 +1,7 @@
 why would trying to access the flask
-
 g.gbid give me this:
-
 OSError: [Errno 2] No such file or directory:
 '/Users/lambert/pymodules/imeall/imeall/./grain_boundaries/apple-touch-icon.png'
-
-
-
 Dealing with routing errors. If you are appending paths to a url (or
 you want the paths to be reflected in the url Flask deals with trailing
 flashes in a particular way. From the Docs:
@@ -17,11 +12,42 @@ flashes in a particular way. From the Docs:
 2.) If a rule does not end with a trailing slash and the user requests the page
     with a trailing slash, a 404 not found is raised.
 
-
 On the flask example page it mentioned reddits link tricks so that you could 
-concatenate two views in the url.
+concatenate two views in the url. Print app.url_map lists all the known routes.
+app.url_map is an instance of werkzeug.routing.Map. This object has a method
+iter_rules so that you can iterate over all the rules.
+
+app.url_map.iter_rules()
 
 
+Serving Files with Flask:
+  Stack Overlow has a big list of questions about serving images from a database
+using Flask. flas return image created from database? etc. Many have their
+images stored in a mongoDB type database. I think the current setup of having a
+directory filesystem database transversed using os in a tree like fashion means
+the migration to MongoDB will be very straightforward. That remains to be
+tested anyway the general pattern seems to be:
+
+  @app.route('/img/<img_name>.png'')
+  def img_server(img_name):
+    img = db.Get_Thing_From_Database()
+    return send_file(img, mimetype='image/png')
+
+That's the pattern I'm going to exploit anyway,
+Also chec out discussion here for ideas on how flask, sqlalchemy, flas-restless
+and angular.js all play together:
+  https://stackoverflow.com/questions/11522151/typical-angular-js-workflow-and-project-structure-with-python-flask
+
+Also there is a flaskplotlib.py gist which shows how to bottle the output of
+matplotlib and return the bottled output as a response.
+
+Another pattern is
+define DB_FOLDER
+@app.route('/uploads/<path:filename>')
+def download_file(filename):
+  return send_from_directory(DB_FOLDER, filename, as_attahment=True
+
+Then attach via {{ url_for('download_file', filename='dogs,jpg') }}
+This follows the uploading files tutorial on flask fairly closely.
 
 
-print app.url_map lists all the routes
