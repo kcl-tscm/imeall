@@ -54,9 +54,9 @@ out         = AtomsWriter('{0}'.format('{0}_traj.xyz'.format(sys.argv[1][:-4])))
 gbid        = (sys.argv[1][:-4]).split('/')[-1]
 strain_mask = [0,0,1,0,0,0]
 ucf         = UnitCellFilter(grain, strain_mask)
-opt         = FIRE(grain)
+opt         = FIRE(ucf)
 for i in range(32):
-  opt.run(fmax=0.008, steps=32)
+  opt.run(fmax=0.008, steps=72)
   out.write(grain)
   if max(np.sum(grain.get_forces()**2, axis=1)**0.5) < 0.008:
     break

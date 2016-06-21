@@ -121,8 +121,9 @@ class GBMaintenance(object):
     ''' 
         Removes xyz files according to a particular regex
         if test is true it only prints the files to be removed.
+        1107053112_v6bxv2_tv0.0bxv0.0_d2.3z_traj.xyz
     '''
-    xyz_regex = re.compile(r'.*?tv[.0-9]+bxv[.0-9]+_d[.0-9]+z.xyz.*?')
+    xyz_regex = re.compile(r'.*?tv[.0-9]+bxv[.0-9]+_d[.0-9]+z_traj.xyz[.*?]*')
     lst = os.listdir(path)
     for filename in lst:
       filename = os.path.join(path, filename)
