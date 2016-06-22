@@ -259,7 +259,7 @@ def eam_pot(filename):
     xpts.append(x.attrib['r'])
   rho = [float(x.attrib['r']) for x in root[0][1]]
   fig, ax = plt.subplots(3,1)
-  ax[0].set_ylim([-1,3])
+  ax[0].set_ylim([-0.5,5])
   ax[0].set_xlim([1.,5.5])
   ax[1].set_xlim([1.,5.5])
   ax[0].set_ylabel('Density')

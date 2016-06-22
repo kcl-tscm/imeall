@@ -42,6 +42,7 @@ var y = d3.scale.linear().range([height, 0]);
 // Set the axes
 var xAxis = d3.svg.axis().scale(x)
     .orient("bottom").ticks(10);
+
 var yAxis = d3.svg.axis().scale(y)
     .orient("left").ticks(30);
 
@@ -58,15 +59,16 @@ var tooltip = d3.select(".page").append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);
 
+//DATA
 var data = jQuery.parseJSON('{{ gbdat|safe }}');
-
-x.domain(d3.extent(data, function(d) { return d.angle; }));
-y.domain(d3.extent(data, function(d) { return d.min_en;}));
 
 var valueline = d3.svg.line()
     .interpolate("cardinal")
     .x(function(d) { return x(d.angle); })
     .y(function(d) { return y(d.min_en); });
+
+x.domain(d3.extent(data, function(d) { return d.angle;  }));
+y.domain(d3.extent(data, function(d) { return d.min_en; }));
 
 svg.append("text")
   .attr("x", width/2)
@@ -84,10 +86,6 @@ svg.append("text")
 var dataByPot = d3.nest()
       .key(function(d) {return d.param_file})
       .entries(data);
-
-console.log(data)
-console.log(dataByPot)
-console.log('Fe_Mendelev.xml'.replace(/\./,''))
 
 var color = d3.scale.category10()
 
@@ -114,10 +112,10 @@ dataByPot.forEach(function(d,i){
 	      tooltip.transition()
 	        .duration(200)
 	        .style("opacity", 0.9)
-	      tooltip.html("<p> or: "+d.or_axis + "</p> <p> bp: "+d.bp+"</p>"
-                    +"<p> Angle: " + Math.round(d.angle*100)/100 + "</p>"
-                    +"<p> Energy: "+ Math.round(d.min_en*1000)/1000 + " J/m^2 </p>")
-	    })
+	        tooltip.html("<p> or: "+d.or_axis + "</p> <p> bp: "+d.bp+"</p>"
+                      +"<p> Angle: " + Math.round(d.angle*100)/100 + "</p>"
+                      +"<p> Energy: "+ Math.round(d.min_en*1000)/1000 + " J/m^2 </p>")
+	        })
 	    .on("mouseout", function(d) {
 	      tooltip.transition()
 	        .duration(500)
@@ -141,6 +139,51 @@ dataByPot.forEach(function(d,i){
       })
     .text(d.key);
   });
+
+// HL: Found this at http://bl.ocks.org/IPWright83/4047002  //
+// Now add some analysis.                                   //
+// Find mean and deviation for each data point on the plot. //
+
+var valuelinedev = d3.svg.line()
+    .interpolate("cardinal")
+    .x(function(d) { return x(d.angle); })
+    .y(function(d) { return y(d.mean); });
+
+var dataByAngle = d3.nest()
+      .key(function(d) {return d.angle})
+      .rollup(function(v){ return { "mean": d3.mean(v, function(d) {return d.min_en; }), 
+                                    "dev":  d3.deviation(v, function(d) {return d.min_en; })}; }) 
+      .entries(data);
+
+var isdefined = function(d){
+    if(d == undefined)
+      {return 0.1;}
+    else 
+      {return d;}
+    };
+
+var sortedAngles = [];
+dataByAngle.forEach(function(d)
+                      {return sortedAngles.push({"angle":parseFloat(d.key), "mean":d.values.mean, 
+                       "dev":isdefined(d.values.dev)});}) 
+sortedAngles.sort(function(a,b){return parseFloat(a.angle)-parseFloat(b.angle);})
+console.log(sortedAngles)
+svg.append("path")
+   .attr("class", "line")
+   .attr("d", valuelinedev(sortedAngles))
+   .style("stroke", "grey");
+
+var area = d3.svg.area()
+      .x(function(d)  {return x(d.angle); })
+      .y0(function(d) {return y(d.mean + d.dev/2.0)})
+      .y1(function(d) {return y(d.mean - d.dev/2.0)});
+
+svg.append("path")
+  .attr("class","area")
+  .attr("d", function(d){return area(sortedAngles)})
+  .style("fill-opacity", 0.25)
+  .style("fill", "grey" );
+
 svg.append("g")
   .attr("class", "x axis")
   .attr("transform", "translate(0," + height + ")")
@@ -150,6 +193,91 @@ svg.append("g")
   .call(yAxis)
   });
 </script>
+
+{# Group by angle. #}
+<script>
+$( document ).ready(function(){
+  var margin = {top:30, right: 100, bottom: 80, left: 50},
+      width  = 800 - margin.left - margin.right,
+      height = 500 - margin.top - margin.bottom;
+  var data = jQuery.parseJSON('{{ gbdat|safe }}');
+  var dataByAngle = d3.nest()
+      .key(function(d) {return d.angle})
+      .rollup(function(v){ return { "mean": d3.mean(v, function(d) {return d.min_en; }), 
+                                    "dev":  d3.deviation(v, function(d) {return d.min_en; })}; }) 
+      .entries(data);
+  var x = d3.scale.linear().range([0, width]);
+  var y = d3.scale.linear().range([height, 0]);
+  var xAxis = d3.svg.axis().scale(x)
+                .orient("bottom").ticks(10);
+  var yAxis = d3.svg.axis().scale(y)
+                .orient("left").ticks(30);
+  var svg = d3.select(".page")
+              .append("svg")
+              .attr("width",  width + margin.left + margin.right)
+              .attr("height", height + margin.top + margin.bottom)
+              .append("g")
+              .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+  var isdefined = function(d){
+        if(d == undefined)
+            {return 0.1;}
+        else 
+            {return d;}
+        };
+  var sortedAngles = [];
+
+  dataByAngle.forEach(function(d)
+                      {return sortedAngles.push({"angle":parseFloat(d.key), "mean":d.values.mean, 
+                       "dev":isdefined(d.values.dev)});}) 
+
+  sortedAngles.sort(function(a,b){return parseFloat(a.angle)-parseFloat(b.angle);})
+  x.domain(d3.extent(sortedAngles, function(d) { return parseFloat(d.angle);}));
+  y.domain(d3.extent(sortedAngles, function(d) { return d.mean;}));
+
+  var valueline = d3.svg.line()
+      .interpolate("cardinal")
+      .x(function(d) { return x(d.angle); })
+      .y(function(d) { return y(d.mean); });
+
+  svg.append("text")
+    .attr("x", width/2)
+    .attr("y", height+margin.top+15)
+    .text("Orientation Angle");
+
+  svg.append("text")
+       .attr("transform", "rotate(-90)")
+       .attr("y", -1.*margin.left)
+       .attr("x", -1.*(height/2))
+       .attr("dy", "1em")
+       .style("text-anchor", "middle")
+       .text("Mean Predicted Energy (J/m2)");
+
+  svg.append("path")
+     .attr("class", "line")
+     .attr("d", valueline(sortedAngles))
+     .style("stroke", "grey");
+
+// HL: Found this at http://bl.ocks.org/IPWright83/4047002
+  var area = d3.svg.area()
+        .x(function(d)  {return x(d.angle); })
+        .y0(function(d) {return y(d.mean + d.dev/2.0)})
+        .y1(function(d) {return y(d.mean - d.dev/2.0)});
+
+  svg.append("path")
+     .attr("class","area")
+     .attr("d", function(d){return area(sortedAngles)})
+     .style("fill-opacity", 0.25)
+     .style("fill", "grey" );
+  svg.append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + height + ")")
+    .call(xAxis);
+  svg.append("g")
+    .attr("class", "y axis")
+    .call(yAxis)
+  });
+</script>
+
 
 <h2> EAM Potentials </h2>
 <p><button id="potentialbutton"> Show/Hide Potentials</button></p>

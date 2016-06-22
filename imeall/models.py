@@ -271,7 +271,6 @@ class GBAnalysis():
           try:
             sub_dict = json.load(f)
           except:
-            #print 'Corrupted', subgrain[1]
             pass
         try:
           if sub_dict['param_file'] not in calc_types:
