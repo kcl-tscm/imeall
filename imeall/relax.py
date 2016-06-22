@@ -60,7 +60,7 @@ ucf         = UnitCellFilter(grain, strain_mask)
 opt         = FIRE(ucf)
 
 for i in range(32):
-  opt.run(fmax=0.008, steps=32)
+  opt.run(fmax=0.008, steps=72)
   out.write(grain)
   if max(np.sum(grain.get_forces()**2, axis=1)**0.5) < 0.008:
     break

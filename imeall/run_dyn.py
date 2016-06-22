@@ -401,8 +401,8 @@ if __name__=='__main__':
 # database
   parser = argparse.ArgumentParser()
   parser.add_argument("-p", "--prefix", help = "Subsequent commands will act on all \
-                                                subdirectories with first characters matching prefix.")
-  parser.add_argument("-ct", "--calc_type", help = "Name of calculation type TB, EAM, DFT, etc.")
+                                                subdirectories with first characters matching prefix.", required=True)
+  parser.add_argument("-ct", "--calc_type", help = "Name of calculation type TB, EAM, DFT, etc.", required=True)
   parser.add_argument("-q",  "--queue", help = "Jobs will be submitted to this queue.", default='smp.q')
   parser.add_argument("-t",  "--time",  help = "Time limit on jobs.", default='1:00:00')
   parser.add_argument("-rc", "--rcut", type=float, help = "Deletion criterion for nearest neighbour atoms.", default=2.0)
@@ -417,7 +417,7 @@ if __name__=='__main__':
 
 # Safest is to hard code the potential associated with 
 # each calculation type:
-  if calc_type == 'EAM':
+  if calc_type == 'EAM_Mish':
     param_file = 'iron_mish.xml'
   elif calc_type == 'EAM_Men':
     param_file = 'Fe_Mendelev.xml'
