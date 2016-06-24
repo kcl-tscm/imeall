@@ -324,12 +324,10 @@ if __name__ == '__main__':
   analyze =  GBAnalysis()
   or_axis = sys.argv[1]
   gb_list = analyze.extract_energies(or_axis=or_axis)
-  print '0.0 0.0 0.0 0.0'
   for gb in sorted(gb_list, key = lambda x: x['angle']):
     try:
-      if gb['param_file']=='dft_vasp_pbe':
+      if gb['param_file']=='Fe_Mendelev.xml':
         print gb['param_file'], gb['angle'], gb['energies']
     except:
       pass
-  print '180.0 0.0 0.0 0.0'
 

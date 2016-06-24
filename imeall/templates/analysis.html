@@ -65,8 +65,10 @@ $( document ).ready(function() {
         .x(function(d) { return x(d.angle); })
         .y(function(d) { return y(d.min_en); });
 
-  x.domain(d3.extent(data, function(d) { return d.angle;  }));
-  y.domain(d3.extent(data, function(d) { return d.min_en; }));
+//  y.domain(d3.extent(data, function(d) { return d.min_en; }));
+//  x.domain(d3.extent(data, function(d) { return d.angle;  }));
+  x.domain([0.0, d3.max(data, function(d) { return d.angle;  })]);
+  y.domain([0.0, d3.max(data, function(d) { return d.min_en;  })]);
 
   svg.append("text")
     .attr("x", width/2)
@@ -165,21 +167,22 @@ $( document ).ready(function() {
                                                  "dev":isdefined(d.values.dev)});}) 
   sortedAngles.sort(function(a,b){return parseFloat(a.angle)-parseFloat(b.angle);})
   console.log(sortedAngles)
-  svg.append("path")
+
+{#  svg.append("path")
     .attr("class", "line")
     .attr("d", valuelinedev(sortedAngles))
-    .style("stroke", "grey");
+    .style("stroke", "grey");              #}
 
   var area = d3.svg.area()
     .x(function(d)  {return x(d.angle); })
     .y0(function(d) {return y(d.mean + d.dev/2.0)})
     .y1(function(d) {return y(d.mean - d.dev/2.0)});
 
-  svg.append("path")
+{#  svg.append("path")
     .attr("class","area")
     .attr("d", function(d){return area(sortedAngles)})
     .style("fill-opacity", 0.25)
-    .style("fill", "grey" );
+    .style("fill", "grey" );                          #}
 
   svg.append("g")
     .attr("class", "x axis")
