@@ -19,6 +19,16 @@ path {
   font-weight: bold;
   text-anchor: middle;
 }
+.tooltip{
+  position: absolute;
+  text-align: center;
+  font:10px sans-serif;
+  width: 60 px;
+  height: 28 px;
+  padding: 2px;
+  background: lightsteelblue;
+}
+
 </style>
 
 <h2> Grain Boundary Analysis </h2>
@@ -55,9 +65,10 @@ $( document ).ready(function() {
       .attr("transform",
             "translate(" + margin.left + "," + margin.top + ")");
 
-  var tooltip = d3.select(".page").append("div")
-       .attr("class", "tooltip")
-       .style("opacity", 0);
+  var tooltip = d3.select(".page")
+        .append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 0);
 //DATA
   var data = jQuery.parseJSON('{{ gbdat|safe }}');
   var valueline = d3.svg.line()
@@ -100,24 +111,32 @@ $( document ).ready(function() {
   svg.selectAll("dot")
     .data(d.values)
 	  .enter()
-      .append("circle")
-      .attr("id", 'tag'+d.key.replace(/[\.\+,\s+\/]/g,''))
-	    .attr("class", "dot")
-	    .attr("cx", (d.values, function(d) {return x(d.angle); }))
-	    .attr("cy", (d.values, function(d) {return y(d.min_en); }))
-	    .attr("r", 3.5)
-      .style("fill", function(){return d.color = color(d.key) })
-	    .on("mouseover", function(d){
-	      tooltip.transition()
-	        .duration(200)
-	        .style("opacity", 0.9)
-	        tooltip.html("<p> or: "+d.or_axis + "</p> <p> bp: "+d.bp+"</p>"
+      .append("a")
+        .attr("xlink:href", function(d) {return d.url;}) 
+        .append("circle")
+          .attr("id", 'tag'+d.key.replace(/[\.\+,\s+\/]/g,''))
+	        .attr("class", "dot")
+	        .attr("cx", (d.values, function(d) {return x(d.angle); }))
+	        .attr("cy", (d.values, function(d) {return y(d.min_en); }))
+	        .attr("r", 3.5)
+          .style("fill", function(){return d.color = color(d.key) })
+	        .on("mouseover", function(d){
+	          tooltip
+              .transition()
+	            .duration(200)
+	            .style("opacity", 1.0)
+              .style("left", +"px")
+              .style("top",  +"px")
+              .style("left", 8.0*margin.left  +"px")
+              .style("top",  1.5*height +"px")
+	          tooltip
+              .html("<p> or: "+d.or_axis + "</p> <p> bp: "+d.bp+"</p>"
                       +"<p> Angle: " + Math.round(d.angle*100)/100 + "</p>"
                       +"<p> Energy: "+ Math.round(d.min_en*1000)/1000 + " J/m^2 </p>")
-	        })
+	           })
 	    .on("mouseout", function(d) {
 	      tooltip.transition()
-	        .duration(500)
+	        .duration(1500)
 	        .style("opacity",0)
       });
 
