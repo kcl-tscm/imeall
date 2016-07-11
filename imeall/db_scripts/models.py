@@ -117,24 +117,28 @@ class GBMaintenance(object):
       else:
         pass
 
-  def remove_xyz(self, path, dryrun=True):
+  def remove_xyz(self, path, dryrun=True, remove_type='traj'):
     ''' 
         Removes xyz files according to a particular regex
         if test is true it only prints the files to be removed.
-        1107053112_v6bxv2_tv0.0bxv0.0_d2.3z_traj.xyz
     '''
-    xyz_regex = re.compile(r'.*?tv[.0-9]+bxv[.0-9]+_d[.0-9]+z_traj.xyz[.*?]*')
+    if remove_type == 'traj':
+      xyz_regex = re.compile(r'.*?tv[.0-9]+bxv[.0-9]+_d[.0-9]+z_traj.xyz[.*?]*')
+    elif remove_type == 'rbt': 
+      xyz_regex = re.compile(r'.*?tv[.0-9]+bxv[.0-9]+.xyz')
+    elif remove_type == 'structs': 
+      xyz_regex = re.compile(r'.*?tv[.0-9]+bxv[.0-9]+_d[.0-9]+z.xyz')
     lst = os.listdir(path)
     for filename in lst:
       filename = os.path.join(path, filename)
       if os.path.isdir(filename):
-        self.remove_xyz(filename)
+        self.remove_xyz(filename, dryrun = dryrun, remove_type=remove_type)
       elif xyz_regex.match(filename):
         if dryrun == True:
+          print filename, os.path.getsize(filename)
+        elif dryrun == False:
           print 'Removing', filename
           os.remove(filename)
-        elif dryrun == False:
-          print filename, os.path.getsize(filename)
       else:
         pass
 
@@ -294,11 +298,4 @@ class GBAnalysis():
     return grain_energies
 
 if __name__ == '__main__':
-  analyze =  GBAnalysis()
-  or_axis = sys.argv[1]
-  gb_list = analyze.extract_energies(or_axis=or_axis)
-  print '0.0 0.0 0.0 0.0'
-  for gb in sorted(gb_list, key = lambda x: x['angle']):
-    print gb['angle'], min([x for x in gb['energies'] if x > 0.]), gb['energies'][len(gb['energies'])/2], max(gb['energies'])
-  print '180.0 0.0 0.0 0.0'
- 
+  print 'Should Write Some Error/Consistency Checking Code here.'
