@@ -70,7 +70,8 @@ quite understand this yet:
 17 9.51 170.49
 18 8.98 171.02
 19 8.51 171.49
-	Read Ken Shoemake's paper on quaternions. In particular spherical linear interpolation.
+
+Read Ken Shoemaker's paper on quaternions. In particular spherical linear interpolation.
 
 For Gif images of relaxing grain boundaries:
 	https://icme.hpc.msstate.edu/mediawiki/images/1/1c/Al_sig5_1.gif

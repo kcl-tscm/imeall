@@ -4,6 +4,7 @@ import re
 import json
 from flask   import Flask, request, session, g, redirect, url_for, abort,\
                     render_template, flash, send_file, jsonify, make_response
+
 from imeall  import app
 from imeall.models import GBAnalysis
 # Unique key is BBBAAAACCC
@@ -85,10 +86,17 @@ def analysis():
       min_en = min([x for x in gb['energies'] if x > 0.])
       max_en = max(gb['energies'])
       try:
-        gbdat.append({'param_file': gb['param_file'], 'or_axis':' '.join(map(str, gb['orientation_axis'])), 
-                      'angle':gb['angle'], 'min_en':min_en, 
+        gbdat.append({'param_file': gb['param_file'], 
+                      'or_axis':' '.join(map(str, gb['orientation_axis'])), 
+                      'angle': gb['angle'], 
+                      'min_en':min_en, 
                       'max_en':max_en,
-                      'bp':' '.join(map(str, map(int, gb['boundary_plane'])))})
+                      'bp':' '.join(map(str, map(int, gb['boundary_plane']))),
+                      'url':   'http://127.0.0.1:5000/grain/alphaFe/'
+                             + ''.join(map(str,gb['orientation_axis']))
+                             +'/'
+                             + gb['gbid']
+                      })
       except KeyError:
         pass
     except ValueError:
@@ -259,7 +267,7 @@ def eam_pot(filename):
     xpts.append(x.attrib['r'])
   rho = [float(x.attrib['r']) for x in root[0][1]]
   fig, ax = plt.subplots(3,1)
-  ax[0].set_ylim([-1,3])
+  ax[0].set_ylim([-0.5,5])
   ax[0].set_xlim([1.,5.5])
   ax[1].set_xlim([1.,5.5])
   ax[0].set_ylabel('Density')

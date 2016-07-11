@@ -2,9 +2,17 @@ import os
 import re
 import sys
 import json
+
+import matplotlib.pyplot as plt
+
 import numpy as np
+from   scipy.spatial import Voronoi, voronoi_plot_2d
+
+
 from   quippy import Atoms
+
 import imeall.slabmaker.slabmaker as slabmaker
+
 from  flask  import Flask, request, session, g, redirect
 from  flask import    url_for, abort, render_template, flash
 
@@ -271,7 +279,6 @@ class GBAnalysis():
           try:
             sub_dict = json.load(f)
           except:
-            #print 'Corrupted', subgrain[1]
             pass
         try:
           if sub_dict['param_file'] not in calc_types:
@@ -288,6 +295,7 @@ class GBAnalysis():
         tmp_dict['boundary_plane']   = j_dict['boundary_plane']
         tmp_dict['energies']         = []
         tmp_dict['param_file']       = calc
+        tmp_dict['gbid']             = j_dict['gbid']
         gb_dict[calc] = tmp_dict
 
       for subgrain in subgb_files:
@@ -321,16 +329,20 @@ class GBAnalysis():
         grain_energies.append(gdict)
     return grain_energies
 
+  def voronoi_analysis():
+    pass
+
+  def energy_landscape():
+    pass
+
 if __name__ == '__main__':
   analyze =  GBAnalysis()
   or_axis = sys.argv[1]
   gb_list = analyze.extract_energies(or_axis=or_axis)
-  print '0.0 0.0 0.0 0.0'
   for gb in sorted(gb_list, key = lambda x: x['angle']):
     try:
-      if gb['param_file']=='dft_vasp_pbe':
+      if gb['param_file']=='Fe_Mendelev.xml':
         print gb['param_file'], gb['angle'], gb['energies']
     except:
       pass
-  print '180.0 0.0 0.0 0.0'
 
