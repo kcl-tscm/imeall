@@ -27,7 +27,7 @@ with open('subgb.json', 'r') as outfile:
 #Ada
 POT_DIR = '/users/k1511981/pymodules/imeall/imeall/potentials' 
 #Retina
-POT_DIR = '/Users/lambert/pymodules/imeall/imeall/potentials' 
+#POT_DIR = '/Users/lambert/pymodules/imeall/imeall/potentials' 
 try: 
   param_file = j_dict['param_file']
   if param_file == 'iron_mish.xml':
@@ -60,7 +60,7 @@ ucf         = UnitCellFilter(grain, strain_mask)
 opt         = FIRE(ucf)
 
 for i in range(32):
-  opt.run(fmax=0.008, steps=72)
+  opt.run(fmax=0.008, steps=100)
   out.write(grain)
   if max(np.sum(grain.get_forces()**2, axis=1)**0.5) < 0.008:
     break
