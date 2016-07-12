@@ -64,16 +64,17 @@ if __name__=='__main__':
   jobdirs = []
   que = deque()
   job = Job(job_que=que)
-
   parser = argparse.ArgumentParser()
   parser.add_argument("-p", "--prefix", help="Choose directories to act on", required=True)
   parser.add_argument("-ct", "--calc_type", help="Choose Calculation Type to submit", required=True)
+  parser.add_argument("-rc", "--rcut", help="Choose cutoff radius to submit", required=True)
   parser.add_argument("-ht", "--hold_time", help="Set wait time between tranches of submitted jobs (seconds)", default=60, type=int)
-  args = parser.parse_args()
 
+  args = parser.parse_args()
   prefix     = args.prefix
   calc_type  = args.calc_type
   hold_time  = args.hold_time
+  rcut       = args.rcut
 
   for thing in os.listdir('./'):
     if os.path.isdir(thing) and thing[:len(prefix)]==prefix:
@@ -82,7 +83,9 @@ if __name__=='__main__':
   exclude = ['EAM_Mish', 'DFT', 'EAM_Men','EAM_Ack','EAM_Dud', 'EAM']
   exclude.remove(calc_type)
 
-  suffix_reg = re.compile(r'.*?v6bxv2_tv0.0+bxv0.0+_d2.3z.pbs')
+  #suffix_reg = re.compile(r'.*?v6bxv2_tv0.0+bxv0.0+_d2.3z.pbs')
+  #suffix_reg = re.compile(r'.*?v6bxv2_tv0.0+bxv0.0+_d{0}z.pbs'.format(rcut))
+  suffix_reg = re.compile(r'.*?v6bxv2_tv[0-9.]+bxv[0-9.]+_d{0}z.pbs'.format(rcut))
   for thing in jobdirs[:]:
     job.sub_pbs(thing, exclude, regex=suffix_reg, calc_type=calc_type)
 

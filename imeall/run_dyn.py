@@ -34,8 +34,7 @@ class ImeallIO(object):
 #Might be better to have a separate VASP OBJECT templated POSCAR, INCAR Files
 #then an Espresso Object Template
     self.vasp_template_dir =  '/projects/SiO2_Fracture/iron/vasp_template/'
-    self.vasp_dict         = {'kpar'  :32, 'npar':16, 'magmom':3.0, 'n_at':'NOTSET',
-					      		        	'ediffg': -0.05}
+    self.vasp_dict         = {'kpar'  :32, 'npar':16, 'magmom':3.0, 'n_at':'NOTSET','ediffg': -0.05}
     self.kpt_grid          = {'kx':12, 'ky':12, 'kz':1}
     self.runsh             = {'nodes':512, 'time':360}
 
@@ -207,7 +206,7 @@ class GBRelax(object):
     print self.grain_dir
     print self.calc_dir
 
-  def gen_super_rbt(self, bp=[],v=[], rbt=[0.0, 0.0], rcut=2.0):
+  def gen_super_rbt(self, bp=[],v=[], rbt=[0.0, 0.0], sup_v=6, sup_bxv=2, rcut=2.0):
     '''
       Create a grain boundary with rigid body translations.
     '''
@@ -216,16 +215,36 @@ class GBRelax(object):
 # For RBT we build a top level dir with just the translated supercell and no
 # deleted atoms then we create subdirectories with particular deletion criteria
 # to them.
-    m, n, grain  = self.gen_super(grain=grain, rbt=rbt, rcut=0.0)
-    self.name    = '{0}_v{1}bxv{2}_tv{3}bxv{4}'.format(self.gbid,
-    str(m),str(n), str(round(rbt[0],2)), str(round(rbt[1],2)))
-    self.subgrain_dir = io.make_dir(self.calc_dir, self.name)
-    grain.write('{0}.xyz'.format(os.path.join(self.subgrain_dir, self.name)))
+    struct_dir = os.path.join(self.grain_dir,'structs')
+    struct_files = os.listdir(struct_dir)
+    loc_name    = '{0}_v{1}bxv{2}_tv{3}bxv{4}_d{5}z'.format(self.gbid,
+    str(sup_v), str(sup_bxv), str(round(rbt[0],2)), str(round(rbt[1],2)), str(rcut))
+#Check if this initial grain with the atom deletion criterion and the rigid body translations
+#is present if not generate it:
+    print loc_name+'.xyz'
+    if loc_name+'.xyz' not in struct_files:
+      print 'GENERATING STRUCTURE'
+      tmp0, tmp1, grain  = self.gen_super(grain=grain, rbt=rbt, sup_v=sup_v, sup_bxv=sup_bxv, rcut=0.0)
+      self.name    = '{0}_v{1}bxv{2}_tv{3}bxv{4}'.format(self.gbid,
+      str(sup_v),str(sup_bxv), str(round(rbt[0],2)), str(round(rbt[1],2)))
+      self.subgrain_dir = io.make_dir(self.calc_dir, self.name)
+      grain.write('{0}.xyz'.format(os.path.join(self.subgrain_dir, self.name)))
 # Now create sub_dir with the appropriate deletion criteria:
-    self.name    = '{0}_v{1}bxv{2}_tv{3}bxv{4}_d{5}z'.format(self.gbid,
-    str(m), str(n), str(round(rbt[0],2)), str(round(rbt[1],2)), str(rcut))
-    self.subgrain_dir = io.make_dir(self.subgrain_dir, self.name)
-    grain = self.delete_atoms(grain=grain, rcut=rcut)
+      self.name    = '{0}_v{1}bxv{2}_tv{3}bxv{4}_d{5}z'.format(self.gbid,
+      str(sup_v), str(sup_bxv), str(round(rbt[0],2)), str(round(rbt[1],2)), str(rcut))
+      self.subgrain_dir = io.make_dir(self.subgrain_dir, self.name)
+      grain = self.delete_atoms(grain=grain, rcut=rcut)
+#Deposit all initial structures in the struct dir:
+      grain.write('{0}.xyz'.format(os.path.join(struct_dir, self.name)))
+    else:
+      print 'STRUCTURE ALREADY GENERATED'
+      self.name    = '{0}_v{1}bxv{2}_tv{3}bxv{4}'.format(self.gbid,
+      str(sup_v),str(sup_bxv), str(round(rbt[0],2)), str(round(rbt[1],2)))
+      self.subgrain_dir = io.make_dir(self.calc_dir, self.name)
+      self.name    = '{0}_v{1}bxv{2}_tv{3}bxv{4}_d{5}z'.format(self.gbid,
+      str(sup_v), str(sup_bxv), str(round(rbt[0],2)), str(round(rbt[1],2)), str(rcut))
+      self.subgrain_dir = io.make_dir(self.subgrain_dir, self.name)
+
 # Finally deposit json and grain file with translation information.
     try:
       f = open('{0}/subgb.json'.format(self.subgrain_dir), 'r')
@@ -243,7 +262,7 @@ class GBRelax(object):
     f = open('{0}/subgb.json'.format(self.subgrain_dir), 'w')
     json.dump(j_dict,f, indent=2)
     f.close()
-    grain.write('{0}.xyz'.format(os.path.join(self.subgrain_dir, self.name)))
+
 
   def gen_super(self, grain=None, rbt=None, sup_v=6, sup_bxv=2, rcut=2.0):
     ''' 
@@ -256,34 +275,42 @@ class GBRelax(object):
     else:
       x = Atoms(grain)
 
-    if rcut > 0.0:
-      x.set_cutoff(3.0)
-      x.calc_connect()
-      x.calc_dists()
-      rem=[]
-      r = farray(0.0)
-      u = fzeros(3)
-      for i in frange(x.n):
-        for n in frange(x.n_neighbours(i)):
-      	  j = x.neighbour(i, n, distance=3.0, diff=u)
-          if x.distance_min_image(i,j) < rcut and j!=i:
-       	    rem.append(sorted([j,i]))
-      rem = list(set([a[0] for a in rem]))
-      if len(rem) >0:
-        x.remove_atoms(rem)
-      else:
-        print 'No duplicate atoms in list.'
-    else:
+    struct_dir = os.path.join(self.grain_dir, 'structs')  
+    self.name  = '{0}_v{1}bxv{2}_tv{3}bxv{4}_d{5}z'.format(self.gbid,
+    str(sup_v), str(sup_bxv), '0.0', '0.0', str(rcut))
+    struct_files = os.listdir(struct_dir)
+# If this structure already exists for this grain boundary
+# don't recreate it. Otherwise build the supercell and deposit 
+# it in the structs directory.
+    if self.name+'.xyz' in struct_files:
+      print 'Structure file already exists'
       pass
-# Now create super cell
-# Now Generate Subgrain directory
-#   n = 2
-#   m = 6
-    x = x*(sup_v, sup_bxv, 1)
-    x.set_scaled_positions(x.get_scaled_positions())
+    else:
+      if rcut > 0.0:
+        x.set_cutoff(3.0)
+        x.calc_connect()
+        x.calc_dists()
+        rem=[]
+        r = farray(0.0)
+        u = fzeros(3)
+        for i in frange(x.n):
+          for n in frange(x.n_neighbours(i)):
+            j = x.neighbour(i, n, distance=3.0, diff=u)
+            if x.distance_min_image(i,j) < rcut and j!=i:
+              rem.append(sorted([j,i]))
+        rem = list(set([a[0] for a in rem]))
+        if len(rem) >0:
+          x.remove_atoms(rem)
+        else:
+          print 'No duplicate atoms in list.'
+      else:
+        pass
+  # Now create super cell:
+      x = x*(sup_v, sup_bxv, 1)
+      x.set_scaled_positions(x.get_scaled_positions())
+      x.write('{0}.xyz'.format(os.path.join(struct_dir, self.name)))
+
     if rbt == None:
-      self.name  = '{0}_v{1}bxv{2}_tv{3}bxv{4}_d{5}z'.format(self.gbid,
-      str(sup_v), str(sup_bxv), '0.0', '0.0', str(rcut))
       self.struct_file  = self.name
       self.subgrain_dir = io.make_dir(self.calc_dir, self.name)
       try:
@@ -291,14 +318,13 @@ class GBRelax(object):
           j_dict = json.load(f)
       except IOError:
         j_dict             = {}
-
       j_dict['name']       = self.name
       j_dict['param_file'] = self.param_file
       j_dict['rbt']        = [0.0, 0.0]
       j_dict['rcut']       = rcut
       with open('{0}/subgb.json'.format(self.subgrain_dir), 'w') as f:
         json.dump(j_dict, f, indent=2)
-      x.write('{0}.xyz'.format(os.path.join(self.subgrain_dir, self.name)))
+#Deposit structure in the structs directory of the grain
     else:
       return sup_v, sup_bxv, x
 
@@ -335,13 +361,15 @@ class GBRelax(object):
       return x
 
   def gen_pbs(self, time='02:30:00', queue='serial.q'):
-		pbs_str = open('/users/k1511981/pymodules/templates/calc_ada.pbs','r').read()
-		pbs_str = pbs_str.format(jname = 'fe'+self.name,xyz_file='{0}.xyz'.format(self.name), 
-                             time=time, 
-                             queue = queue)
-		print os.path.join(self.subgrain_dir, 'fe{0}.pbs'.format(self.name))
-		with open(os.path.join(self.subgrain_dir, 'fe{0}.pbs'.format(self.name)) ,'w') as pbs_file:
-			print >> pbs_file, pbs_str
+    ''' Generates job pbs file
+    '''
+    pbs_str = open('/users/k1511981/pymodules/templates/calc_ada.pbs','r').read()
+#   struct_dir = os.path.join(self.grain_dir,'structs')
+    pbs_str = pbs_str.format(jname='fe'+self.name, xyz_file='{0}.xyz'.format(self.name), 
+                             time=time, queue=queue)
+    print os.path.join(self.subgrain_dir, 'fe{0}.pbs'.format(self.name))
+    with open(os.path.join(self.subgrain_dir, 'fe{0}.pbs'.format(self.name)) ,'w') as pbs_file:
+      print >> pbs_file, pbs_str
 
   def translate(self):
     pass
@@ -415,8 +443,7 @@ if __name__=='__main__':
   rcut      = args.rcut
   print rcut, type(rcut)
 
-# Safest is to hard code the potential associated with 
-# each calculation type:
+# Each calculation type is associated with a potential:
   if calc_type == 'EAM_Mish':
     param_file = 'iron_mish.xml'
   elif calc_type == 'EAM_Men':
@@ -441,8 +468,18 @@ if __name__=='__main__':
     print '\n'
     gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type=calc_type,
                       potential = 'IP EAM_ErcolAd', param_file=param_file)
-    gbrelax.gen_super(rcut=rcut, sup_v=6, sup_bxv=2)
-    gbrelax.gen_pbs(time=time, queue=queue)
+    sup_v=6
+    sup_bxv=2
+#check if structure already exists in structs file:
+    with open(os.path.join(job_dir,'gb.json')) as f:
+      grain_dict = json.load(f)
+    bp = grain_dict['boundary_plane']
+    v  = grain_dict['orientation_axis']
+    for i in np.linspace(0.25,1.0, 4):
+      for j in np.linspace(0.125,1.0,8):
+        gbrelax.gen_super_rbt(rcut=rcut, bp=bp, v=v, rbt=[i,j])
+        gbrelax.gen_pbs(time=time, queue=queue)
+
 #######################################
 #######################################
 ## RELAX EAM FOR LIST OF DIRECTORIES ##
@@ -465,7 +502,7 @@ if __name__=='__main__':
 #  gbid    = job_dir.strip('/')
 #  gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type='EAM_Men', 
 #                    potential='IP EAM_ErcolAd', param_file='Fe_Mendelev.xml')
-##                    potential = 'IP EAM_ErcolAd', param_file='./iron_mish.xml')
+#                    potential = 'IP EAM_ErcolAd', param_file='./iron_mish.xml')
 #  with open(os.path.join(job_dir,'gb.json')) as f:
 #    grain_dict = json.load(f)
 #  bp = grain_dict['boundary_plane']
@@ -474,20 +511,6 @@ if __name__=='__main__':
 #    for j in np.linspace(0.125,1.0,8):
 #      gbrelax.gen_super_rbt(bp=bp, v=v, rbt=[i,j], rcut=2.0)
 #      gbrelax.gen_pbs()
-#########################################################################
-#########################################################################
-#Super Cell no rigid body translation
-#for job_dir in jobdirs:
-#  gbid    = job_dir.strip('/')
-#  print '\n'
-#  print '\t', gbid
-#  print '\n'
-#  gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type='EAM_Men', 
-#                    potential='IP EAM_ErcolAd', param_file='Fe_Mendelev.xml')
-#                   potential='IP EAM_ErcolAd', param_file='./iron_mish.xml')
-#  gbrelax.gen_super(rcut=2.0)
-#  gbrelax.gen_pbs()
-#  gbrelax.go_relax()
 #########################################################################
 #########################################################################
 ## COPY Directories across im_io.copy_struct(dir, sub_dir, dir, sub_dir)#

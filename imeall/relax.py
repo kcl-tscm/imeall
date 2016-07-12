@@ -27,7 +27,7 @@ with open('subgb.json', 'r') as outfile:
 #Ada
 POT_DIR = '/users/k1511981/pymodules/imeall/imeall/potentials' 
 #Retina
-POT_DIR = '/Users/lambert/pymodules/imeall/imeall/potentials' 
+#POT_DIR = '/Users/lambert/pymodules/imeall/imeall/potentials' 
 try: 
   param_file = j_dict['param_file']
   if param_file == 'iron_mish.xml':
@@ -53,14 +53,16 @@ pot     = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale),
 grain.set_calculator(pot)
 E_gb_init   = grain.get_potential_energy()
 alpha       = E_gb_init
-out         = AtomsWriter('{0}'.format('{0}_traj.xyz'.format(sys.argv[1][:-4])))
+#out         = AtomsWriter('{0}'.format('{0}_traj.xyz'.format(sys.argv[1][:-4])))
+traj_file   = os.path.basename(sys.argv[1])
+out         = AtomsWriter('{0}'.format('{0}_traj.xyz'.format(traj_file)))
 gbid        = (sys.argv[1][:-4]).split('/')[-1]
 strain_mask = [0,0,1,0,0,0]
 ucf         = UnitCellFilter(grain, strain_mask)
 opt         = FIRE(ucf)
 
 for i in range(32):
-  opt.run(fmax=0.008, steps=72)
+  opt.run(fmax=0.008, steps=100)
   out.write(grain)
   if max(np.sum(grain.get_forces()**2, axis=1)**0.5) < 0.008:
     break
