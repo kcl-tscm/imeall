@@ -53,7 +53,9 @@ pot     = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale),
 grain.set_calculator(pot)
 E_gb_init   = grain.get_potential_energy()
 alpha       = E_gb_init
-out         = AtomsWriter('{0}'.format('{0}_traj.xyz'.format(sys.argv[1][:-4])))
+#out         = AtomsWriter('{0}'.format('{0}_traj.xyz'.format(sys.argv[1][:-4])))
+traj_file   = os.path.basename(sys.argv[1])
+out         = AtomsWriter('{0}'.format('{0}_traj.xyz'.format(traj_file)))
 gbid        = (sys.argv[1][:-4]).split('/')[-1]
 strain_mask = [0,0,1,0,0,0]
 ucf         = UnitCellFilter(grain, strain_mask)
