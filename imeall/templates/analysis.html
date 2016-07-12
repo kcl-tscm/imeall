@@ -185,7 +185,7 @@ $( document ).ready(function() {
                      {return sortedAngles.push({"angle":parseFloat(d.key), "mean":d.values.mean, 
                                                  "dev":isdefined(d.values.dev)});}) 
   sortedAngles.sort(function(a,b){return parseFloat(a.angle)-parseFloat(b.angle);})
-  console.log(sortedAngles)
+//  console.log(sortedAngles)
 
 {#  svg.append("path")
     .attr("class", "line")

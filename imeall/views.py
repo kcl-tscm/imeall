@@ -86,9 +86,9 @@ def analysis():
       min_en = min([x for x in gb['energies'] if x > 0.])
       max_en = max(gb['energies'])
       try:
-        gbdat.append({'param_file': gb['param_file'], 
-                      'or_axis':' '.join(map(str, gb['orientation_axis'])), 
-                      'angle': gb['angle'], 
+        gbdat.append({'param_file': gb['param_file'],
+                      'or_axis':' '.join(map(str, gb['orientation_axis'])),
+                      'angle': gb['angle'],
                       'min_en':min_en, 
                       'max_en':max_en,
                       'bp':' '.join(map(str, map(int, gb['boundary_plane']))),
@@ -160,16 +160,18 @@ def grain_boundary(url_path, gbid):
   json_files = []
   extract_json(path, json_files)
   subgrains = []
+  subgrainsj = []
   for i, path in enumerate(json_files):
     try: 
       subgrains.append([json.load(open(path,'r')), i])
+      subgrainsj.append(json.load(open(path,'r')))
     except:
       pass
   print 'PATH', path, 'stuff'
   print 'URL_PATH', url_path 
-  return render_template('grain_boundary.html', gbid=gbid, url_path=url_path, 
+  return render_template('grain_boundary.html', gbid=gbid, url_path=url_path,
                           stuff=stuff, gb_info=gb_info, tree=tree,
-                          subgrains=subgrains)
+                          subgrains=subgrains, subgrainsj=json.dumps(subgrainsj))
 
 #Check for Ovito in different paths.
 def run_ovito(target_dir, filename):
