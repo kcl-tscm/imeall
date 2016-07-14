@@ -113,6 +113,10 @@ def orientations(url_path, orientation):
   for thing in os.listdir(path):
     if thing[:3] == orientation: 
       grains.append(thing.strip()) 
+#Also dislocations of edge and screw type should be shown.
+    elif thing[0] in ['e', 's']:
+      grains.append(thing.strip())  
+
   return render_template('orientation.html', url_path=url_path, grains=grains)
 
 def make_tree(path):
