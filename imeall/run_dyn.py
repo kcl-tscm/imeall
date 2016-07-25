@@ -206,7 +206,7 @@ class GBRelax(object):
     print self.grain_dir
     print self.calc_dir
 
-  def gen_super_rbt(self, bp=[],v=[], rbt=[0.0, 0.0], sup_v=6, sup_bxv=2, rcut=2.0):
+  def gen_super_rbt(self, bp=[],v=[], rbt=[0.0, 0.0], sup_v=6, sup_bxv=4, rcut=2.0):
     '''
       Create a grain boundary with rigid body translations.
     '''
@@ -214,7 +214,7 @@ class GBRelax(object):
     grain = build_tilt_sym_gb(bp=bp, v=v, rbt=rbt)
 # For RBT we build a top level dir with just the translated supercell and no
 # deleted atoms then we create subdirectories with particular deletion criteria
-# to them.
+# to them. This means we don't have to duplicate the structure files.
     struct_dir = os.path.join(self.grain_dir,'structs')
     struct_files = os.listdir(struct_dir)
     loc_name    = '{0}_v{1}bxv{2}_tv{3}bxv{4}_d{5}z'.format(self.gbid,
@@ -222,7 +222,9 @@ class GBRelax(object):
 #Check if this initial grain with the atom deletion criterion and the rigid body translations
 #is present if not generate it:
     print loc_name+'.xyz'
-    if loc_name+'.xyz' not in struct_files:
+    #if loc_name+'.xyz' not in struct_files:
+    #Quite a few non-supercells were in the directories so regenerating from scratch.
+    if True:
       print 'GENERATING STRUCTURE'
       tmp0, tmp1, grain  = self.gen_super(grain=grain, rbt=rbt, sup_v=sup_v, sup_bxv=sup_bxv, rcut=0.0)
       self.name    = '{0}_v{1}bxv{2}_tv{3}bxv{4}'.format(self.gbid,
@@ -267,7 +269,7 @@ class GBRelax(object):
   def gen_super(self, grain=None, rbt=None, sup_v=6, sup_bxv=2, rcut=2.0):
     ''' 
        To create a grain boundary super cell we use the parameters of
-       Rittner and Seidman PRB 54 6999.
+       Rittner and Seidman (PRB 54 6999).
     '''
     io = ImeallIO()
     if rbt == None:
@@ -282,12 +284,13 @@ class GBRelax(object):
 # If this structure already exists for this grain boundary
 # don't recreate it. Otherwise build the supercell and deposit 
 # it in the structs directory.
-    if self.name+'.xyz' in struct_files:
+    #if self.name+'.xyz' in struct_files:
+    if False:
       print 'Structure file already exists'
       pass
     else:
       if rcut > 0.0:
-        x.set_cutoff(3.0)
+        x.set_cutoff(2.4)
         x.calc_connect()
         x.calc_dists()
         rem=[]
@@ -335,7 +338,7 @@ class GBRelax(object):
       x = Atoms('{0}.xyz'.format(os.path.join(self.grain_dir, self.gbid)))
     else:
       x = Atoms(grain)
-    x.set_cutoff(3.0)
+    x.set_cutoff(2.4)
     x.calc_connect()
     x.calc_dists()
     rem=[]
@@ -468,8 +471,8 @@ if __name__=='__main__':
     print '\n'
     gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type=calc_type,
                       potential = 'IP EAM_ErcolAd', param_file=param_file)
-    sup_v=6
-    sup_bxv=2
+    sup_v   = 6
+    sup_bxv = 2
 #check if structure already exists in structs file:
     with open(os.path.join(job_dir,'gb.json')) as f:
       grain_dict = json.load(f)
@@ -477,7 +480,7 @@ if __name__=='__main__':
     v  = grain_dict['orientation_axis']
     for i in np.linspace(0.25,1.0, 4):
       for j in np.linspace(0.125,1.0,8):
-        gbrelax.gen_super_rbt(rcut=rcut, bp=bp, v=v, rbt=[i,j])
+        gbrelax.gen_super_rbt(rcut=rcut, bp=bp, v=v, sup_v=sup_v, sup_bxv=sup_bxv, rbt=[i,j])
         gbrelax.gen_pbs(time=time, queue=queue)
 
 #######################################
