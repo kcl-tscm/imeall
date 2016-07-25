@@ -10,17 +10,22 @@ from qlab import set_fortran_indexing
 from imeall.run_dyn import GBRelax
 from imeall.lotf.screw import Dislocation 
 
+import argparse
+
+
 set_fortran_indexing=False
 gbr = GBRelax()
 
-x = [-1,-1,-1]
-y = [ 1,-1, 0]
-z = [-1,-1, 2]
+#For edge x is burgers vector
+x = [1,0,0]
+#For edge y is glide plane vector
+y = [0,1,-1]
+#For edge z is dislocation line
+z = [0,1,1]
 
 s_system = list(x)
 s_system.extend(y)
 name = ''.join(map(str,s_system)).replace('-','')
-name = 'e{0}.xyz'.format(name)
 
 print x,y,z
 
@@ -36,12 +41,12 @@ at.calc_connect()
 
 
 print 'Delete atoms'
-at                    = gbr.delete_atoms(grain=at, rcut=1.7)
+at                    = gbr.delete_atoms(grain=at, rcut=1.5)
 at.info['OrigHeight'] = at.positions[:,1].max()-at.positions[:,1].min()
 r_scale = 1.00894848312
 rem = []
 for atom in at:
-  if atom.position[0] <= 0.716:
+  if atom.position[0] <= 0.00 and atom.position[1] <= 100.0:
     rem.append(atom.index+1)
 print 'Removing ', len(rem), ' atoms.'
 if len(rem) > 0:
@@ -67,5 +72,5 @@ alpha     = calc_nye_tensor(at, ref_slab,3,3,at.n)
 at.add_property('screw', alpha[2,2,:])
 at.add_property('edgex', alpha[2,0,:])
 at.add_property('edgey', alpha[2,1,:])
-at.write('{0}'.format(name))
+at.write('e{0}.xyz'.format(name))
 
