@@ -21,9 +21,6 @@ for traj_file in traj_files:
     at.add_property('edgex', 0.0, overwrite=True)
     at.add_property('edgey', 0.0, overwrite=True)
     at.add_property('screw', 0.0, overwrite=True)
-    for i, mark in enumerate(at.properties['modified_hybrid_mark_1']):
-      if mark> 0:
-        print i, mark
     knit_traj.write(at)
 
   

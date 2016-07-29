@@ -17,9 +17,9 @@ class Dislocation(object):
     self.x = x 
     self.y = y 
     self.z = z
-    self.l_x =  20.
-    self.l_y =  20.
-    self.l_z =  20.
+    self.l_x =  200.
+    self.l_y =  200.
+    self.l_z =  200.
     self.name = name
 
   def gen_screw_dislocation(self):
