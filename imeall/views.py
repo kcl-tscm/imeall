@@ -3,8 +3,8 @@ import os
 import re
 import json
 from flask   import Flask, request, session, g, redirect, url_for, abort,\
-                    render_template, flash, send_file, jsonify, make_response
-
+                      render_template, flash, send_file, jsonify, make_response
+import subprocess
 from imeall  import app
 from imeall.models import GBAnalysis
 # Unique key is BBBAAAACCC
@@ -19,21 +19,23 @@ from imeall.models import GBAnalysis
 # Calculate: total energy, forces, atoms, magnetic moments.
 # Table energies should be populated in eV:
 # Each calculation should have the atoms object attached to it.
-grain_boundaries = {}
 calculations      = {}
-grain_boundaries['0000000000'] = {'title': 'Ideal Crystal ',  'gb_id':'0000000000'}
-grain_boundaries['1107053111'] = {'title': 'Sigma(3)  (111)', 'gb_id':'1107053111'}
-grain_boundaries['1105048332'] = {'title': 'Sigma(11) (332)', 'gb_id':'1105048332'}
-grain_boundaries['1106000112'] = {'title': 'Sigma(3) (112)',  'gb_id':'1106000112'}
 calculations['0000000000'] = {'VASP-DFT-PBE' : {'E0':-8.23807, 'DFT-mag': 2.2238, 'nat':1}, 'IP-EAM-MISH':{'E0': -4.2701, 'nat':1}}
 calculations['1107053111'] = {'VASP-DFT-PBE' : {'E0':-406.154623782, 'nat':96, 'A': 27.7436434255}}
 calculations['1105048332'] = {'IP-EAM-MISH'  : {'E0':-382.847802363, 'nat':90, 'A':18.7825353894 }}
 calculations['1106000112'] = {'IP-EAM-MISH'  : {'E0':-196.171, 'nat':46, 'A': 9.80885920049}}
-#files to display in browser:
-valid_extensions = ['xyz', 'json']
+
+
+
+
+#files that Imeall server can wants to display in browser:
+valid_extensions = ['xyz', 'json', 'mp4']
 vasp_files       = ['IBZKPT', 'INCAR', 'CHG', 'CHGCAR', 'DOSCAR', 'EIGENVAL', 
                     'KPOINTS', 'OSZICAR', 'OUTCAR', 'PCDAT', 'POSCAR',
                     'POTCAR', 'WAVECAR', 'XDATCAR']
+
+
+
 # Currently the database connection is just a path name to our grain boundary
 # database stored as a file tree. I don't necessarily see any reason not to exploit
 # the existing filesystem and tools associated for searching. Why?
@@ -113,8 +115,8 @@ def orientations(url_path, orientation):
   for thing in os.listdir(path):
     if thing[:3] == orientation: 
       grains.append(thing.strip()) 
-#Also dislocations of edge and screw type should be shown.
-    elif thing[0] in ['e', 's']:
+#Also dislocations of edge and screw fracture and plane type should be shown.
+    elif thing[0] in ['e', 's','p','f']:
       grains.append(thing.strip())  
 
   return render_template('orientation.html', url_path=url_path, grains=grains)
@@ -171,16 +173,15 @@ def grain_boundary(url_path, gbid):
       subgrainsj.append(json.load(open(path,'r')))
     except:
       pass
-  print 'PATH', path, 'stuff'
-  print 'URL_PATH', url_path 
   return render_template('grain_boundary.html', gbid=gbid, url_path=url_path,
                           stuff=stuff, gb_info=gb_info, tree=tree,
                           subgrains=subgrains, subgrainsj=json.dumps(subgrainsj))
 
 #Check for Ovito in different paths.
 def run_ovito(target_dir, filename):
-  """ run_ovito is meant to launch the ovito viewer application with the
-      associated grainboundary trajectory file loaded, the os command should
+  """ 
+      run_ovito launches the Ovito application with the
+      associated grain boundary trajectory file loaded, the os command should
       ensure we are in the working directory so that any modifications, or
       videos generated will be saved in the correct place.
   """
@@ -239,6 +240,9 @@ def serve_file(gbid, filename):
       else:
         break
     return render_template('oszicar.html', osz=json.dumps(osz))
+  elif filename.endswith('mp4'):
+    subprocess.Popen('open {0}'.format(textpath).split()) 
+    return render_template('text.html', text='Playing Video')
   else:
     text = text.split('\n')
     return render_template('text.html', text=text)
@@ -256,7 +260,6 @@ def eam_pot(filename):
   from matplotlib.figure import Figure
   from matplotlib.dates import DateFormatter
   
-
   fig = Figure()
   ax = fig.add_subplot(111)
   FVR = []

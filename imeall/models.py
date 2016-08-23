@@ -22,6 +22,12 @@ from  flask import    url_for, abort, render_template, flash
 # files.
 
 class PotentialParameters(object):
+  """
+    :class:`PotentialParameters` contains the ground state energy per atom for bulk iron
+    of the different EAM potentials used in the Imeall Database. It also contains
+    the values required to rescale the relaxed lattice parameters for bulk iron predicted by
+    the EAM potentials to the target DFT value.
+  """
   def __init__(self):
     self.name = 'Potential Parameters'
   def gs_ener_per_atom(self): 
@@ -33,13 +39,26 @@ class PotentialParameters(object):
               }
     return eperat
 
+  def eam_rscale(self): 
+    rscale = {'Fe_Mendelev.xml' : 1.00894848312,
+              'iron_mish.xml'   : 1.0129007626,
+              'Fe_Ackland.xml'  : 1.00894185389,
+              'Fe_Dudarev.xml'  : 1.01279093417,
+              'dft_vasp_pbe'    : 1.00000000000
+              }
+    return rscale
+
 class Job(object):
+  """
+    class:'Job' collection of routines for generating 
+    and submitting pbs submission scripts.
+  """
   def __init__(self):
     self.pbs_file = ''
     self.job_dir  = ''
     self.job_id   = ''
   def sub_pbs(self, job_dir, exclude='DFT', suffix='v6bxv2z', regex=None):
-    ''' 
+    """ 
     Given an explicit suffix, or a regex this routine recurses through
     the directory structure and submits any pbs files that 
     match the suffix or regex pattern. Exclude keeps track of 
@@ -60,7 +79,7 @@ class Job(object):
     SUFFIX:
       submit all super cells: 
         v6bxv2z
-    '''
+    """
     lst = os.listdir(job_dir)
     for dir in lst:
       dir = os.path.join(job_dir, dir)
@@ -86,14 +105,13 @@ class Job(object):
           pass
 
 class GBMaintenance(object):
-  '''
-    Collection of maintenance routines for the GB database.
+  """
+    :class'GBMaintenance' is a collection of maintenance routines for the GB database.
     Possible usages: regenerate all the csl lattices in the database
     or a subdirectory of the database, take a new grain boundary profile 
     picture for multiple directories, update the gb json information if a
-    new grain boundary property is desired. This really is 
-    turning into facebook for grain boundaries!
-  '''
+    new grain boundary property is desired.
+  """
   def __init__(self):
     self.materials = ['alphaFe']
 

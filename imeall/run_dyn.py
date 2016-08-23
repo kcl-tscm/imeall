@@ -24,11 +24,13 @@ class Capturing(list):
     sys.stdout = self._stdout
 
 class ImeallIO(object):
-# Primary IO Object for routines for searching Imeall Directory tree
-# creating new grains, and subgrain directories. 
-# Sub-Grain directory (each 'massaged' grain boundary will have its own
-# directory) supercells of the grain count as subgrains finally a subdirectory
-# of defects is included for vacancies and interstitials.
+ """
+  :class:`Primary` IO Object for searching Imeall Directory tree
+  creating new grains, and subgrain directories. 
+  Sub-Grain directory supercells of the grain count as subgrains 
+  finally a subdirectory of defects is included for 
+  vacancies and interstitials.
+ """
   def __init__(self):
 #IO variables for VASP Calculations. 
 #Might be better to have a separate VASP OBJECT templated POSCAR, INCAR Files
@@ -179,18 +181,20 @@ class GBRelax(object):
   def __init__(self, grain_dir='./', gbid='0000000000', calc_type='EAM',
                potential = 'IP EAM_ErcolAd', param_file = 'iron_mish.xml',
                traj_file='traj.xyz'):
-# Here we initialize some naming conventions, the calculation type, and
-# necessary input files.
+  """
+    :class:`GBRelax` is responsible for generating the initial configuration of the grain
+    boundary before and relaxation occurs.
+    Here we Initialize some naming conventions, the calculation type, and
+    necessary input files. grain_dir is the overarching grain directory (the theme):
+    the target dir is the subdirectory depending on the
+    calculation type (flavour) at the highest level and then the
+    variations (deletions, translation, substitutions, vacancies) 
+    on the theme are subgrain(s) i.e. in subgrain_dir named
+    according to the variation. atom deletion for atoms within radius
+    rcut is written gbid_r2.0, translations gbid_tx_0.1, gbid_ty,0.2 etc.
+    Hydrogen inclusion is denoted in terms of concentration 
+  """
     self.gbid        =  gbid
-# grain_dir is the overarching grain directory (the theme):
-# the target dir is the subdirectory depending on the
-# calculation type (flavour) at the highest level and then the
-# variations (deletions, translation, substitutions, vacancies) 
-# on the theme are subgrain(s) i.e. in subgrain_dir named
-# according to the variation. atom deletion for atoms within radius
-# rcut is written gbid_r2.0, translations gbid_tx_0.1, gbid_ty,0.2 etc.
-# Hydrogen occlusion is denoted interms of concentration, or number of H?
-# That remains to be seend
     self.grain_dir    = grain_dir
     self.calc_dir   = os.path.join(grain_dir, calc_type)
     self.subgrain_dir =''

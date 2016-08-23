@@ -4,18 +4,15 @@ The grain boundaries are generated and labeled according to
 a uniform process  indicated by the following notation:
 
 ```
-  sig(A)Theta[XXX](YYY)
+  Theta[XXX](YYY)
 ```
-
-A is the reciprocal density of the coincident sites
-in the Coincident Site Lattice i.e.:
 
 sigma = (number of coincident sites in an elementary cell)/
 (total number of all lattice sites in an elementary cell)
 
 Theta is the angle of misorientation about the vector [XXX]
 and (YYY) determines the plane of the interface between
-the misoriented grain b and grain a. In this way it is possible
+the misoriented Grain A and Grain B. In this way it is possible
 to uniquely characterize all grain boundaries. 
 
 An additional set of three degrees of freedom is then used to extend 

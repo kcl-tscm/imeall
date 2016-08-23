@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # Imeall documentation build configuration file, created by
-# sphinx-quickstart on Mon Aug  8 12:35:13 2016.
+# sphinx-quickstart on Mon Aug  8 14:02:37 2016.
 #
 # This file is execfile()d with the current directory set to its
 # containing dir.
@@ -31,9 +31,9 @@
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
-    'sphinx.ext.doctest',
+    'sphinx.ext.todo',
     'sphinx.ext.coverage',
-    'sphinx.ext.imgmath',
+    'sphinx.ext.viewcode',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -116,7 +116,7 @@ pygments_style = 'sphinx'
 # keep_warnings = False
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
-todo_include_todos = False
+todo_include_todos = True
 
 
 # -- Options for HTML output ----------------------------------------------
@@ -200,7 +200,7 @@ html_static_path = ['_static']
 
 # If true, links to the reST sources are added to the pages.
 #
-html_show_sourcelink = True
+# html_show_sourcelink = True
 
 # If true, "Created using Sphinx" is shown in the HTML footer. Default is True.
 #
