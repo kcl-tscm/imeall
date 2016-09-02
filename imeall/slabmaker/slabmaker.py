@@ -509,7 +509,8 @@ def csl_factory(orientation_axis, boundary_plane, m, n, grain_a, grain_b,
       y = Nxv. rotate_plane_z takes grain_a and rotates it
       so that the orientation axis of the grain boundary with
       respect to grain a is orthogonal to the x-y plane. The
-      quaternion to accomplish this rotation is stored in plane_quaternion_z 
+      quaternion to accomplish this rotation is stored 
+      in plane_quaternion_z.
   """
   f = open(os.path.join(target_dir, 'grainaT.dat'), 'w')
   g = open(os.path.join(target_dir, 'grainaB.dat'), 'w')
@@ -893,10 +894,13 @@ if __name__=='__main__':
 	         [np.pi*(60.0/180.), np.array([1.0, 0.0, -1.0])]]
 
 
+  surfaces = [[np.pi*(0.0), np.array([0,0,1])]]
 
 ####CHOOSE ORIENTATION AXIS and LIST of Sym_Tilt_GBs:
-  orientation_axis = np.array([1, 1, 1])
-  for gb in sym_tilt_111:
+#   orientation_axis = np.array([1, 1, 1])
+  orientation_axis = np.array([1, 1, 0])
+  #for gb in sym_tilt_111:
+  for gb in surfaces:
 #  orientation_axis = np.array([0, 0, 1])
 #  for gb in sym_tilt_100:
 #   orientation_axis = np.array([1, 1, 0])

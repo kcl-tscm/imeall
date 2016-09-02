@@ -48,6 +48,7 @@ class PotentialParameters(object):
               }
     return rscale
 
+
 class Job(object):
   """
     class:'Job' collection of routines for generating 
@@ -347,11 +348,12 @@ class GBAnalysis():
         grain_energies.append(gdict)
     return grain_energies
 
-  def voronoi_analysis():
+  def delaunay_analysis():
+# Create polytopes for all the iron structures in the database
+# to identify specific sites of interest and identify possible
+# structural units. These would also 
     pass
 
-  def energy_landscape():
-    pass
 
 if __name__ == '__main__':
   analyze =  GBAnalysis()

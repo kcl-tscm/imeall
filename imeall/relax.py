@@ -3,14 +3,14 @@ import sys
 import json
 import shutil
 import ase.io        
-from   cStringIO           import StringIO
-from   ase.optimize.sciopt import SciPyFminCG
-from   quippy              import Atoms, Potential, frange
-from   ase.constraints     import UnitCellFilter, StrainFilter
-from   quippy.io           import AtomsWriter, AtomsReader, write
-from   ase.optimize        import BFGS, FIRE, LBFGS, MDMin, QuasiNewton
 import numpy as np
 from pprint import pprint
+from cStringIO           import StringIO
+from ase.optimize.sciopt import SciPyFminCG
+from quippy              import Atoms, Potential, frange
+from ase.constraints     import UnitCellFilter, StrainFilter
+from quippy.io           import AtomsWriter, AtomsReader, write
+from ase.optimize        import BFGS, FIRE, LBFGS, MDMin, QuasiNewton
 
 def converged(grain, smax, fmax):
   maxstress = max(grain.get_stress().ravel())

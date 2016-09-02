@@ -1,6 +1,6 @@
+import datetime
 import argparse
 import subprocess
-import datetime
 
 class SyncDB(object):
   def __init__(self, sync_log="db_synclog",exclude="'*/Fracture/*'", exclude_from="rsync_exclude.txt",
@@ -34,9 +34,11 @@ if __name__=='__main__':
   mira_params = dict(sync_log="db_synclog", exclude="'*/Fracture/*'", exclude_from="rsync_exclude.txt", rsync_args="-auv",
                      src="lambert@mira.alcf.anl.gov:/home/lambert/iron/grain_boundaries", target="./") 
 
-  sync = SyncDB(**mira_params)
-  sync.sync_db(server="mira")
+  ada_params  = dict(sync_log="db_synclog", exclude="'*/Fracture/*'", exclude_from="rsync_exclude.txt", rsync_args="-auv", 
+                     src="k1511981@ada.hpc.kcl.ac.uk:/users/k1511981/sharedscratch/grain_boundaries/grain_boundaries", target="./")
 
+  sync_mira = SyncDB(**mira_params)
+  sync_mira.sync_db(server="mira")
 
-
-
+  sync_ada  = SyncDB(**ada_params)
+  sync_ada.sync_db(server="ada")
