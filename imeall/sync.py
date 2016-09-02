@@ -15,8 +15,9 @@ class SyncDB(object):
     self.rsync_args   = rsync_args
 
   def sync_db(self, server="mira"):
-#Use rsync to sync the db with that server
-    #sync_arg = "rsync -auv --exclude '*/Fracture/*' --exclude-from 'rsync_exclude.txt' lambert@mira.alcf.anl.gov:/home/lambert/iron/grain_boundaries ./"
+# Use rsync to sync the db with that server
+# sync_arg = "rsync -auv --exclude '*/Fracture/*' --exclude-from 'rsync_exclude.txt' 
+# lambert@mira.alcf.anl.gov:/home/lambert/iron/grain_boundaries ./"
     sync_args = ["rsync"] + [self.rsync_args] + ["--exclude"] + [self.exclude] + ["--exclude-from"] + [self.exclude_from] + [self.src] + [self.target]
     print sync_args
     with open(self.sync_log,"a") as output:
@@ -34,7 +35,7 @@ if __name__=='__main__':
   mira_params = dict(sync_log="db_synclog", exclude="'*/Fracture/*'", exclude_from="rsync_exclude.txt", rsync_args="-auv",
                      src="lambert@mira.alcf.anl.gov:/home/lambert/iron/grain_boundaries", target="./") 
 
-  ada_params  = dict(sync_log="db_synclog", exclude="'*/Fracture/*'", exclude_from="rsync_exclude.txt", rsync_args="-auv", 
+  ada_params = dict(sync_log="db_synclog", exclude="'*/Fracture/*'", exclude_from="rsync_exclude.txt", rsync_args="-auv", 
                      src="k1511981@ada.hpc.kcl.ac.uk:/users/k1511981/sharedscratch/grain_boundaries/grain_boundaries", target="./")
 
   sync_mira = SyncDB(**mira_params)
@@ -42,3 +43,4 @@ if __name__=='__main__':
 
   sync_ada  = SyncDB(**ada_params)
   sync_ada.sync_db(server="ada")
+
