@@ -2,11 +2,11 @@
 import os
 import re
 import json
-from flask   import Flask, request, session, g, redirect, url_for, abort,\
-                      render_template, flash, send_file, jsonify, make_response
 import subprocess
-from imeall  import app
-from imeall.models import GBAnalysis
+from   imeall  import app
+from   flask   import Flask, request, session, g, redirect, url_for, abort,\
+                      render_template, flash, send_file, jsonify, make_response
+from   imeall.models import GBAnalysis
 # Unique key is BBBAAAACCC
 # Common axis=[BBB], misorientation angle=AAAA, and GB plane = (CCC).
 # temporary table should be replaced by database.
@@ -25,17 +25,13 @@ calculations['1107053111'] = {'VASP-DFT-PBE' : {'E0':-406.154623782, 'nat':96, '
 calculations['1105048332'] = {'IP-EAM-MISH'  : {'E0':-382.847802363, 'nat':90, 'A':18.7825353894 }}
 calculations['1106000112'] = {'IP-EAM-MISH'  : {'E0':-196.171, 'nat':46, 'A': 9.80885920049}}
 
-
-
-
 #files that Imeall server can wants to display in browser:
 valid_extensions = ['xyz', 'json', 'mp4']
 vasp_files       = ['IBZKPT', 'INCAR', 'CHG', 'CHGCAR', 'DOSCAR', 'EIGENVAL', 
                     'KPOINTS', 'OSZICAR', 'OUTCAR', 'PCDAT', 'POSCAR',
                     'POTCAR', 'WAVECAR', 'XDATCAR']
 
-
-
+#
 # Currently the database connection is just a path name to our grain boundary
 # database stored as a file tree. I don't necessarily see any reason not to exploit
 # the existing filesystem and tools associated for searching. Why?
@@ -51,12 +47,17 @@ vasp_files       = ['IBZKPT', 'INCAR', 'CHG', 'CHGCAR', 'DOSCAR', 'EIGENVAL',
 #      boundaries within a class of materials and for different classes of
 #      materials. This tree structure would resemble a collection of documents and
 #      could be mapped onto a NoSQL type of database fairly easily. 
+#
 @app.before_request
 def before_request():
   g.gb_dir = app.config['GRAIN_DATABASE']
 
 @app.route('/')
 def home_page():
+  """
+   Base view of imeall database. Links to material specific
+   databases and synchronization log.
+  """
   materials = os.listdir(g.gb_dir)
   return render_template('imeall.html', materials=materials)
 
@@ -72,11 +73,17 @@ def material(material):
       orientations.append(filename)
   return render_template('material.html', url_path=url_path, orientations=orientations)
 
+@app.route("/db_sync/")
+def synchronization():
+  with open('./imeall/db_synclog','r') as f:
+    db_log = f.read().split()
+  return render_template('synchronization.html', db_log='\n'.join(db_log))
+
 @app.route('/analysis/')
 def analysis():
-  '''
+  """
     This view collates data from the grainboundary database.
-  '''
+  """
 # User chooses what orientation angle to look at via a GET argument:
   or_axis = request.args.get('or_axis', '001')
   analyze = GBAnalysis()
@@ -108,6 +115,9 @@ def analysis():
 
 @app.route('/orientation/<path:url_path>/<orientation>/')
 def orientations(url_path, orientation):
+  """
+    List different orientation axis in the material database.
+  """
   url_path = url_path+'/'+orientation
   path     = os.path.join(g.gb_dir, url_path)
   grains    = []
@@ -118,10 +128,12 @@ def orientations(url_path, orientation):
 #Also dislocations of edge and screw fracture and plane type should be shown.
     elif thing[0] in ['e', 's','p','f']:
       grains.append(thing.strip())  
-
   return render_template('orientation.html', url_path=url_path, grains=grains)
 
 def make_tree(path):
+  """
+    Recurse through subgrain directories collecting json files.
+  """
   tree = dict(name=os.path.basename(path), children=[], fullpath='')
   try: 
     lst = os.listdir(path)
@@ -154,15 +166,16 @@ def extract_json(path, json_files):
 
 @app.route('/grain/<path:url_path>/<gbid>/')
 def grain_boundary(url_path, gbid):
+  """
+    View for the grainboundary. CSL lattice, and list of
+    subgrain directories.
+  """
   url_path  = url_path+'/'+gbid
   path = os.path.join(g.gb_dir, url_path)
   with open(os.path.join(path, 'gb.json'),'r') as json_file:
     gb_info = json.load(json_file)
   stuff = []
   tree = make_tree(path)
-# Get all the subdirectory json files so that
-# we can easily compare normalized grain boundary formation
-# energies, hydrogen interstitials etc.
   json_files = []
   extract_json(path, json_files)
   subgrains = []
@@ -180,29 +193,24 @@ def grain_boundary(url_path, gbid):
 #Check for Ovito in different paths.
 def run_ovito(target_dir, filename):
   """ 
-      run_ovito launches the Ovito application with the
-      associated grain boundary trajectory file loaded, the os command should
-      ensure we are in the working directory so that any modifications, or
-      videos generated will be saved in the correct place.
+    run_ovito launches the Ovito application with the
+    associated grain boundary trajectory file loaded, the os command should
+    ensure we are in the working directory so that any modifications, or
+    videos generated will be saved in the correct place. ovito must be set
+    in environment.
   """
-  ovito = "~/ovito-2.6.1-x86_64/bin/ovito"
+  ovito = os.environ["OVITO"]
   target_dir = '/'.join(target_dir.split('/')[:-1])
-  print target_dir
-  print filename
   if os.path.isfile(ovito):
-    os.system("cd {0}; {1} {2}&".format(target_dir, ovito, filename))
-    variable = raw_input('Continue?')
-  elif os.path.isfile('/Users/lambert/Ovito.app/Contents/MacOS/ovito'):
-    os.system('cd {0}; /Users/lambert/Ovito.app/Contents/MacOS/ovito {1}&'.format(target_dir, filename))
+    job = subprocess.Popen("cd {0}; {1} {2}&".format(target_dir, ovito, filename).split())
   else: 
-    return flash('Ovito not installed in one of the usual locations.')
+    return flash('OVITO not in PATH variable.')
 
-#This route serves images from the grain boundary directory.
 @app.route('/img/<path:filename>/<gbid>/<img_type>')
 def serve_img(filename, gbid, img_type):
-#should consider security stuff here as well... flask.safe_join()
-  print 'FILENAME', filename
-  print 'GBID', gbid
+  """
+    Serve the different images to the browser.
+  """
   img = os.path.join(filename,'{0}.png'.format(gbid))
   if img_type =='struct':
     img  = app.config['GRAIN_DATABASE']+'/'+filename+'/{0}.png'.format(gbid)
@@ -215,7 +223,9 @@ def serve_img(filename, gbid, img_type):
 
 @app.route('/textfile/<gbid>/<path:filename>')
 def serve_file(gbid, filename):
-#Serves text files should we want to inspect these in the browser:
+  """
+    Serve different common file types to the browser.
+  """
   textpath = request.args.get('textpath')
   with open('{0}'.format(textpath),'r') as text_file:
     text = text_file.read()
@@ -249,7 +259,10 @@ def serve_file(gbid, filename):
 
 @app.route('/eam_pot/<path:filename>')
 def eam_pot(filename):
-#found this gist at https://gist.github.com/wilsaj/862153
+  """
+    Matplotlib to inspect xml potential files in the database.
+    Based on gist at https://gist.github.com/wilsaj/862153.
+  """
   import random
   import datetime
   import StringIO

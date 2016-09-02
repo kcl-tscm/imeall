@@ -1,7 +1,7 @@
 import os
 import sys
 import glob
-from quippy import AtomsReader, AtomsWriter, set_fortran_indexing
+from   quippy import AtomsReader, AtomsWriter, set_fortran_indexing
 
 
 #Read in a collection of traj output files

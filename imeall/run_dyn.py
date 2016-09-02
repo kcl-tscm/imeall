@@ -2,15 +2,16 @@ import os
 import sys
 import json
 import shutil
-from   cStringIO       import StringIO
 import ase.io        
 from   ase.constraints import UnitCellFilter
 from   ase.optimize    import BFGS, FIRE
 from   quippy          import Atoms, Potential, frange, farray, fzeros
 from   quippy.io       import AtomsWriter, AtomsReader, write
-from   slabmaker.slabmaker  import build_tilt_sym_gb
+from   pprint          import pprint
+from   cStringIO       import StringIO
+from   slabmaker.slabmaker import build_tilt_sym_gb
+
 import numpy as np
-from   pprint import pprint
 import argparse
 
 class Capturing(list):
@@ -24,13 +25,13 @@ class Capturing(list):
     sys.stdout = self._stdout
 
 class ImeallIO(object):
- """
+  """
   :class:`Primary` IO Object for searching Imeall Directory tree
   creating new grains, and subgrain directories. 
   Sub-Grain directory supercells of the grain count as subgrains 
   finally a subdirectory of defects is included for 
   vacancies and interstitials.
- """
+  """
   def __init__(self):
 #IO variables for VASP Calculations. 
 #Might be better to have a separate VASP OBJECT templated POSCAR, INCAR Files
@@ -41,6 +42,9 @@ class ImeallIO(object):
     self.runsh             = {'nodes':512, 'time':360}
 
   def make_dir(self, target_dir, dir_name):
+    """
+    Create grain boundary directory
+    """
     target_subdir = os.path.join(target_dir, dir_name)
     if not os.path.isdir(target_subdir):
       os.makedirs(target_subdir)
@@ -62,6 +66,7 @@ class ImeallIO(object):
         return from_dir, from_dir_name
     print 'no directory with calc_suffix,', calc_suffix
     return None
+
 # Common pattern might be I have a list of grain dir directories
 # with xyz files in them. Say the relaxed EAM grainboundaries for
 # a certain orientation. /gb/EAM/gbid_criteria/gbid_traj.xyz.
@@ -120,9 +125,11 @@ class ImeallIO(object):
       json.dump(gb_data, json_file, indent=2)
 
   def xyz_to_vasp(self, target_dir, target_sub_dir, calc_suffix='_d2.0'):
-# Initialize a vasp calculation. Read in the xyz file 
-# if it is present and generate an INCAR, POSCAR, 
-# run_vasp file in the Directory the vasp template 
+    """
+    Initialize a vasp calculation. Read in the xyz file 
+    if it is present and generate an INCAR, POSCAR, 
+    run_vasp file in the Directory the vasp template 
+    """
     json_file = os.path.join(target_dir, 'gb.json')
     gb_data = self.load_json(json_file)
     target_dir = os.path.join(target_dir, target_sub_dir)
@@ -164,35 +171,29 @@ class ImeallIO(object):
 
   def submit_job(self, target_dir, target_sub_dir, calc_suffix='_d2.0'):
     target_dir = os.path.join(target_dir, target_sub_dir)
-#Identify the subdirectory by the calculation suffix:
     target_dir, target_dir_name = self.find_subdir(target_dir, calc_suffix)
     try:
       gb_data = json.load(open(os.path.join(target_dir,'gb.json')))
       pprint(gb_data)
     except:
       print 'Error Opening JSON FILE'
-    try:
-#os.system('cd {0}; ./run.sh'.format(target_dir))
-      pass
-    except:
-      print 'Error submitting ', target_dir
 
 class GBRelax(object):
   def __init__(self, grain_dir='./', gbid='0000000000', calc_type='EAM',
                potential = 'IP EAM_ErcolAd', param_file = 'iron_mish.xml',
                traj_file='traj.xyz'):
   """
-    :class:`GBRelax` is responsible for generating the initial configuration of the grain
-    boundary before and relaxation occurs.
-    Here we Initialize some naming conventions, the calculation type, and
-    necessary input files. grain_dir is the overarching grain directory (the theme):
-    the target dir is the subdirectory depending on the
-    calculation type (flavour) at the highest level and then the
-    variations (deletions, translation, substitutions, vacancies) 
-    on the theme are subgrain(s) i.e. in subgrain_dir named
-    according to the variation. atom deletion for atoms within radius
-    rcut is written gbid_r2.0, translations gbid_tx_0.1, gbid_ty,0.2 etc.
-    Hydrogen inclusion is denoted in terms of concentration 
+  :class:`GBRelax` is responsible for generating the initial configuration of the grain
+  boundary before and relaxation occurs.
+  Here we Initialize some naming conventions, the calculation type, and
+  necessary input files. grain_dir is the overarching grain directory (the theme):
+  the target dir is the subdirectory depending on the
+  calculation type (flavour) at the highest level and then the
+  variations (deletions, translation, substitutions, vacancies) 
+  on the theme are subgrain(s) i.e. in subgrain_dir named
+  according to the variation. atom deletion for atoms within radius
+  rcut is written gbid_r2.0, translations gbid_tx_0.1, gbid_ty,0.2 etc.
+  Hydrogen inclusion is denoted in terms of concentration 
   """
     self.gbid        =  gbid
     self.grain_dir    = grain_dir
@@ -211,9 +212,9 @@ class GBRelax(object):
     print self.calc_dir
 
   def gen_super_rbt(self, bp=[],v=[], rbt=[0.0, 0.0], sup_v=6, sup_bxv=4, rcut=2.0):
-    '''
-      Create a grain boundary with rigid body translations.
-    '''
+    """
+    Create a grain boundary with rigid body translations.
+    """
     io = ImeallIO()
     grain = build_tilt_sym_gb(bp=bp, v=v, rbt=rbt)
 # For RBT we build a top level dir with just the translated supercell and no
@@ -271,10 +272,10 @@ class GBRelax(object):
 
 
   def gen_super(self, grain=None, rbt=None, sup_v=6, sup_bxv=2, rcut=2.0):
-    ''' 
-       To create a grain boundary super cell we use the parameters of
-       Rittner and Seidman (PRB 54 6999).
-    '''
+    """ 
+    To create a grain boundary super cell we use the parameters of
+    Rittner and Seidman (PRB 54 6999).
+    """
     io = ImeallIO()
     if rbt == None:
       x = Atoms('{0}.xyz'.format(os.path.join(self.grain_dir, self.gbid)))
@@ -336,7 +337,9 @@ class GBRelax(object):
       return sup_v, sup_bxv, x
 
   def delete_atoms(self, grain=None, rcut=2.0):
-# Delete atoms below a certain threshold
+    """ 
+    Delete atoms below a certain distance threshold
+    """ 
     io = ImeallIO()
     if grain == None:
       x = Atoms('{0}.xyz'.format(os.path.join(self.grain_dir, self.gbid)))
@@ -368,10 +371,10 @@ class GBRelax(object):
       return x
 
   def gen_pbs(self, time='02:30:00', queue='serial.q'):
-    ''' Generates job pbs file
-    '''
+    """ 
+    Generates job pbs file.
+    """
     pbs_str = open('/users/k1511981/pymodules/templates/calc_ada.pbs','r').read()
-#   struct_dir = os.path.join(self.grain_dir,'structs')
     pbs_str = pbs_str.format(jname='fe'+self.name, xyz_file='{0}.xyz'.format(self.name), 
                              time=time, queue=queue)
     print os.path.join(self.subgrain_dir, 'fe{0}.pbs'.format(self.name))
@@ -380,11 +383,11 @@ class GBRelax(object):
 
   def translate(self):
     pass
-# Displace grain_a relative to grain_b
-# can be accomplished by moving along x or y
-# and wrapping atoms back to unit cell
-# Take the grain_boundary structure and relax it
+
   def go_relax(self, maxiters = 400):
+    """
+    Take the grain_boundary structure and relax it
+    """
     if self.struct_file == '':
       print 'No pointer to struct file. Have you specified a job?'
       return None
