@@ -7,19 +7,26 @@ atomistic properties of dislocations, grain boundaries, and fracture simulations
 <h2><code>Imeall</code> Naming Conventions</h2>
 <p>The grain boundaries are generated and labeled according to a uniform process indicated by the following notation:</p>
 <pre><code>  Theta[XXX](YYY)</code></pre>
-<p>Theta is the angle of misorientation in degree around the orientation axis [XXX]. The boundary plane (YYY) 
+<p>Theta is the angle of misorientation in degrees around the orientation axis [XXX]. The boundary plane (YYY) 
 determines the plane of the interface between the misoriented Grain A and Grain B. In this way it is 
-possible to uniquely characterize all grain boundaries.</p>
-<p>An additional set of three degrees of freedom is then used to extend the above definition. Additional degrees of 
+possible to uniquely characterize all grain boundaries. Grain boundaries characterized by these three quantities 
+are considered `canonical` grains.</p>
+
+<p> An additional set of three degrees of freedom is then used to extend the above definition. The additional degrees of 
 freedom correspond to a rigid body translation in the two dimensional plain of the grain boundary, one 
 relative to the other, and a volume relaxation orthogonal to the grain boundary plane. These atomic 
 scale degrees of freedom compose subgrains of the canonical parent grain. Further variations of the grain include
-vacancies and impurities which compose new subgrains of the canonical grain.
+vacancies and impurities which also compose new subgrains of the canonical grain. Subgrains are stored in a hierarchical
+format below the canonical grain.
+</p>
 
+<p>
 Finally, we assign the idealized crystalline bulk structure the notation:</p>
 <pre><code>  0000000000</code></pre>
-<p>Computationally each canonical grain boundary so identified can be considered an object with all its physical properties as attributes (to be described below). The structures are stored locally in the database as <a href="https://libatoms.github.io/QUIP/io.html#module-ase.io.extxyz">Extended XYZ</a> files. </p>
-</ul>
+<p>
+The structures are stored locally in the database 
+as <a href="https://libatoms.github.io/QUIP/io.html#module-ase.io.extxyz">Extended XYZ</a> files. 
+</p>
 
 
 <h2 id="using-imeall">Using Imeall</h2>
