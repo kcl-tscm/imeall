@@ -71,13 +71,13 @@ combined <code>_tv0.25bxv0.25_d2.0</code>. A key for some common suffix patterns
 
   <h3> Remote Databases </h3> 
   <p> <code>Imeall</code> provides a framework for synchronizing the local database, which contains
-  the output of calculations, with the production servers (typically remote servers). To define the server
-  that require synchronization and inspect the synchronization log file go to:
+  the output of calculations, with the production servers (typically remote servers). To inspect the local
+  synchronization logs go to:
   <pre><a href ={{url_for('synchronization')}}>Database Synchronization</a></pre>
   </p>
 
   <h3> Local Database </h3>
-  <p> Your local database contains the following materials: </p>
+  <p> The local database contains the following materials: </p>
   <ul class=entries>
   {% for material in materials %}
     <li> <a href={{ url_for('material', material=material)}}>{{material}}</a></em></li>

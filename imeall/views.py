@@ -56,10 +56,11 @@ def before_request():
 def home_page():
   """
    Base view of imeall database. Links to material specific
-   databases and synchronization log.
+   databases and the synchronization log.
   """
   materials = os.listdir(g.gb_dir)
   return render_template('imeall.html', materials=materials)
+
 
 @app.route('/<material>/')
 def material(material):
@@ -73,11 +74,17 @@ def material(material):
       orientations.append(filename)
   return render_template('material.html', url_path=url_path, orientations=orientations)
 
+
 @app.route("/db_sync/")
 def synchronization():
   with open('./imeall/db_synclog','r') as f:
-    db_log = f.read().split()
-  return render_template('synchronization.html', db_log='\n'.join(db_log))
+    db_log = f.read().split('\n\n')
+  db_log.reverse()
+  return render_template('synchronization.html', db_log=db_log)
+
+  #date_re  = re.compile("([0-9]{2}:[0-9]{2}:[0-9]{2}\s+[0-9-]+)", re.S)
+  #db_log   = re.split(date_re, db_log)
+  #return render_template('synchronization.html', db_log='\n'.join(db_log))
 
 @app.route('/analysis/')
 def analysis():
