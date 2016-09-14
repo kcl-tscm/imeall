@@ -1,0 +1,6 @@
+{%  extends "layout.html"  %}
+{% block body %}
+  {% for k,v in j_file.items() %}
+    <p> {{k}}:{{v}} </p>
+  {% endfor%}
+{% endblock body %}
