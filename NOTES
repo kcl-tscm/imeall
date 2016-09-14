@@ -1,0 +1,140 @@
+Overall:
+  Thinking about it the real justification for this project
+  is to do deep learning on the GrainBoundaries, Dynamics,
+  and Energetics, and to have a database of all these calculations.
+  Strictly speaking each view of a grain boundary should have a neural net
+  attached to it which is capable producing its dynamics, it's potential energy
+  surface etc.
+  Visualization Stuff:
+  Thinking more now about how the library is going to look:
+
+I'd really like some kind of X11 server embedding in the page
+That would make it very simple for a user to look at the grain
+boundary say using AtomEye and flicker around with things there.
+There are some packages which seem to be moving towards a Javascript
+style X server... I feel like a decent solution would be just to stream
+the output of a server side x11 stuff to the browser.
+VNC (virtual network computing) and x11vnc.
+ffmpeg can also grab x11 and turn it into video for streaming.
+X11 is a display server Presents a common API for drawing, keyboard, mouse, other events
+There is a remote protocol so you can tunnel via tcp, ssh etc.
+
+  https://prezi.com/jrfg5ziqtwhn/x11-in-a-modern-web-browser-why/
+  https://github.com/GothAck/javascript-x-server.git
+  http://stackoverflow.com/questions/19556947/html5-javascript-x11-server
+  https://docs.oracle.com/cd/E26502_01/html/E28056/gmceg.html
+
+Although looking into the code I realize chemview.js will
+actually provide the client side visualization that I 
+actually need, and can communicate in a much nice format back 
+and forth with json.
+
+Films:
+  If we want to see a movie imovie might be a useful way of wrapping up a variety
+of different grain boundaries into a brady brunch/1970s style split screen of
+fun.
+
+Server Development:
+Browsing file systems, uploading files etc:
+
+Advanced views and custom decorators:
+h4ttp://exploreflask.readthedocs.io/en/latest/configuration.html
+http://exploreflask.readthedocs.io/en/latest/views.html
+Standard Patterns for uploading files:
+http://flask.pocoo.org/docs/0.10/patterns/fileuploads/
+
+Flask-Uploads allows application to handle file uploading, and
+serving the uploaded files.
+Some more templates for application structure:
+  https://github.com/imwilsonxu/fbone
+  https://github.com/sloria/cookiecutter-flask
+
+Module for metric space indexing.
+  http://well-adjusted.de/~jrspieker/mspace/
+
+
+For injecting Jinja Templates with extra spice!
+Note: This is Flask specific!
+I know this post is quite old, but there are better methods of doing 
+this in the newer versions of Flask using context processors.
+Variables can easily be created:
+
+@app.context_processor
+def example():
+    return dict(myexample='This is an example')
+
+The above can be used in a Jinja2 template with Flask like so:
+{{ myexample }}
+
+Which outputs This is an example
+
+As well as full fledged functions:
+
+@app.context_processor
+def utility_processor():
+    def format_price(amount, currency=u'€'):
+        return u'{0:.2f}{1}'.format(amount, currency)
+    return dict(format_price=format_price)
+
+The above when used like so:
+{{ format_price(0.33) }} 
+(Which outputs the input price with the currency symbol)
+Also a note on how to create a recursive list patttern
+  http://stackoverflow.com/questions/11922893/jinja2-and-json
+
+Tue 10 May 2016 15:18:18 BST
+
+Spent first part of day messing around with views and 
+d3 js stuff. Can read d3.js documentation here:
+    https://d3js.org/#introduction
+
+Key lessons were... 
+  1) Inspect everything you do in javascript in the console
+     makes debugging things alot simpler.
+  2) Passing the dict_struct via jinja requires some
+     juggling of python to javascript::
+
+     var data = jQuery.parse(json.dumps([{data},{data},...{data}]))
+
+    and in the jinja template we dont want the json string to be escaped
+    so we need to mark the data as safe {{data|safe}}.
+
+    Might also be able to exploit this kind of pattern
+    {{item|tojson|safe}}. Funny how reading the documentation becomes
+    alot easier after you've had to solve all the problems.
+
+   The standard configuration for Jinja in Flask is layed out here:
+   http://flask.pocoo.org/docs/0.10/templating/#standard-filters
+   as follows. autoescaping is enabled for all templates ending in .html
+   .htm, .xml, as well as .xhtml
+
+   3) opt in/out of autoescaping via {% autoescape %} tag.}
+      some global variables available withing Jinja2 templates
+        config
+        request
+        session
+        g
+        url_for
+        get_flashed_messages()
+
+  3) Adding custom filters to flask:
+    @app.template_filter('reverse')
+    def reverse_filter(s):
+      return s[::-1]
+    def reverse_filter(s):
+      return s[::-1]
+    app.jinja_env.filters['reverse'] = reverse_filter
+
+A cool way of including markdown into a jinja script is 
+described here:
+  https://gist.github.com/glombard/7554134
+
+# One thing we should definitely look at si the PHONONPY 
+# EIGENMODES For a Grain Boundary!
+
+
+
+https://atztogo.github.io/phonopy/setting-tags.html#irreducible-representation-related-tags
+
+
+

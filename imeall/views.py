@@ -26,7 +26,7 @@ calculations['1105048332'] = {'IP-EAM-MISH'  : {'E0':-382.847802363, 'nat':90, '
 calculations['1106000112'] = {'IP-EAM-MISH'  : {'E0':-196.171, 'nat':46, 'A': 9.80885920049}}
 
 #files that Imeall server can wants to display in browser:
-valid_extensions = ['xyz', 'json', 'mp4']
+valid_extensions = ['xyz', 'json', 'mp4', 'png','day']
 vasp_files       = ['IBZKPT', 'INCAR', 'CHG', 'CHGCAR', 'DOSCAR', 'EIGENVAL', 
                     'KPOINTS', 'OSZICAR', 'OUTCAR', 'PCDAT', 'POSCAR',
                     'POTCAR', 'WAVECAR', 'XDATCAR']
@@ -56,10 +56,11 @@ def before_request():
 def home_page():
   """
    Base view of imeall database. Links to material specific
-   databases and synchronization log.
+   databases and the synchronization log.
   """
   materials = os.listdir(g.gb_dir)
   return render_template('imeall.html', materials=materials)
+
 
 @app.route('/<material>/')
 def material(material):
@@ -73,11 +74,25 @@ def material(material):
       orientations.append(filename)
   return render_template('material.html', url_path=url_path, orientations=orientations)
 
+
 @app.route("/db_sync/")
 def synchronization():
   with open('./imeall/db_synclog','r') as f:
-    db_log = f.read().split()
-  return render_template('synchronization.html', db_log='\n'.join(db_log))
+    db_log = f.read().split('\n\n')
+  db_log.reverse()
+  return render_template('synchronization.html', db_log=db_log)
+
+  #date_re  = re.compile("([0-9]{2}:[0-9]{2}:[0-9]{2}\s+[0-9-]+)", re.S)
+  #db_log   = re.split(date_re, db_log)
+  #return render_template('synchronization.html', db_log='\n'.join(db_log))
+
+@app.route("/log/")
+def _log_in():
+#Some combination of pexpect and the like should let us handle the automatic
+#accessing of the different servers we wish to sync to.
+#http://stackoverflow.com/questions/37783368/pass-post-data-to-a-script-flask
+#http://stackoverflow.com/questions/2387731/use-subprocess-to-send-a-password
+  return redirect(url_for("synchronization"))
 
 @app.route('/analysis/')
 def analysis():
@@ -132,7 +147,7 @@ def orientations(url_path, orientation):
 
 def make_tree(path):
   """
-    Recurse through subgrain directories collecting json files.
+    Recurse through subgrain directories collecting json and png files.
   """
   tree = dict(name=os.path.basename(path), children=[], fullpath='')
   try: 
@@ -171,11 +186,11 @@ def grain_boundary(url_path, gbid):
     subgrain directories.
   """
   url_path  = url_path+'/'+gbid
-  path = os.path.join(g.gb_dir, url_path)
+  path      = os.path.join(g.gb_dir, url_path)
   with open(os.path.join(path, 'gb.json'),'r') as json_file:
     gb_info = json.load(json_file)
   stuff = []
-  tree = make_tree(path)
+  tree  = make_tree(path)
   json_files = []
   extract_json(path, json_files)
   subgrains = []
@@ -187,8 +202,8 @@ def grain_boundary(url_path, gbid):
     except:
       pass
   return render_template('grain_boundary.html', gbid=gbid, url_path=url_path,
-                          stuff=stuff, gb_info=gb_info, tree=tree,
-                          subgrains=subgrains, subgrainsj=json.dumps(subgrainsj))
+                          gb_info=gb_info, tree=tree, subgrains=subgrains, 
+                          subgrainsj=json.dumps(subgrainsj))
 
 #Check for Ovito in different paths.
 def run_ovito(target_dir, filename):
@@ -209,8 +224,9 @@ def run_ovito(target_dir, filename):
 @app.route('/img/<path:filename>/<gbid>/<img_type>')
 def serve_img(filename, gbid, img_type):
   """
-    Serve the different images to the browser.
+  Serve the different images to the browser.
   """
+  print 'Calling serve img', gbid, img_type, filename
   img = os.path.join(filename,'{0}.png'.format(gbid))
   if img_type =='struct':
     img  = app.config['GRAIN_DATABASE']+'/'+filename+'/{0}.png'.format(gbid)
@@ -219,6 +235,10 @@ def serve_img(filename, gbid, img_type):
   elif img_type =='pot':
     pot_dir = '/Users/lambert/pymodules/imeall/imeall/potentials'
     img     = pot_dir+'/'+filename
+  elif img_type =='gen':
+    img  = app.config['GRAIN_DATABASE']+'/'+filename
+  else:
+    img = 'NO IMAGE'
   return send_file(img)
 
 @app.route('/textfile/<gbid>/<path:filename>')
@@ -233,6 +253,12 @@ def serve_file(gbid, filename):
     text = text.split('\n')
     run_ovito(textpath, filename)
     return render_template('text.html', text=text)
+  elif filename.endswith('json'):
+    with open(textpath, 'r') as f:
+      j_file = json.load(f)
+    return render_template("render_json.html", j_file=j_file)
+  elif filename.endswith('png'):
+    return send_file(textpath)
   elif filename == 'OSZICAR':  
     rmm_regex  = re.compile(r'RMM:\s+([-+0-9.E\s]+)')
     osz_list = rmm_regex.findall(text)

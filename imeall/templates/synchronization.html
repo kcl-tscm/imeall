@@ -1,5 +1,7 @@
 {% extends "layout.html" %}
 {% block body %}
-  {{ db_log }}
+  {% for log in db_log[:10] %}
+    <p> {{ log }} <p>
+  {%  endfor %}
 {% endblock body %}
 
