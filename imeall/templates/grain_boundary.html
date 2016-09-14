@@ -75,12 +75,17 @@
           </li>
         {% else %}
           {% if item.name|file_extension =='png' %}
-             <li> <img src = "{{url_for('serve_file', gbid=gbid, filename=item.name, 
-                                url_path=url_path, textpath=item.fullpath)}}" style="width:84px;height:84px;border:0;"
+             <li> 
+                  <a href="{{url_for('serve_file', gbid=gbid, filename=item.name, 
+                                                  url_path=url_path, textpath=item.fullpath)}}" title={{item.name}}>
+                  <img src = "{{url_for('serve_file', gbid=gbid, filename=item.name, 
+                                url_path=url_path, textpath=item.fullpath)}}" style="width:120px;height:120px;border:0;"
                                 alt = {{item.name}}>
+                  </a>
+             </li>
           {% else %}
              <li> <a href="{{url_for('serve_file', gbid=gbid, filename=item.name, 
-                             url_path=url_path, textpath=item.fullpath)}}"> {{item.name}} </a>
+                             url_path=url_path, textpath=item.fullpath)}}">{{item.name}}</a> </li>
           {% endif %}
         {%- endif %}
       {%- endfor %}
