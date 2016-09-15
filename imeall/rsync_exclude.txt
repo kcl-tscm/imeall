@@ -3,4 +3,3 @@
 *.pbs
 */Fracture/*
 *.cobaltlog
-*/DFT/*

@@ -41,6 +41,12 @@ class VaspOutcar(object):
                  'param_file':'VASP-DFT-PBE'}
       json.dump(gb_dict, outfile, indent=2)
     return
+  
+
+  def pull_atom_forces():
+    force_pos_rege = re.compile("")
+    for line in pos_force.split('\n'):
+      x,y,z,fx,fy,fz = map(float, line.split())
 
 # REGEX library
 # pull free energies, number of iterations, 
@@ -48,6 +54,7 @@ class VaspOutcar(object):
 toten_regex = re.compile(r'free energy    TOTEN  =\s+([\-0-9\.]+)', re.S)
 iter_regex  = re.compile(r'Iteration\s+([0-9]+)\(\s+([0-9]+)\)')
 conv_regex  = re.compile('reached required accuracy', re.S)
+
 
 
 if __name__=='__main__':
