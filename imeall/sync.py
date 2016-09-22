@@ -37,7 +37,7 @@ if __name__=='__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument("-s", "--server", help="name of server to synce with")
 
-  mira_params = dict(sync_log="db_synclog", exclude="'*/Fracture/*'", exclude_from="rsync_exclude.txt", rsync_args="-auv",
+  mira_params = dict(sync_log="db_synclog", exclude="'*/Fracture/*'", exclude_from="rsync_exclude.txt", rsync_args="-av",
                      src="lambert@mira.alcf.anl.gov:/home/lambert/iron/grain_boundaries", target="./") 
 
   ada_params = dict(sync_log="db_synclog", exclude="'*/Fracture/*'", exclude_from="rsync_exclude.txt", rsync_args="-auv", 

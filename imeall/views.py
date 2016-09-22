@@ -206,18 +206,23 @@ def grain_boundary(url_path, gbid):
                           subgrainsj=json.dumps(subgrainsj))
 
 #Check for Ovito in different paths.
-def run_ovito(target_dir, filename):
+def run_ovito(filename):
   """ 
-    run_ovito launches the Ovito application with the
-    associated grain boundary trajectory file loaded, the os command should
-    ensure we are in the working directory so that any modifications, or
-    videos generated will be saved in the correct place. ovito must be set
-    in environment.
+  run_ovito launches the Ovito application with the
+  associated grain boundary trajectory file loaded, the os command should
+  ensure we are in the working directory so that any modifications, or
+  videos generated will be saved in the correct place. ovito must be set
+  in environment.
   """
-  ovito = os.environ["OVITO"]
-  target_dir = '/'.join(target_dir.split('/')[:-1])
+  try:
+    ovito = os.environ["OVITO"]
+  except KeyError:
+    flash('No path to OVITO found in the environment')
   if os.path.isfile(ovito):
-    job = subprocess.Popen("cd {0}; {1} {2}&".format(target_dir, ovito, filename).split())
+    print os.path.dirname(filename)
+#MORE SECURITY RISK IMEALL CANNOT BE ACCESSED GLOBALLY:
+    print os.path.dirname(filename), ovito, filename
+    job = subprocess.Popen("{0} {1}".format(ovito, filename).split(), cwd=os.path.dirname(filename))
   else: 
     return flash('OVITO not in PATH variable.')
 
@@ -251,7 +256,7 @@ def serve_file(gbid, filename):
     text = text_file.read()
   if filename.split(".")[-1] == 'xyz':
     text = text.split('\n')
-    run_ovito(textpath, filename)
+    run_ovito(textpath)
     return render_template('text.html', text=text)
   elif filename.endswith('json'):
     with open(textpath, 'r') as f:
