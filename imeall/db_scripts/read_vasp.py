@@ -3,11 +3,51 @@ import re
 from ase.io import vasp
 from quippy import Atoms
 import json
+import shutil
+
+class VaspIncar(object):
+  """ 
+  :class:`VaspIncar` to manipulate vasp input files.
+  """  
+  def __init__(self, jobdir='./'):
+    self.calc_type = 'relaxation'
+    self.incar     = 'INCAR'
+    self.kpoints   = 'KPOINTS'
+    self.potcar    = 'POTCAR'
+    self.poscar    = 'POSCAR'
+    self.job_dir   = jobdir
+
+  def constrained_relaxation(self,current='T   T   T', target='F   F   T'):
+    """ 
+    :method: `constrained_relaxation` pass target string with 
+    Booleans of directions to permit relaxation along.
+    """
+    with open(os.path.join(self.job_dir,self.poscar),'r') as f:
+      poscar = f.read()
+      poscar = poscar.replace(current, target)
+    with open(os.path.join(self.job_dir, self.poscar),'w') as f:
+      print >> f, poscar
+    return
+
+  def cont_to_pos(self):
+    """
+    :method:`cont_to_pos` copy CONTCAR to POSCAR. If CONTCAR is empty POSCAR will not 
+    be updated and a notification will be printed to stdout.
+    """
+    with open(os.path.join(self.job_dir, self.contcar),'r') as f:
+      contcar = f.read()
+#To determine if we have a valid CONTCAR with numbers in it:
+    re_number = re.compile('[0-9]')
+    if re.match(re_number, contcar):
+      shutil.copy(os.path.join(self.job_dir, self.contcar), os.path.join(self.job_dir, self.contcar))
+    else:
+      print 'CONTCAR empty not copying files across: ', self.job_dir
+    return
 
 class VaspOutcar(object):
   """ 
   :class:`VaspOutcar` to pull information of interest
-  from vasp calculation.
+  from vasp outcar files: positions, forces, total energies.
   """  
   def __init__(self):
     self.totens = []
@@ -68,8 +108,14 @@ if __name__=='__main__':
     gamma_surf.converged = True
   
 # Return an Atoms object, collect total energies and the number of iterations:
-  out_atoms  = vasp.read_vasp_out('OUTCAR')
-  gamma_surf.atoms = out_atoms
+  try:
+    out_atoms  = vasp.read_vasp_out('OUTCAR')
+    gamma_surf.atoms = out_atoms
+  except IndexError:
+    print 'No position information in OUTCAR using input.'
+    out_atoms  = vasp.read_vasp('POSCAR')
+    gamma_surf.atoms = out_atoms
+
   totens     = map(float, toten_regex.findall(outcar))
   iterations = iter_regex.findall(outcar)
   
@@ -87,8 +133,9 @@ if __name__=='__main__':
     print 'Totens', len(totens), 'Iters', len(iterations)
     sys.exit()
   
-# Create Total Energy Plot
+# Create Total Energy Plot for all jobdirs in the pattern.
   with open('toten.dat','w' ) as f:
     for thing in gamma_surf.totens:
       print >> f, '\t'.join(map(str, thing))
   gamma_surf.write_json_file()
+  gamma_surf.atoms.write('relaxed_dft_struct.xyz')

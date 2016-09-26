@@ -7,6 +7,7 @@ from quippy.io import AtomsWriter, AtomsReader
 parser = argparse.ArgumentParser()
 
 parser.add_argument("-p", "--pattern", required=True)
+parser.add_argument("-j", "--jobfile")
 pattern = args.pattern
 
 jobs = glob.glob(pattern)
