@@ -43,6 +43,12 @@ if __name__=='__main__':
   ada_params = dict(sync_log="db_synclog", exclude="'*/Fracture/*'", exclude_from="rsync_exclude.txt", rsync_args="-auv", 
                      src="k1511981@ada.hpc.kcl.ac.uk:/users/k1511981/sharedscratch/grain_boundaries/grain_boundaries", target="./")
 
+  #To sync the directory structure of the grainboundary
+  #rsync -a -f"+ */" -f"- *" source/ destination/
+  #rsync_args='-a -f"+ */" -f"- *'.split()
+  #http://superuser.com/questions/156664/what-are-the-differences-between-the-rsync-delete-options
+  emptydir_params = dict(sync_log="db_synclog", exclude="'*/Fracture/*'", exclude_from="rsync_exclude.txt", rsync_args="-auv", src="", target="")
+
   sync_mira = SyncDB(**mira_params)
   sync_mira.sync_db(server="mira")
 

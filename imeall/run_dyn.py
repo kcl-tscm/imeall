@@ -10,9 +10,10 @@ from   quippy.io       import AtomsWriter, AtomsReader, write
 from   pprint          import pprint
 from   cStringIO       import StringIO
 from   slabmaker.slabmaker import build_tilt_sym_gb
+from   relax               import relax_gb
 
-import numpy as np
 import argparse
+import numpy as np
 
 class Capturing(list):
   def __enter__(self):
@@ -219,9 +220,9 @@ class GBRelax(object):
 # For RBT we build a top level dir with just the translated supercell and no
 # deleted atoms then we create subdirectories with particular deletion criteria
 # to them. This means we don't have to duplicate the structure files.
-    struct_dir = os.path.join(self.grain_dir,'structs')
+    struct_dir   = os.path.join(self.grain_dir,'structs')
     struct_files = os.listdir(struct_dir)
-    loc_name    = '{0}_v{1}bxv{2}_tv{3}bxv{4}_d{5}z'.format(self.gbid,
+    loc_name     = '{0}_v{1}bxv{2}_tv{3}bxv{4}_d{5}z'.format(self.gbid,
     str(sup_v), str(sup_bxv), str(round(rbt[0],2)), str(round(rbt[1],2)), str(rcut))
 #Check if this initial grain with the atom deletion criterion and the rigid body translations
 #is present if not generate it:
@@ -437,13 +438,15 @@ if __name__=='__main__':
 # run_dyn parsing builds a command line tool for managing grain boundary
 # database
   parser = argparse.ArgumentParser()
-  parser.add_argument("-p", "--prefix", help = "Subsequent commands will act on all \
-                                                subdirectories with first characters matching prefix.", required=True)
+  parser.add_argument("-p",  "--prefix", help = "Subsequent commands will act on all \
+                                                 subdirectories with first characters matching prefix.", required=True)
   parser.add_argument("-ct", "--calc_type", help = "Name of calculation type TB, EAM, DFT, etc.", required=True)
   parser.add_argument("-q",  "--queue", help = "Jobs will be submitted to this queue.", default='smp.q')
   parser.add_argument("-t",  "--time",  help = "Time limit on jobs.", default='1:00:00')
-  parser.add_argument("-rc", "--rcut",  type=float, help = "Deletion criterion for nearest neighbour atoms.", default=2.0)
-  parser.add_argument("-h", "--hydrogen", type=int, help="If greater than 0 add n hydrogens to the boundary.", default=0)
+  parser.add_argument("-rc", "--rcut",     type=float, help = "Deletion criterion for nearest neighbour atoms.", default=2.0)
+  parser.add_argument("-h",  "--hydrogen", type=int, help="If greater than 0 add n hydrogens to the boundary.", default=0)
+  parser.add_argument("-i_v", "--i_v",     type=float, help="Rigid body translation along i_v.", default=0.0)
+  parser.add_argument("-i_bxv", "--i_bxv", type=float, help="Rigid body translation along i_bxv.", default=0.0)
 
   args = parser.parse_args()
   calc_type = args.calc_type
@@ -468,16 +471,35 @@ if __name__=='__main__':
     print 'No available potential corresponds to this calculation type.'
     sys.exit()
 
-  jobdirs = []
-  for target_dir in os.listdir('./'):
-    if os.path.isdir(target_dir) and thing[:len(prefix)]==prefix:
-      jobdirs.append(target_dir)
+  from_script = True
+  if not from_script:
+#Standard mode for ada, we have a pattern append all sub grain jobs we want to look
+#at and relax boundaries.
+    jobdirs = []
+    for target_dir in os.listdir('./'):
+      if os.path.isdir(target_dir) and thing[:len(prefix)]==prefix:
+        jobdirs.append(target_dir)
 
-  for job_dir in jobdirs[:]:
-    gbid    = job_dir.strip('/')
-    print '\n'
-    print '\t', gbid
-    print '\n'
+    for job_dir in jobdirs[:]:
+      gbid    = job_dir.strip('/')
+      print '\n'
+      print '\t', gbid
+      print '\n'
+      gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type=calc_type,
+                        potential = 'IP EAM_ErcolAd', param_file=param_file)
+      sup_v   = 6
+      sup_bxv = 2
+      with open(os.path.join(job_dir,'gb.json')) as f:
+        grain_dict = json.load(f)
+      bp = grain_dict['boundary_plane']
+      v  = grain_dict['orientation_axis']
+      for i in np.linspace(0.125, 1.0):
+        for j in np.linspace(0.125, 1.0):
+          gbrelax.gen_super_rbt(rcut=rcut, bp=bp, v=v, sup_v=sup_v, sup_bxv=sup_bxv, rbt=[i,j])
+          gbrelax.gen_pbs(time=time, queue=queue)
+  elif from_script:
+# Generate the supercell in the directory:
+    job_dir = os.cwd()
     gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type=calc_type,
                       potential = 'IP EAM_ErcolAd', param_file=param_file)
     sup_v   = 6
@@ -486,11 +508,16 @@ if __name__=='__main__':
       grain_dict = json.load(f)
     bp = grain_dict['boundary_plane']
     v  = grain_dict['orientation_axis']
-    for i in np.linspace(0.125, 1.0):
-      for j in np.linspace(0.125, 1.0):
-        gbrelax.gen_super_rbt(rcut=rcut, bp=bp, v=v, sup_v=sup_v, sup_bxv=sup_bxv, rbt=[i,j])
-        gbrelax.gen_pbs(time=time, queue=queue)
-
+    i_v   = args.i_v  
+    i_bxv = args.i_bxv
+# Generate the appropriate grain boundary in this directory.
+    gbrelax.gen_super_rbt(rcut=rcut, bp=bp, v=v, sup_v=sup_v, sup_bxv=sup_bxv, rbt=[i_v, i_bxv])
+#Switch to the appropriate subgrain directory.
+    os.chdir(gbrelax.subgrain_dir)
+# Call the relax function from this directory, reads in the initial struct_file, relaxes cell, writes json.
+    relax_gb()
+  else:
+    print "No Job Mode selected."
 #######################################
 #######################################
 ## RELAX EAM FOR LIST OF DIRECTORIES ##

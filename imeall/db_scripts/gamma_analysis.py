@@ -46,22 +46,28 @@ def grab_eners(dir_pattern=''):
     #disp = re_disp.findall(job)
     os.chdir(job)
 # Pull energy from the json file.
-    with open('subgb.json','r') as f:
-      gb_dict = json.load(f)
-    eners.append((job[-3:], gb_dict['E_gb']))
+    try:
+      with open('subgb.json','r') as f:
+        gb_dict = json.load(f)
+      eners.append((job[-3:], gb_dict['E_gb']))
+    except:
+      print 'Unable to read subgb', job
+      pass
     os.chdir('../')
   return eners
 
 if __name__=='__main__':
   parser  = argparse.ArgumentParser()
-  parser.add_argument("-p",   "--pattern", required=True)
-  parser.add_argument("-A",   "--area", type=float, default=181.221)
+  parser.add_argument("-A", "--area",    help="Area of the grain boundary.", type=float, default=181.221)
+  parser.add_argument("-p", "--pattern", help="glob pattern for directories containing gamma surface information.", required=True)
+  parser.add_argument("-r", "--reverse", help="If energetics are symmetric can create the full plot by reversing.", action='store_true')
   args    = parser.parse_args()
   area    = args.area
   pattern = args.pattern
+  reverse = args.reverse
 
   create_json(dir_pattern='{0}*'.format(pattern))
   eners         = grab_eners('{0}*'.format(pattern))
   calc_pattern  = '{0}'.format(pattern)
   print 'Writing data to ', calc_pattern+'.dat'
-  plot_ener(eners=eners, calc_pattern=calc_pattern, A=area, reverse=False)
+  plot_ener(eners=eners, calc_pattern=calc_pattern, A=area, reverse=reverse)
