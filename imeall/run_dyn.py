@@ -183,19 +183,19 @@ class GBRelax(object):
   def __init__(self, grain_dir='./', gbid='0000000000', calc_type='EAM',
                potential = 'IP EAM_ErcolAd', param_file = 'iron_mish.xml',
                traj_file='traj.xyz'):
-  """
-  :class:`GBRelax` is responsible for generating the initial configuration of the grain
-  boundary before and relaxation occurs.
-  Here we Initialize some naming conventions, the calculation type, and
-  necessary input files. grain_dir is the overarching grain directory (the theme):
-  the target dir is the subdirectory depending on the
-  calculation type (flavour) at the highest level and then the
-  variations (deletions, translation, substitutions, vacancies) 
-  on the theme are subgrain(s) i.e. in subgrain_dir named
-  according to the variation. atom deletion for atoms within radius
-  rcut is written gbid_r2.0, translations gbid_tx_0.1, gbid_ty,0.2 etc.
-  Hydrogen inclusion is denoted in terms of concentration.
-  """
+    """
+    :class:`GBRelax` is responsible for generating the initial configuration of the grain
+    boundary before and relaxation occurs.
+    Here we Initialize some naming conventions, the calculation type, and
+    necessary input files. grain_dir is the overarching grain directory (the theme):
+    the target dir is the subdirectory depending on the
+    calculation type (flavour) at the highest level and then the
+    variations (deletions, translation, substitutions, vacancies) 
+    on the theme are subgrain(s) i.e. in subgrain_dir named
+    according to the variation. atom deletion for atoms within radius
+    rcut is written gbid_r2.0, translations gbid_tx_0.1, gbid_ty,0.2 etc.
+    Hydrogen inclusion is denoted in terms of concentration.
+    """
     self.gbid        =  gbid
     self.grain_dir    = grain_dir
     self.calc_dir   = os.path.join(grain_dir, calc_type)
