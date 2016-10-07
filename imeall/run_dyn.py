@@ -128,7 +128,7 @@ class ImeallIO(object):
     """
     Initialize a vasp calculation. Read in the xyz file 
     if it is present and generate an INCAR, POSCAR, 
-    run_vasp file in the Directory the vasp template 
+    run_vasp file in the directory the vasp template.
     """
     json_file = os.path.join(target_dir, 'gb.json')
     gb_data = self.load_json(json_file)
@@ -193,7 +193,7 @@ class GBRelax(object):
   on the theme are subgrain(s) i.e. in subgrain_dir named
   according to the variation. atom deletion for atoms within radius
   rcut is written gbid_r2.0, translations gbid_tx_0.1, gbid_ty,0.2 etc.
-  Hydrogen inclusion is denoted in terms of concentration 
+  Hydrogen inclusion is denoted in terms of concentration.
   """
     self.gbid        =  gbid
     self.grain_dir    = grain_dir
@@ -206,7 +206,6 @@ class GBRelax(object):
     self.potential   = potential
     self.fmax        = 0.5E-2
     self.traj_file   = traj_file
-
     print 'Generate Job in:'
     print self.grain_dir
     print self.calc_dir
@@ -258,8 +257,8 @@ class GBRelax(object):
       j_dict = json.load(f)
       f.close()
     except IOError:
-       f = open('{0}/subgb.json'.format(self.subgrain_dir), 'w')
-       j_dict = {}
+      f = open('{0}/subgb.json'.format(self.subgrain_dir), 'w')
+      j_dict = {}
 #terms to append to subgrain dictionary:
     j_dict['param_file'] = self.param_file
     j_dict['name'] = self.name
@@ -267,7 +266,7 @@ class GBRelax(object):
     j_dict['rcut'] = rcut
 
     f = open('{0}/subgb.json'.format(self.subgrain_dir), 'w')
-    json.dump(j_dict,f, indent=2)
+    json.dump(j_dict, f, indent=2)
     f.close()
 
 
@@ -443,7 +442,8 @@ if __name__=='__main__':
   parser.add_argument("-ct", "--calc_type", help = "Name of calculation type TB, EAM, DFT, etc.", required=True)
   parser.add_argument("-q",  "--queue", help = "Jobs will be submitted to this queue.", default='smp.q')
   parser.add_argument("-t",  "--time",  help = "Time limit on jobs.", default='1:00:00')
-  parser.add_argument("-rc", "--rcut", type=float, help = "Deletion criterion for nearest neighbour atoms.", default=2.0)
+  parser.add_argument("-rc", "--rcut",  type=float, help = "Deletion criterion for nearest neighbour atoms.", default=2.0)
+  parser.add_argument("-h", "--hydrogen", type=int, help="If greater than 0 add n hydrogens to the boundary.", default=0)
 
   args = parser.parse_args()
   calc_type = args.calc_type
@@ -456,6 +456,8 @@ if __name__=='__main__':
 # Each calculation type is associated with a potential:
   if calc_type == 'EAM_Mish':
     param_file = 'iron_mish.xml'
+  elif calc_type == 'PotBH':
+    param_file = 'PotBH.xml'
   elif calc_type == 'EAM_Men':
     param_file = 'Fe_Mendelev.xml'
   elif calc_type == 'EAM_Ack':
@@ -467,9 +469,9 @@ if __name__=='__main__':
     sys.exit()
 
   jobdirs = []
-  for thing in os.listdir('./'):
-    if os.path.isdir(thing) and thing[:len(prefix)]==prefix:
-      jobdirs.append(thing)
+  for target_dir in os.listdir('./'):
+    if os.path.isdir(target_dir) and thing[:len(prefix)]==prefix:
+      jobdirs.append(target_dir)
 
   for job_dir in jobdirs[:]:
     gbid    = job_dir.strip('/')
@@ -480,13 +482,12 @@ if __name__=='__main__':
                       potential = 'IP EAM_ErcolAd', param_file=param_file)
     sup_v   = 6
     sup_bxv = 2
-#check if structure already exists in structs file:
     with open(os.path.join(job_dir,'gb.json')) as f:
       grain_dict = json.load(f)
     bp = grain_dict['boundary_plane']
     v  = grain_dict['orientation_axis']
-    for i in np.linspace(0.25,1.0, 4):
-      for j in np.linspace(0.125,1.0,8):
+    for i in np.linspace(0.125, 1.0):
+      for j in np.linspace(0.125, 1.0):
         gbrelax.gen_super_rbt(rcut=rcut, bp=bp, v=v, sup_v=sup_v, sup_bxv=sup_bxv, rbt=[i,j])
         gbrelax.gen_pbs(time=time, queue=queue)
 
@@ -531,15 +532,6 @@ if __name__=='__main__':
 ##    print job_dir
 ##    im_io.copy_struct(job_dir, job_dir, 'EAM', 'DFT')
 #########################################################################
-#########################################################################
-## GENERATE list of poscar files etc in the sub_directories            ##
-#########################################################################
-#########################################################################
-#  im_io = ImeallIO()
-#  for job_dir in jobdirs[1:]:
-#    print job_dir
-#    im_io.xyz_to_vasp(job_dir,'DFT')
-############################################################################
 ############################################################################
 ## Our final pattern is to scan through all the subgrains and resubmit    ##
 ## unless a particular convergence has been achieved.                     ##
