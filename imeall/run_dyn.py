@@ -24,11 +24,13 @@ class Capturing(list):
     sys.stdout = self._stdout
 
 class ImeallIO(object):
-# Primary IO Object for routines for searching Imeall Directory tree
-# creating new grains, and subgrain directories. 
-# Sub-Grain directory (each 'massaged' grain boundary will have its own
-# directory) supercells of the grain count as subgrains finally a subdirectory
-# of defects is included for vacancies and interstitials.
+  """
+  Primary IO Object for routines for searching Imeall Directory tree
+  creating new grains, and subgrain directories. 
+  Sub-Grain directory (each 'massaged' grain boundary will have its own
+  directory) supercells of the grain count as subgrains finally a subdirectory
+  of defects is included for vacancies and interstitials.
+  """
   def __init__(self):
 #IO variables for VASP Calculations. 
 #Might be better to have a separate VASP OBJECT templated POSCAR, INCAR Files
@@ -63,6 +65,8 @@ class ImeallIO(object):
 # Common pattern might be I have a list of grain dir directories
 # with xyz files in them. Say the relaxed EAM grainboundaries for
 # a certain orientation. /gb/EAM/gbid_criteria/gbid_traj.xyz.
+
+
   def copy_struct(self, from_dir, target_dir, from_sub_dir, 
       target_sub_dir, calc_suffix='_d2.0', calc_point='final', md_step=1):
 # The calc_suffix determines which subgrain directories to
@@ -364,10 +368,10 @@ class GBRelax(object):
       return x
 
   def gen_pbs(self, time='02:30:00', queue='serial.q'):
-    ''' Generates job pbs file
+    ''' 
+      Generates a pbs file from the template stored in pbs_str. Writes 
     '''
     pbs_str = open('/users/k1511981/pymodules/templates/calc_ada.pbs','r').read()
-#   struct_dir = os.path.join(self.grain_dir,'structs')
     pbs_str = pbs_str.format(jname='fe'+self.name, xyz_file='{0}.xyz'.format(self.name), 
                              time=time, queue=queue)
     print os.path.join(self.subgrain_dir, 'fe{0}.pbs'.format(self.name))

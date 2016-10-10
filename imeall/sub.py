@@ -13,6 +13,17 @@ class Job(object):
     self.job_id   = ''
     self.job_que  = job_que
 
+  def gen_pbs(self, time='8:00:00', queue='serial.q'):
+    ''' 
+      Generates a pbs file from the template stored in pbs_str. Writes 
+    '''
+    pbs_str = open('/users/k1511981/pymodules/templates/calc_ada.pbs','r').read()
+    pbs_str = pbs_str.format(jname='fe'+self.name, xyz_file='{0}.xyz'.format(self.name),
+                             time=time, queue=queue)
+    print os.path.join(self.subgrain_dir, 'fe{0}.pbs'.format(self.name))
+    with open(os.path.join(self.subgrain_dir, 'fe{0}.pbs'.format(self.name)) ,'w') as pbs_file:
+      print >> pbs_file, pbs_str
+
   def sub_pbs(self, job_dir, exclude, suffix='v6bxv2z', regex=None, calc_type=None):
     ''' 
     Given an explicit suffix, or a regex this routine recurses through
