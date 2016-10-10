@@ -5,12 +5,15 @@ import shutil
 import ase.io        
 from   ase.constraints import UnitCellFilter
 from   ase.optimize    import BFGS, FIRE
-from   quippy          import Atoms, Potential, frange, farray, fzeros
+from   quippy          import Atoms, Potential
+from   quippy          import set_fortran_indexing, fzeros, frange
 from   quippy.io       import AtomsWriter, AtomsReader, write
 from   pprint          import pprint
 from   cStringIO       import StringIO
 from   slabmaker.slabmaker import build_tilt_sym_gb
 from   relax               import relax_gb
+
+set_fortran_indexing(False)
 
 import argparse
 import numpy as np
@@ -196,6 +199,7 @@ class GBRelax(object):
     rcut is written gbid_r2.0, translations gbid_tx_0.1, gbid_ty,0.2 etc.
     Hydrogen inclusion is denoted in terms of concentration.
     """
+
     self.gbid        =  gbid
     self.grain_dir    = grain_dir
     self.calc_dir   = os.path.join(grain_dir, calc_type)
@@ -220,16 +224,15 @@ class GBRelax(object):
 # For RBT we build a top level dir with just the translated supercell and no
 # deleted atoms then we create subdirectories with particular deletion criteria
 # to them. This means we don't have to duplicate the structure files.
-    struct_dir   = os.path.join(self.grain_dir,'structs')
-    struct_files = os.listdir(struct_dir)
-    loc_name     = '{0}_v{1}bxv{2}_tv{3}bxv{4}_d{5}z'.format(self.gbid,
-    str(sup_v), str(sup_bxv), str(round(rbt[0],2)), str(round(rbt[1],2)), str(rcut))
-#Check if this initial grain with the atom deletion criterion and the rigid body translations
-#is present if not generate it:
-    print loc_name+'.xyz'
-    #if loc_name+'.xyz' not in struct_files:
-    #Quite a few non-supercells were in the directories so regenerating from scratch.
-    if True:
+# Restoring the write to file
+# Check if this initial grain with the atom deletion criterion and the rigid body translations
+# is present if not generate it:
+    place_in_struct_dir = False
+    if place_in_struct_dir:
+      struct_dir   = os.path.join(self.grain_dir,'structs')
+      struct_files = os.listdir(struct_dir)
+      loc_name     = '{0}_v{1}bxv{2}_tv{3}bxv{4}_d{5}z'.format(self.gbid,
+      str(sup_v), str(sup_bxv), str(round(rbt[0],2)), str(round(rbt[1],2)), str(rcut))
       print 'GENERATING STRUCTURE'
       tmp0, tmp1, grain  = self.gen_super(grain=grain, rbt=rbt, sup_v=sup_v, sup_bxv=sup_bxv, rcut=0.0)
       self.name    = '{0}_v{1}bxv{2}_tv{3}bxv{4}'.format(self.gbid,
@@ -244,13 +247,18 @@ class GBRelax(object):
 #Deposit all initial structures in the struct dir:
       grain.write('{0}.xyz'.format(os.path.join(struct_dir, self.name)))
     else:
-      print 'STRUCTURE ALREADY GENERATED'
+      m, n, grain  = self.gen_super(grain=grain, rbt=rbt, sup_v=sup_v, sup_bxv=sup_bxv,  rcut=0.0)
       self.name    = '{0}_v{1}bxv{2}_tv{3}bxv{4}'.format(self.gbid,
-      str(sup_v),str(sup_bxv), str(round(rbt[0],2)), str(round(rbt[1],2)))
+      str(m), str(n), str(round(rbt[0],2)), str(round(rbt[1],2)))
       self.subgrain_dir = io.make_dir(self.calc_dir, self.name)
+      grain.write('{0}.xyz'.format(os.path.join(self.subgrain_dir, self.name)))
       self.name    = '{0}_v{1}bxv{2}_tv{3}bxv{4}_d{5}z'.format(self.gbid,
       str(sup_v), str(sup_bxv), str(round(rbt[0],2)), str(round(rbt[1],2)), str(rcut))
       self.subgrain_dir = io.make_dir(self.subgrain_dir, self.name)
+      print "delete atoms"
+      grain = self.delete_atoms(grain=grain, rcut=rcut)
+#Deposit all initial structures in the struct dir:
+      grain.write('{0}.xyz'.format(os.path.join(self.subgrain_dir, self.name)))
 
 # Finally deposit json and grain file with translation information.
     try:
@@ -285,7 +293,11 @@ class GBRelax(object):
     struct_dir = os.path.join(self.grain_dir, 'structs')  
     self.name  = '{0}_v{1}bxv{2}_tv{3}bxv{4}_d{5}z'.format(self.gbid,
     str(sup_v), str(sup_bxv), '0.0', '0.0', str(rcut))
-    struct_files = os.listdir(struct_dir)
+    try:
+      struct_files = os.listdir(struct_dir)
+    except OSError:
+      #no structs dir
+      pass
 # If this structure already exists for this grain boundary
 # don't recreate it. Otherwise build the supercell and deposit 
 # it in the structs directory.
@@ -299,10 +311,9 @@ class GBRelax(object):
         x.calc_connect()
         x.calc_dists()
         rem=[]
-        r = farray(0.0)
-        u = fzeros(3)
-        for i in frange(x.n):
-          for n in frange(x.n_neighbours(i)):
+        u = np.zeros(3)
+        for i in range(x.n):
+          for n in range(x.n_neighbours(i)):
             j = x.neighbour(i, n, distance=3.0, diff=u)
             if x.distance_min_image(i,j) < rcut and j!=i:
               rem.append(sorted([j,i]))
@@ -314,9 +325,9 @@ class GBRelax(object):
       else:
         pass
   # Now create super cell:
-      x = x*(sup_v, sup_bxv, 1)
+      x = x*(sup_v, sup_bxv, 1.0)
       x.set_scaled_positions(x.get_scaled_positions())
-      x.write('{0}.xyz'.format(os.path.join(struct_dir, self.name)))
+        
 
     if rbt == None:
       self.struct_file  = self.name
@@ -349,7 +360,6 @@ class GBRelax(object):
     x.calc_connect()
     x.calc_dists()
     rem=[]
-    r = farray(0.0)
     u = fzeros(3)
     for i in frange(x.n):
       for n in frange(x.n_neighbours(i)):
@@ -439,12 +449,12 @@ if __name__=='__main__':
 # database
   parser = argparse.ArgumentParser()
   parser.add_argument("-p",  "--prefix", help = "Subsequent commands will act on all \
-                                                 subdirectories with first characters matching prefix.", required=True)
-  parser.add_argument("-ct", "--calc_type", help = "Name of calculation type TB, EAM, DFT, etc.", required=True)
+                                                 subdirectories with first characters matching prefix.", default='001')
+  parser.add_argument("-ct", "--calc_type", help = "Name of calculation type TB, EAM, DFT, etc.", default='PotBH')
   parser.add_argument("-q",  "--queue", help = "Jobs will be submitted to this queue.", default='smp.q')
   parser.add_argument("-t",  "--time",  help = "Time limit on jobs.", default='1:00:00')
+  parser.add_argument("-hyd",  "--hydrogen", type=int, help="If greater than 0 add n hydrogens to the boundary.", default=0)
   parser.add_argument("-rc", "--rcut",     type=float, help = "Deletion criterion for nearest neighbour atoms.", default=2.0)
-  parser.add_argument("-h",  "--hydrogen", type=int, help="If greater than 0 add n hydrogens to the boundary.", default=0)
   parser.add_argument("-i_v", "--i_v",     type=float, help="Rigid body translation along i_v.", default=0.0)
   parser.add_argument("-i_bxv", "--i_bxv", type=float, help="Rigid body translation along i_bxv.", default=0.0)
 
@@ -453,7 +463,7 @@ if __name__=='__main__':
   prefix    = args.prefix
   queue     = args.queue
   time      = args.time
-  rcut      = args.rcut
+  rcut      = float(args.rcut)
   print rcut, type(rcut)
 
 # Each calculation type is associated with a potential:
@@ -486,7 +496,7 @@ if __name__=='__main__':
       print '\t', gbid
       print '\n'
       gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type=calc_type,
-                        potential = 'IP EAM_ErcolAd', param_file=param_file)
+                        potential='IP EAM_ErcolAd', param_file=param_file)
       sup_v   = 6
       sup_bxv = 2
       with open(os.path.join(job_dir,'gb.json')) as f:
@@ -499,7 +509,9 @@ if __name__=='__main__':
           gbrelax.gen_pbs(time=time, queue=queue)
   elif from_script:
 # Generate the supercell in the directory:
-    job_dir = os.cwd()
+    job_dir = './'
+    gbid    = os.path.basename(os.getcwd()).strip('/')
+    print gbid
     gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type=calc_type,
                       potential = 'IP EAM_ErcolAd', param_file=param_file)
     sup_v   = 6
@@ -508,14 +520,15 @@ if __name__=='__main__':
       grain_dict = json.load(f)
     bp = grain_dict['boundary_plane']
     v  = grain_dict['orientation_axis']
-    i_v   = args.i_v  
-    i_bxv = args.i_bxv
+    print bp, v
+    i_v   = float(args.i_v) 
+    i_bxv = float(args.i_bxv)
 # Generate the appropriate grain boundary in this directory.
     gbrelax.gen_super_rbt(rcut=rcut, bp=bp, v=v, sup_v=sup_v, sup_bxv=sup_bxv, rbt=[i_v, i_bxv])
 #Switch to the appropriate subgrain directory.
     os.chdir(gbrelax.subgrain_dir)
 # Call the relax function from this directory, reads in the initial struct_file, relaxes cell, writes json.
-    relax_gb()
+    relax_gb(gb_file=gbrelax.name)
   else:
     print "No Job Mode selected."
 #######################################

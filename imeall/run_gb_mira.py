@@ -15,7 +15,7 @@ from bgqtools import (get_bootable_blocks, boot_blocks, block_corner_iter,
 set_unbuffered_stdout()
 
 acct    = 'SiO2_Fracture'
-time    = 10
+time    = 15
 queue   = 'default'
 mapping = 'ABCDET'
 scratch = os.getcwd()
@@ -27,7 +27,8 @@ ppn     = 8 # MPI tasks per node
 hostname = socket.gethostname()
 print 'Hostname: %s' % hostname
 
-jobdirs = glob.glob('0011425810')
+#jobdirs = glob.glob('00110391110')
+jobdirs = glob.glob('0017*')
 print 'jobdirs = %s' % jobdirs
 jobdirs = filter(os.path.isdir, jobdirs)
 jdirs = []
@@ -39,6 +40,10 @@ for job in jobdirs:
 
 jobdirs = filter(lambda x: os.path.isdir(x[0]), jdirs)
 jobdirs = jobdirs[:128]
+#os.chdir(jobdirs[0][0])
+#print os.getcwd()
+#[print x[0] for x in  jobdirs]
+
 njobs   = len(jobdirs)
 nodes   = npj*njobs
 
@@ -70,10 +75,10 @@ logs = []
 for job, (block, corner, shape) in zip(jobdirs, block_corner_iter(blocks, npj)):
   print job, (block, corner, shape)
   os.chdir(os.path.join(scratch, job[0]))
-  log = open('gbrelax.out', 'w')
+  log = open('gbrelax.out', 'a')
   locargs = '--block %s --corner %s --shape %s' % (block, corner, shape)
 # runjob_args = ('python %s -n %d -p %d %s' % (locargs, npj*ppn, ppn, envargs)).split()
-  pyargs  = 'python -rc {rc} -i_v {i_v} -i_bxv {i_bxv} '.format(rc=job[1], i_v=job[2], i_bxv=job[3])
+  pyargs  = 'python /home/lambert/pymodules/imeall/imeall/relax.py -rc {rc} -i_v {i_v} -i_bxv {i_bxv} '.format(rc=job[1], i_v=job[2], i_bxv=job[3])
   runjob_args = ('runjob %s -n %d -p %d %s : %s'%(locargs, 1, 1, envargs, pyargs)).split()
   print ' '.join(runjob_args)
   jobs.append(subprocess.Popen(runjob_args, stdout=log))

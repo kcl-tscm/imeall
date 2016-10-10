@@ -4,7 +4,6 @@ from ase.lattice.spacegroup import crystal
 from ase.lattice.surface import surface, bcc111,bcc110
 from ase.lattice.cubic   import BodyCenteredCubic
 from ase.utils.geometry  import get_duplicate_atoms
-from collections import Counter
 import json
 import os
 import numpy as np
@@ -368,7 +367,7 @@ def print_points(atoms, f):
 
 def find_densest_plane(grain_dict):
   maxx = max([len(a) for a in grain_dict.values()])
-  len_keys = {x:len(y) for x,y in grain_dict.items()}
+  len_keys = dict([(x,len(y)) for x,y in grain_dict.items()])
   keys_2   = [x for x,y in grain_dict.items()]
   keys_2   = sorted(keys_2)
   keys = [x for x,y in grain_dict.items() if len(y) == maxx]

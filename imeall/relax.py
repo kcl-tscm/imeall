@@ -12,7 +12,7 @@ from ase.constraints     import UnitCellFilter, StrainFilter
 from quippy.io           import AtomsWriter, AtomsReader, write
 from ase.optimize        import BFGS, FIRE, LBFGS, MDMin, QuasiNewton
 
-def relax_gb():
+def relax_gb(gb_file='file.xyz'):
   def converged(grain, smax, fmax):
     maxstress = max(grain.get_stress().ravel())
     rmsforces = np.sum(grain.get_forces()**2, axis=1)**0.5
@@ -26,7 +26,11 @@ def relax_gb():
   
   #Rescaled to 2.83 which is magic number for the grain boundary canonical case.
   #Ada
-  POT_DIR = '/users/k1511981/pymodules/imeall/imeall/potentials' 
+  try:
+    #POT_DIR = '/users/k1511981/pymodules/imeall/imeall/potentials' 
+    POT_DIR     = os.environ['POTDIR']
+  except:
+    sys.exit("PLEASE SET export POTDIR='path/to/potfiles/'")
   #Retina
   #POT_DIR = '/Users/lambert/pymodules/imeall/imeall/potentials' 
   try: 
@@ -52,22 +56,26 @@ def relax_gb():
   
   print 'Using: ', eam_pot
   pot_file    = eam_pot.split('/')[-1]
-  grain       = Atoms('{0}'.format(sys.argv[1]))
+  #grain       = Atoms('{0}'.format(sys.argv[1]))
+  print '{0}.xyz'.format(gb_file)
+  print os.getcwd()
+  grain       = Atoms('{0}.xyz'.format(gb_file))
   pot         = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=eam_pot)
   grain.set_calculator(pot)
   E_gb_init   = grain.get_potential_energy()
   alpha       = E_gb_init
-  traj_file   = os.path.basename(sys.argv[1])
+  traj_file   = gb_file
   out         = AtomsWriter('{0}'.format('{0}_traj.xyz'.format(traj_file)))
-  gbid        = (sys.argv[1][:-4]).split('/')[-1]
+  #gbid        = (gb_file[:-4]).split('/')[-1]
+  gbid        = gb_file
   strain_mask = [0,0,1,0,0,0]
   ucf         = UnitCellFilter(grain, strain_mask)
   opt         = FIRE(ucf)
   
   for i in range(32):
-    opt.run(fmax=0.008, steps=100)
+    opt.run(fmax=0.01, steps=200)
     out.write(grain)
-    if max(np.sum(grain.get_forces()**2, axis=1)**0.5) < 0.008:
+    if max(np.sum(grain.get_forces()**2, axis=1)**0.5) < 0.01:
       break
   out.close()
   
