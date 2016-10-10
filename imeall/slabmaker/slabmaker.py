@@ -4,7 +4,6 @@ from ase.lattice.spacegroup import crystal
 from ase.lattice.surface import surface, bcc111,bcc110
 from ase.lattice.cubic   import BodyCenteredCubic
 from ase.utils.geometry  import get_duplicate_atoms
-from collections import Counter
 import json
 import os
 import numpy as np
@@ -368,7 +367,7 @@ def print_points(atoms, f):
 
 def find_densest_plane(grain_dict):
   maxx = max([len(a) for a in grain_dict.values()])
-  len_keys = {x:len(y) for x,y in grain_dict.items()}
+  len_keys = dict([(x,len(y)) for x,y in grain_dict.items()])
   keys_2   = [x for x,y in grain_dict.items()]
   keys_2   = sorted(keys_2)
   keys = [x for x,y in grain_dict.items() if len(y) == maxx]
@@ -509,7 +508,8 @@ def csl_factory(orientation_axis, boundary_plane, m, n, grain_a, grain_b,
       y = Nxv. rotate_plane_z takes grain_a and rotates it
       so that the orientation axis of the grain boundary with
       respect to grain a is orthogonal to the x-y plane. The
-      quaternion to accomplish this rotation is stored in plane_quaternion_z 
+      quaternion to accomplish this rotation is stored 
+      in plane_quaternion_z.
   """
   f = open(os.path.join(target_dir, 'grainaT.dat'), 'w')
   g = open(os.path.join(target_dir, 'grainaB.dat'), 'w')
@@ -893,10 +893,13 @@ if __name__=='__main__':
 	         [np.pi*(60.0/180.), np.array([1.0, 0.0, -1.0])]]
 
 
+  surfaces = [[np.pi*(0.0), np.array([0,0,1])]]
 
 ####CHOOSE ORIENTATION AXIS and LIST of Sym_Tilt_GBs:
-  orientation_axis = np.array([1, 1, 1])
-  for gb in sym_tilt_111:
+#   orientation_axis = np.array([1, 1, 1])
+  orientation_axis = np.array([1, 1, 0])
+  #for gb in sym_tilt_111:
+  for gb in surfaces:
 #  orientation_axis = np.array([0, 0, 1])
 #  for gb in sym_tilt_100:
 #   orientation_axis = np.array([1, 1, 0])

@@ -1,8 +1,127 @@
 {% extends "layout.html" %}
 {% block body %}
+<p> <code>Imeall</code> (IM-UHLL) is a database framework for calculations relating to the 
+atomistic properties of dislocations, grain boundaries, and fracture simulations in materials.  </p>
+
+<h2><code>Imeall</code> Naming Conventions</h2>
+<p>The grain boundaries are generated and labeled according to a uniform process indicated by the following notation:</p>
+<pre><code>  Theta[XXX](YYY)</code></pre>
+<p>Theta is the angle of misorientation in degrees around the orientation axis [XXX]. The boundary plane (YYY) 
+determines the plane of the interface between the misoriented Grain A and Grain B. In this way it is 
+possible to uniquely characterize all grain boundaries. Grain boundaries characterized by these three quantities 
+are considered `canonical` grains.</p>
+
+<p> An additional set of three degrees of freedom is then used to extend the above definition. The additional degrees of 
+freedom correspond to a rigid body translation in the two dimensional plain of the grain boundary, one 
+relative to the other, and a volume relaxation orthogonal to the grain boundary plane. These atomic 
+scale degrees of freedom compose subgrains of the canonical parent grain. Further variations of the grain include
+vacancies and impurities which also compose new subgrains of the canonical grain. Subgrains are stored in a hierarchical
+format below the canonical grain.
+</p>
+
+<p>
+Finally, we assign the idealized crystalline bulk structure the notation:</p>
+<pre><code>  0000000000</code></pre>
+<p>
+The structures are stored locally in the database 
+as <a href="https://libatoms.github.io/QUIP/io.html#module-ase.io.extxyz">extended XYZ</a> files. 
+</p>
+
+
+<h2 id="using-imeall">Using Imeall</h2>
+<p>Locally the <code> Imeall </code> server  can be accessed through your browser at http://127.0.0.1:5000/.</p>
+
+<p> 
+    The home page contains a list of links for each material in the database under: 
+    <pre><a href="#localdatabase">Local Database</a>.</pre>
+    Each link leads to a view of different orientation axes vectors for which grain boundary properties have been computed.
+</p>
+
+<p> 
+   For instance: 
+   <pre><code>/alphaFe/110</code></pre> contains all computed 110 grain boundaries for BCC iron. The [000] orientation axes directory contains
+   calculations pertaining to a perfect crystal, fracture simulations along different cleavage 
+   planes and singular defects and vacancies in a perfect crystal.
+</p>
+
+<p> Within each orientation axes is a list of full grain boundaries. Each of these contains a snap shot of the 
+unrelaxed grain boundary structure (the canonical boundary), the coincident site lattice, and a list of sub-directories 
+containing the type of calculations performed on the grain boundary. The subdirectories store atomic 
+scale properties according to calculation type. Examples of calculation types include: 
+tight binding models, EAMs, DFT, etc. 
+If multiple &quot;flavours&quot; of each calculation type are to be used the directories can take more specific names: 
+EAM_Mishin, DFT_PW, DFT_VASP etc. Within each calc_type of directories is the pattern gbid_'suffix'. These subdirectories
+are considered &quot;Subgrains&quot; of the canonical grain. These subgrains constitute the inclusion of defects, vacancies, dislocations
+and other modifications to the canonical grain.
+
+<h3>Subgrain Directories</h3>
+The suffix denotes the modification to the canonical grain boundary structure. This could constitute a 
+pattern like <code>_d2.0</code> which denotes: delete one of a pair of atoms from the original grain boundary 
+structure with nearest neighbour distance less than or equal to 2 <span>&#8491;</span>. Another suffix pattern might be displace the canonical grain along the in-plane lattice vectors by a 
+distance 0.25*lattice vector: <code> _tv0.25bxv0.25 </code>. Suffices can be 
+combined: <code>_tv0.25bxv0.25_d2.0</code>. A key for some common suffix patterns is given here:</p>
+<pre><code> 
+  _v2bxv6        : supercell 2 times along orientation axis 6 times along the normal to the orientation axis.
+  _tv0.13bxv0.25 : displace one grain 0.13*v along v and 0.25*bxv along bxv.
+  _d2.0z         : delete one of pair of atoms within distance 2.0 <span>&#8491;</span> of each other.
+  _h2.0n1        : 1 additional hydrogen atom in system 2.0 <span>&#8491;</span> from a grainboundary.
+</code>
+</pre>
+
+<p>
+  Systematic use of these naming conventions ensures that at the analysis 
+  stage grain boundary properties can be retrieved, compared, and 
+  combined easily.
+</p>
+
+<p>The canonical grain contains a file:</p>
+<pre><code>  gb.json</code></pre>
+<p>subsequent directories each contain a file:</p>
+<pre><code>  subgb.json</code></pre>
+<p>This json file contains information about relevant grain boundary properties in the usual key:value format. Some common keys are:</p>
+<pre><code>  E_gb_init : Unrelaxed Grain Boundary Energy.
+  E_gb      : Relaxed Grain Boundary Energy.
+  n_at      : Number of atoms in the grain boundary.
+  A         : Grain Boundary area in the unit cell.</code></pre>
+<p> 
+Upon subsequent analysis new key:values pairs can be added to the json dictionaries as required.
+Either by directly editing the json file or through the python API when new calculations are performed.
+</p>
+
+<h3> PH </h3>
+<p>A subgrain directory may also contain a directory labeled <code>/PH/</code>. This directory contains 
+calculations pertaining to vibrational properties of the system: i.e. 
+the phonon density of states, bandstructures,
+and free energies/entropies determined within the quasiharmonic approximation. 
+Again calculations are organized by the calc_type property (EAM, TB, DFT). 
+Vibrational properties are typically calculated using 
+the <a href="https://atztogo.github.io/phonopy/">phonopy</a> code. Force constant matrices
+can also be stored in the /PH/ sub-directories.</p>
+
+<h3> /000/ </h3>
+<p> 
+The <code>/000/</code> directory contains many "subgrains" of the unperturbed ideal crystal. 
+This directory is likely to contain isolated edge and screw dislocations, fracture simulations
+along different cleavage planes, <span>&#611;</span>-surface calculations for different glide planes,
+vibrational properties of the ideal crystal, and all the same again for the 
+ideal crystal with defects or interstitials. Dislocations, defects, and 
+fracture simulations in the presence of grainboundaries should be stored as 
+subgrains under the appropriate canonical grainboundary database.
+</p>
+
+<h3> Remote Databases </h3> 
+  <p> <code>Imeall</code> provides a framework for synchronizing the local database, which contains
+  the output of calculations, with the production servers (typically remote servers). To inspect the local
+  synchronization logs go to:
+  <pre><a href ={{url_for('synchronization')}}>Database Synchronization</a></pre>
+  </p>
+
+<h3> Local Database </h3>
+  <a name="localdatabase"></a>
+  <p> The local database contains the following materials: </p>
   <ul class=entries>
   {% for material in materials %}
-    <li> <a href={{ url_for('material', material=material)}}>{{material}}</a></em></li>
+    <li> <pre><a href={{ url_for('material', material=material)}}>{{material}}</a></em><pre></li>
   {% endfor%}
   </ul>
 {% endblock %}

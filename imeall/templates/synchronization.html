@@ -1,0 +1,7 @@
+{% extends "layout.html" %}
+{% block body %}
+  {% for log in db_log[:10] %}
+    <p> {{ log }} <p>
+  {%  endfor %}
+{% endblock body %}
+

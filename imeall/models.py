@@ -2,19 +2,15 @@ import os
 import re
 import sys
 import json
-
+import numpy as np
 import matplotlib.pyplot as plt
 
-import numpy as np
-from   scipy.spatial import Voronoi, voronoi_plot_2d
-
-
 from   quippy import Atoms
-
 import imeall.slabmaker.slabmaker as slabmaker
 
+from  scipy.spatial import Voronoi, voronoi_plot_2d
 from  flask  import Flask, request, session, g, redirect
-from  flask import    url_for, abort, render_template, flash
+from  flask  import url_for, abort, render_template, flash
 
 # Currently Our models are stored by hand
 # and then we handle the interactions with 
@@ -22,6 +18,12 @@ from  flask import    url_for, abort, render_template, flash
 # files.
 
 class PotentialParameters(object):
+  """
+  :class:`PotentialParameters` contains the ground state energy per atom for bulk iron
+  of the different EAM potentials used in the Imeall Database. It also contains
+  the values required to rescale the relaxed lattice parameters for bulk iron predicted by
+  the EAM potentials to the target DFT value.
+  """
   def __init__(self):
     self.name = 'Potential Parameters'
   def gs_ener_per_atom(self): 
@@ -33,13 +35,27 @@ class PotentialParameters(object):
               }
     return eperat
 
+  def eam_rscale(self): 
+    rscale = {'Fe_Mendelev.xml' : 1.00894848312,
+              'iron_mish.xml'   : 1.0129007626,
+              'Fe_Ackland.xml'  : 1.00894185389,
+              'Fe_Dudarev.xml'  : 1.01279093417,
+              'dft_vasp_pbe'    : 1.00000000000
+              }
+    return rscale
+
+
 class Job(object):
+  """
+  class:'Job' collection of routines for generating 
+  and submitting pbs submission scripts.
+  """
   def __init__(self):
     self.pbs_file = ''
     self.job_dir  = ''
     self.job_id   = ''
   def sub_pbs(self, job_dir, exclude='DFT', suffix='v6bxv2z', regex=None):
-    ''' 
+    """ 
     Given an explicit suffix, or a regex this routine recurses through
     the directory structure and submits any pbs files that 
     match the suffix or regex pattern. Exclude keeps track of 
@@ -60,7 +76,7 @@ class Job(object):
     SUFFIX:
       submit all super cells: 
         v6bxv2z
-    '''
+    """
     lst = os.listdir(job_dir)
     for dir in lst:
       dir = os.path.join(job_dir, dir)
@@ -86,23 +102,22 @@ class Job(object):
           pass
 
 class GBMaintenance(object):
-  '''
-    Collection of maintenance routines for the GB database.
-    Possible usages: regenerate all the csl lattices in the database
-    or a subdirectory of the database, take a new grain boundary profile 
-    picture for multiple directories, update the gb json information if a
-    new grain boundary property is desired. This really is 
-    turning into facebook for grain boundaries!
-  '''
+  """
+  :class'GBMaintenance' is a collection of maintenance routines for the GB database.
+  Possible usages: regenerate all the csl lattices in the database
+  or a subdirectory of the database, take a new grain boundary profile 
+  picture for multiple directories, update the gb json information if a
+  new grain boundary property is desired.
+  """
   def __init__(self):
     self.materials = ['alphaFe']
 
   def retake_pic(self,fname, translate=False,toggle=False, confirm=True):
-    ''' 
-      Take grain boundary profile pic in directory
-      requires gb directory with gbid.xyz file in it.
-      set confirm = False to not prompt for overwrite.
-    '''
+    """ 
+    Take grain boundary profile pic in directory
+    requires gb directory with gbid.xyz file in it.
+    set confirm = False to not prompt for overwrite.
+    """
     if confirm:
       var = 'n'
       var = raw_input('Retake photo (y/n)?')
@@ -116,10 +131,10 @@ class GBMaintenance(object):
       pass
 
   def remove_eo_files(self, path):
-    '''
-      In case the rsync brings across a bunch of log files
-      we can get rid of those.
-    '''
+    """
+    In case the rsync brings across a bunch of log files
+    we can get rid of those.
+    """
     eo_regex = re.compile(r'[eo][0-9]+')
     lst = os.listdir(path)
     for filename in lst:
@@ -146,13 +161,13 @@ class GBMaintenance(object):
     new_json['n_at'] = len(at) 
 
   def update_json(self, dirname):
-    ''' 
+    """ 
     This function was originally written to update all keys in the
     json dictionaries in the grain boundary directories.
     The pattern is quite general and can be adapted to just add
     new keys, delete old keys, consider it a dictionary migration
     routine.
-    '''
+    """
     os.path.join(dirname,'gb.json')
     new_json = {}
     with open(json_path,'r') as json_old:
@@ -173,11 +188,11 @@ class GBMaintenance(object):
       json.dump(new_json, json_new_file, indent=2)
 
   def fix_json(self, path):
-    '''
+    """
     Once my json files had two {}{} dictionaries written to them
     this parser opened all the subgb files, 
     and selected the dictionary I actually wanted.
-    '''
+    """
     lst = os.listdir(path)
     for filename in lst:
       new_path = os.path.join(path, filename)
@@ -203,13 +218,13 @@ class GBMaintenance(object):
         pass
 
   def update_json(self, filename):
-    ''' 
+    """
     This function was originally written to update all keys in the
     json dictionaries in the grain boundary directories.
     The pattern is quite general and can be adapted to just add
     new keys delete old keys consider it a dictionary migration
     routine.
-    '''
+    """
     new_json = {}
     with open(filename,'r') as json_old:
       old_json = json.load(json_old)
@@ -236,11 +251,11 @@ class GBAnalysis():
     pass
 
   def find_gb_json(self, path, j_list, filetype):
-    ''' 
-    populates j_list with list of lists containing 
+    """ 
+    Populates j_list with list of lists containing 
     the directory containing a grain json file
     and the filename of the json files.
-    '''
+    """
     try:
       lst = os.listdir(path)
     except:
@@ -329,11 +344,14 @@ class GBAnalysis():
         grain_energies.append(gdict)
     return grain_energies
 
-  def voronoi_analysis():
+  def delaunay_analysis():
+    """
+    Create polytopes for all the iron structures in the database
+    to identify specific sites of interest and identify possible
+    structural units. These would also 
+    """  
     pass
 
-  def energy_landscape():
-    pass
 
 if __name__ == '__main__':
   analyze =  GBAnalysis()
