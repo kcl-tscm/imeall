@@ -264,10 +264,10 @@ class GBAnalysis():
     """
     try:
       lst = os.listdir(path)
-    except:
+    except OSError:
       pass
     for filename in lst:
-      filename = os.path.join(path,filename)
+      filename = os.path.join(path, filename)
       if os.path.isdir(filename):
         self.find_gb_json(filename, j_list, filetype)
       elif filename.split('/')[-1] == filetype:
@@ -358,6 +358,28 @@ class GBAnalysis():
     gb_ener = 16.02*((gb_dict['E_gb']-(ener_per_atom['PotBH.xml']*float(gb_dict['n_at'])))/(2*gb_dict['A']))
     return gb_ener
 
+  def pull_gamsurf(self, path="./",  potential="PotBH"):
+    subgb_files = []
+    print os.getcwd()
+    print path
+    if os.path.isdir(os.path.join(path,potential)):
+      self.find_gb_json(os.path.join(path,potential), subgb_files, 'subgb.json')
+      gam_surfs   = []
+#Only pulling for PotBH:
+      for gb in subgb_files:
+        with open(gb[1],'r') as f:
+          gb_json = json.load(f)
+        gam_surfs.append((gb_json['rcut'], gb_json['rbt'][0], gb_json['rbt'][1], self.calc_energy(gb_json)))
+      en_list    = [x[3] for x in gam_surfs]
+      min_en     = min(en_list)
+      min_coords = [(gam[0], gam[1]) for gam in filter(lambda x: round(x[3], 5) == round(min_en, 5), gam_surfs)]
+      max_en     = max(en_list)
+      max_coords = [(gam[0], gam[1]) for gam in filter(lambda x: round(x[3], 5)==round(max_en, 5), gam_surfs)]
+      gam_dict   = {'max_en':max_en, 'min_en':min_en, 'min_coords':min_coords, 'max_coords':max_coords}
+    else:
+      gam_dict = {'max_en':0.0, 'min_en':0.0,'min_coords':[],'max_coords':[]}
+    return gam_dict
+
   def delaunay_analysis():
     """
     Create polytopes for all the iron structures in the database
@@ -411,6 +433,4 @@ if __name__ == '__main__':
     max_coords = filter(lambda x: round(x[3], 5)==round(max_en, 5), gam_surfs)
     for m in max_coords:
       print m
-
-
 
