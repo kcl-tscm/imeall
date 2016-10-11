@@ -2,11 +2,12 @@ import os
 import re
 import sys
 import json
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
 from   quippy import Atoms
-import imeall.slabmaker.slabmaker as slabmaker
+import slabmaker.slabmaker as slabmaker
 
 from  scipy.spatial import Voronoi, voronoi_plot_2d
 from  flask  import Flask, request, session, g, redirect
@@ -28,6 +29,7 @@ class PotentialParameters(object):
     self.name = 'Potential Parameters'
   def gs_ener_per_atom(self): 
     eperat = {'Fe_Mendelev.xml' : -4.12243503431,
+              'PotBH.xml'       : -4.01298214176,
               'iron_mish.xml'   : -4.28000356875,
               'Fe_Ackland.xml'  : -4.01298226805,
               'Fe_Dudarev.xml'  : -4.31608690638,
@@ -37,6 +39,7 @@ class PotentialParameters(object):
 
   def eam_rscale(self): 
     rscale = {'Fe_Mendelev.xml' : 1.00894848312,
+              'PotBH.xml'       : 1.00894848312,
               'iron_mish.xml'   : 1.0129007626,
               'Fe_Ackland.xml'  : 1.00894185389,
               'Fe_Dudarev.xml'  : 1.01279093417,
@@ -252,9 +255,12 @@ class GBAnalysis():
 
   def find_gb_json(self, path, j_list, filetype):
     """ 
-    Populates j_list with list of lists containing 
-    the directory containing a grain json file
-    and the filename of the json files.
+    :method:find_gb_json Populates the list j_list with lists of the form
+    [/directory_path/, /subgb_file_path].
+    attributes:
+      path     : root directory to begin recursive search
+      j_list   : empty list  to populate
+      filetype : 'subgb.json', 'gb.json'
     """
     try:
       lst = os.listdir(path)
@@ -284,10 +290,10 @@ class GBAnalysis():
     for grain in  gb_files:
       path = grain[0]
       with open(grain[1],'r') as f:
-        j_dict = json.load(f)
-      subgb_files                           = []
+        j_dict    = json.load(f)
+      subgb_files = []
       self.find_gb_json(path, subgb_files, 'subgb.json')
-      calc_types = []
+      calc_types  = []
 #Find all calculation types associated with this grain
       for subgrain in subgb_files:
         with open(subgrain[1],'r') as f:
@@ -327,6 +333,8 @@ class GBAnalysis():
                 gb_ener = 16.02*((sub_dict['E_gb']-(ener_per_atom['Fe_Ackland.xml']*float(sub_dict['n_at'])))/(2*sub_dict['A']))
               elif 'Fe_Dudarev.xml' == sub_dict['param_file']:  
                 gb_ener = 16.02*((sub_dict['E_gb']-(ener_per_atom['Fe_Dudarev.xml']*float(sub_dict['n_at'])))/(2*sub_dict['A']))
+              elif 'PotBH.xml' == sub_dict['param_file']:  
+                gb_ener = 16.02*((sub_dict['E_gb']-(ener_per_atom['PotBH.xml']*float(sub_dict['n_at'])))/(2*sub_dict['A']))
               elif 'dft_vasp_pbe' == sub_dict['param_file']:  
                 print subgrain
                 gb_ener = 16.02*((sub_dict['E_gb']-(ener_per_atom['dft_vasp_pbe']*float(sub_dict['n_at'])))/(2*sub_dict['A']))
@@ -344,23 +352,65 @@ class GBAnalysis():
         grain_energies.append(gdict)
     return grain_energies
 
+  def calc_energy(self, gb_dict):
+    pot_param     = PotentialParameters()
+    ener_per_atom = pot_param.gs_ener_per_atom()
+    gb_ener = 16.02*((gb_dict['E_gb']-(ener_per_atom['PotBH.xml']*float(gb_dict['n_at'])))/(2*gb_dict['A']))
+    return gb_ener
+
   def delaunay_analysis():
     """
     Create polytopes for all the iron structures in the database
     to identify specific sites of interest and identify possible
-    structural units. These would also 
+    structural units.
     """  
     pass
 
 
 if __name__ == '__main__':
+  parser = argparse.ArgumentParser()
+
+  parser.add_argument("-t",  "--toplevelen", action="store_true", help="Pull energies from the top \
+                                                      level directory down for a particular orientation axis")
+  parser.add_argument("-g",  "--gam_min",    action="store_true", help="Potential")
+  parser.add_argument("-v",  "--potential",  default="PotBH", help="Potential paramfile string")
+  parser.add_argument("-or", "--orientation", action="store_true", help="Orientation axis", default ="001")
+  args = parser.parse_args()
+
   analyze =  GBAnalysis()
-  or_axis = sys.argv[1]
-  gb_list = analyze.extract_energies(or_axis=or_axis)
-  for gb in sorted(gb_list, key = lambda x: x['angle']):
-    try:
-      if gb['param_file']=='Fe_Mendelev.xml':
+
+  if args.toplevelen:
+    or_axis = args.orientation
+    gb_list = analyze.extract_energies(or_axis=or_axis)
+    for gb in sorted(gb_list, key = lambda x: x['angle']):
+      if gb['param_file']=='PotBH.xml':
         print gb['param_file'], gb['angle'], gb['energies']
-    except:
-      pass
+  
+  if args.gam_min:
+#   Search potential directory for all the gamma surface it contains
+#   for all the cutoff radii.
+    subgb_files = []
+    analyze.find_gb_json(args.potential, subgb_files, 'subgb.json')
+    gam_surfs = []
+    for gb in subgb_files:
+      with open(gb[1],'r') as f:
+        gb_json = json.load(f)
+      gam_surfs.append((gb_json['rcut'], gb_json['rbt'][0], gb_json['rbt'][1], analyze.calc_energy(gb_json)))
+    for gs in gam_surfs:
+      print gs
+    en_list = [x[3] for x in gam_surfs]
+    min_en  = min(en_list)
+    print 'Min Energy: ', min_en, 'J/m^{2}' 
+    min_coords = filter(lambda x: round(x[3], 5) == round(min_en, 5), gam_surfs)
+    print 'Coordinates of Min Energy Grain Boundaries:'
+    for m in min_coords:
+      print m
+    max_en  = max(en_list)
+    print 'Max Energy: ', max_en, 'J/m^{2}'
+    print 'Coordinates of Max Energy Grain Boundaries:'
+    max_coords = filter(lambda x: round(x[3], 5)==round(max_en, 5), gam_surfs)
+    for m in max_coords:
+      print m
+
+
 

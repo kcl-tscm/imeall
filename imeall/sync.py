@@ -35,7 +35,10 @@ class SyncDB(object):
 
 if __name__=='__main__':
   parser = argparse.ArgumentParser()
-  parser.add_argument("-s", "--server", help="name of server to synce with")
+  parser.add_argument("-s", "--server", help="name of server to sync with")
+  parser.add_argument("-a", "--ada",  action="store_true")
+  parser.add_argument("-m", "--mira", action="store_true")
+  args = parser.parse_args()
 
   mira_params = dict(sync_log="db_synclog", exclude="'*/Fracture/*'", exclude_from="rsync_exclude.txt", rsync_args="-av",
                      src="lambert@mira.alcf.anl.gov:/home/lambert/iron/grain_boundaries", target="./") 
@@ -49,8 +52,14 @@ if __name__=='__main__':
   #http://superuser.com/questions/156664/what-are-the-differences-between-the-rsync-delete-options
   emptydir_params = dict(sync_log="db_synclog", exclude="'*/Fracture/*'", exclude_from="rsync_exclude.txt", rsync_args="-auv", src="", target="")
 
-  sync_mira = SyncDB(**mira_params)
-  sync_mira.sync_db(server="mira")
+  if args.mira:
+    sync_mira = SyncDB(**mira_params)
+    sync_mira.sync_db(server="mira")
+  
+  if args.ada:
+    sync_ada  = SyncDB(**ada_params)
+    sync_ada.sync_db(server="ada")
 
-  sync_ada  = SyncDB(**ada_params)
-  sync_ada.sync_db(server="ada")
+
+
+
