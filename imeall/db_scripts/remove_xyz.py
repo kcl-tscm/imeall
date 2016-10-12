@@ -3,8 +3,12 @@ import sys
 from models import GBMaintenance 
 import argparse
 
-gbm = GBMaintenance()
 
+#"""
+#Removes xyz files of different types.
+#"""
+
+gbm = GBMaintenance()
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-p", "--prefix", help = "Subsequent commands will act on all \

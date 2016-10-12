@@ -123,11 +123,15 @@ class GBMaintenance(object):
         if test is true it only prints the files to be removed.
     '''
     if remove_type == 'traj':
-      xyz_regex = re.compile(r'.*?tv[.0-9]+bxv[.0-9]+_d[.0-9]+z_traj.xyz[.*?]*')
+      xyz_regex = re.compile(r'.*?traj.*?xyz')
     elif remove_type == 'rbt': 
       xyz_regex = re.compile(r'.*?tv[.0-9]+bxv[.0-9]+.xyz')
     elif remove_type == 'structs': 
       xyz_regex = re.compile(r'.*?tv[.0-9]+bxv[.0-9]+_d[.0-9]+z.xyz')
+    elif remove_type == 'all': 
+      xyz_regex = re.compile(r'.*?xyz')
+    else:
+      sys.exit("No type chosen")
     lst = os.listdir(path)
     for filename in lst:
       filename = os.path.join(path, filename)
@@ -135,13 +139,32 @@ class GBMaintenance(object):
         self.remove_xyz(filename, dryrun = dryrun, remove_type=remove_type)
       elif xyz_regex.match(filename):
         if dryrun == True:
+      #could add a function here which opens the subgb.json file 
+      #checks if it is converged if not do not delete:
+          dir_name = os.path.dirname(filename)
+          subgb_file = os.path.join(dir_name,'subgb.json')
+          if os.path.exists(subgb_file):
+            with open(subgb_file,'r') as f:
+              subgb_dict = json.load(f)
+            if 'converged' in subgb_dict:
+              print 'Converged: ', subgb_dict['converged']
           print filename, os.path.getsize(filename)
         elif dryrun == False:
           print 'Removing', filename
-          os.remove(filename)
+          dir_name = os.path.dirname(filename)
+          subgb_file = os.path.join(dir_name,'subgb.json')
+          if os.path.exists(subgb_file):
+            with open(subgb_file,'r') as f:
+              subgb_dict = json.load(f)
+            if 'converged' in subgb_dict:
+              if subgb_dict['converged']:
+                os.remove(filename)
+              else:
+                pass
+          else:
+            os.remove(filename)
       else:
         pass
-
 
   def add_key_to_dict(self, dirname):
     os.path.join(dirname, 'subgb.json')
