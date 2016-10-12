@@ -35,12 +35,14 @@
   <h3> Min/Max Energy Structures </h3>
   <ul>
     <li> Min. Energy: {{ gam_dict.min_en | round(4, 'floor') }} J/m^{2} </li>  
+    <li> Rigid Body Translation (x,y, Cutoff Criterion)</li>
     <ul>
       {% for rbt in gam_dict.min_coords %} 
           <li> {{rbt}} </li>
       {% endfor %}
     </ul>
     <li> Max. Energy:{{ gam_dict.max_en | round(4, 'floor') }} J/m^{2}  </li>  
+    <li> Rigid Body Translation (x,y, Cutoff Criterion)</li>
     <ul>
       {% for rbt in gam_dict.max_coords %} 
           <li> {{rbt}} </li>

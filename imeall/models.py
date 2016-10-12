@@ -359,6 +359,11 @@ class GBAnalysis():
     return gb_ener
 
   def pull_gamsurf(self, path="./",  potential="PotBH"):
+    """
+    :method:pull_gamsurf Loop over subgrain directories of a potential (default PotBH) 
+    find the minimum and maximum energies of the screening procedure, return
+    a dictionary, with information about the lowest energy structure.
+    """
     subgb_files = []
     print os.getcwd()
     print path
@@ -372,9 +377,10 @@ class GBAnalysis():
         gam_surfs.append((gb_json['rcut'], gb_json['rbt'][0], gb_json['rbt'][1], self.calc_energy(gb_json)))
       en_list    = [x[3] for x in gam_surfs]
       min_en     = min(en_list)
-      min_coords = [(gam[0], gam[1]) for gam in filter(lambda x: round(x[3], 5) == round(min_en, 5), gam_surfs)]
+#Create lists of (vx bxv rcut)
+      min_coords = [(gam[1], gam[2], gam[0]) for gam in filter(lambda x: round(x[3], 5) == round(min_en, 5), gam_surfs)]
       max_en     = max(en_list)
-      max_coords = [(gam[0], gam[1]) for gam in filter(lambda x: round(x[3], 5)==round(max_en, 5), gam_surfs)]
+      max_coords = [(gam[1], gam[2], gam[0]) for gam in filter(lambda x: round(x[3], 5)==round(max_en, 5), gam_surfs)]
       gam_dict   = {'max_en':max_en, 'min_en':min_en, 'min_coords':min_coords, 'max_coords':max_coords}
     else:
       gam_dict = {'max_en':0.0, 'min_en':0.0,'min_coords':[],'max_coords':[]}
