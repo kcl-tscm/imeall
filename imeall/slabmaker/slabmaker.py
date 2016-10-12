@@ -4,12 +4,16 @@ from ase.lattice.spacegroup import crystal
 from ase.lattice.surface import surface, bcc111,bcc110
 from ase.lattice.cubic   import BodyCenteredCubic
 from ase.utils.geometry  import get_duplicate_atoms
-import json
+
 import os
+import json
+import time
 import numpy as np
 import transformations as quat
+
 from quippy import io
 from quippy import set_fortran_indexing
+
 try:
   from qlab import set_fortran_indexing, view, gcat
 except:
@@ -38,13 +42,14 @@ def take_pic(fname, translate=False, toggle=False):
     z = (at.get_cell()[2,2])/4.
     v.shift_xtal(2, 5.)
   v.rotate([0.,1.,0.],0.5*np.pi)
-  v.toggle_parallel_projection()
+  #v.toggle_parallel_projection()
   # v capture will sometimes toggle parallel projection
   # so double toggle cancels this behaviour.
-  if toggle == True:
-    v.toggle_parallel_projection()
+  #if toggle == True:
+  #  v.toggle_parallel_projection()
   v.capture('{0}.png'.format(fname))
-  v.close()
+  #v.close()
+  #time.sleep(60)
 
 def rotate_plane_z(grain, miller):
   ''' 

@@ -157,7 +157,7 @@ def make_tree(path):
     pass  
   else:
     for name in lst:
-      filename = os.path.join(path,name)
+      filename = os.path.join(path, name)
       if os.path.isdir(filename):
         tree['children'].append(make_tree(filename))
       else:
@@ -182,8 +182,9 @@ def extract_json(path, json_files):
 @app.route('/grain/<path:url_path>/<gbid>/')
 def grain_boundary(url_path, gbid):
   """
-    View for the grainboundary. CSL lattice, and list of
-    subgrain directories.
+  :method:grain_boundary Top view for a canonical grain boundary. CSL 
+  lattice, and list of subgrain directories, 
+  energies, etc.
   """
   url_path  = url_path+'/'+gbid
   path      = os.path.join(g.gb_dir, url_path)
@@ -195,15 +196,20 @@ def grain_boundary(url_path, gbid):
   extract_json(path, json_files)
   subgrains = []
   subgrainsj = []
-  for i, path in enumerate(json_files):
+  for i, gb_path in enumerate(json_files):
     try: 
-      subgrains.append([json.load(open(path,'r')), i])
-      subgrainsj.append(json.load(open(path,'r')))
+      subgrains.append([json.load(open(gb_path,'r')), i])
+      subgrainsj.append(json.load(open(gb_path,'r')))
     except:
       pass
+  #Pull gamma surface
+  analyze  = GBAnalysis()
+  gam_dict = analyze.pull_gamsurf(path=path) 
+  print gam_dict
+
   return render_template('grain_boundary.html', gbid=gbid, url_path=url_path,
                           gb_info=gb_info, tree=tree, subgrains=subgrains, 
-                          subgrainsj=json.dumps(subgrainsj))
+                          subgrainsj=json.dumps(subgrainsj), gam_dict=gam_dict)
 
 #Check for Ovito in different paths.
 def run_ovito(filename):

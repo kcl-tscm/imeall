@@ -21,6 +21,7 @@
 {% block body %}
   <h2> Grain Boundary Structure </h2>
   <h3> {{ gbid }} </h3>
+  <h3> Canonical Information </h3>
   <ul>
     <li> Grain Boundary Type:  <em> {{ gb_info.type }}</em>      </li>
     <li> Orientation Axis:     [{{ gb_info.orientation_axis | join(' ')  }}]  </li>
@@ -29,6 +30,24 @@
     <li> Number of Atoms in Unit Cell: {{ gb_info.n_at }}      </li>
     <li> Coincident Sites:             {{ gb_info.coincident_sites }}      </li>
     <li> Sigma({{ (gb_info.n_at/gb_info.coincident_sites) | round(2, 'floor') }})</li>
+  </ul>
+
+  <h3> Min/Max Energy Structures </h3>
+  <ul>
+    <li> Min. Energy: {{ gam_dict.min_en | round(4, 'floor') }} J/m^{2} </li>  
+    <li> Rigid Body Translation (x,y, Cutoff Criterion)</li>
+    <ul>
+      {% for rbt in gam_dict.min_coords %} 
+          <li> {{rbt}} </li>
+      {% endfor %}
+    </ul>
+    <li> Max. Energy:{{ gam_dict.max_en | round(4, 'floor') }} J/m^{2}  </li>  
+    <li> Rigid Body Translation (x,y, Cutoff Criterion)</li>
+    <ul>
+      {% for rbt in gam_dict.max_coords %} 
+          <li> {{rbt}} </li>
+      {% endfor %}
+    </ul>
   </ul>
 
 	<h2> Structure  </h2>
