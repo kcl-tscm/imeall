@@ -31,7 +31,7 @@ for job in jobdirs:
         jdirs.append((job, rc, i, j, job_index))
 
 jobdirs = filter(lambda x: os.path.isdir(x[0]), jdirs)
-jobdirs = jobdirs[1727:]
+jobdirs = jobdirs[1850:]
 njobs   = len(jobdirs)
 nodes   = npj*njobs
 jtime    = '1:00:00'
@@ -55,7 +55,7 @@ for job_tract in chunker(jobdirs, 36):
     print >> log, job, gb_args, job[4]
     job = subprocess.Popen(qsub_args.split())
     job.wait()
-  time.sleep(1200)
+  time.sleep(1500)
 #sync to local machine:
   os.chdir(scratch)
   now = datetime.now()

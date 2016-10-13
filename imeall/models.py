@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+import glob
 import json
 import argparse
 import numpy as np
@@ -10,8 +11,12 @@ from   quippy import Atoms
 import slabmaker.slabmaker as slabmaker
 
 from  scipy.spatial import Voronoi, voronoi_plot_2d
-from  flask  import Flask, request, session, g, redirect
-from  flask  import url_for, abort, render_template, flash
+try:
+  from  flask  import Flask, request, session, g, redirect
+  from  flask  import url_for, abort, render_template, flash
+except:
+  print 'No flask'
+  pass
 
 # Currently Our models are stored by hand
 # and then we handle the interactions with 
@@ -365,8 +370,6 @@ class GBAnalysis():
     a dictionary, with information about the lowest energy structure.
     """
     subgb_files = []
-    print os.getcwd()
-    print path
     if os.path.isdir(os.path.join(path,potential)):
       self.find_gb_json(os.path.join(path,potential), subgb_files, 'subgb.json')
       gam_surfs   = []
@@ -375,16 +378,48 @@ class GBAnalysis():
         with open(gb[1],'r') as f:
           gb_json = json.load(f)
         gam_surfs.append((gb_json['rcut'], gb_json['rbt'][0], gb_json['rbt'][1], self.calc_energy(gb_json)))
-      en_list    = [x[3] for x in gam_surfs]
-      min_en     = min(en_list)
+      en_list     = [x[3] for x in gam_surfs]
+      min_en      = min(en_list)
 #Create lists of (vx bxv rcut)
-      min_coords = [(gam[1], gam[2], gam[0]) for gam in filter(lambda x: round(x[3], 5) == round(min_en, 5), gam_surfs)]
-      max_en     = max(en_list)
-      max_coords = [(gam[1], gam[2], gam[0]) for gam in filter(lambda x: round(x[3], 5)==round(max_en, 5), gam_surfs)]
-      gam_dict   = {'max_en':max_en, 'min_en':min_en, 'min_coords':min_coords, 'max_coords':max_coords}
+      min_coords  = [(gam[1], gam[2], gam[0]) for gam in filter(lambda x: round(x[3], 5) == round(min_en, 5), gam_surfs)]
+      max_en      =   max(en_list)
+      max_coords  = [(gam[1], gam[2], gam[0]) for gam in filter(lambda x: round(x[3], 5)==round(max_en, 5), gam_surfs)]
+      gam_dict    = {'max_en':max_en, 'min_en':min_en, 'min_coords':min_coords, 'max_coords':max_coords}
     else:
+      print "No potential directory:", potential, "found."
       gam_dict = {'max_en':0.0, 'min_en':0.0,'min_coords':[],'max_coords':[]}
     return gam_dict
+
+  def list_unconverged(self, prefix='001', potential='PotBH'):
+    """
+    :method:list_unconverged find all files with unconverged in there json file.
+    """
+    jobdirs = glob.glob('{0}*'.format(prefix))
+    jobdirs = filter(os.path.isdir, jobdirs)
+    scratch = os.getcwd()
+    converged_list   = []
+    unconverged_list = []
+    missing_key_list = []
+    for job in jobdirs:
+      os.chdir(os.path.join(scratch, job))
+      subgb_files = []
+      if os.path.isdir(potential):
+        self.find_gb_json(potential, subgb_files, 'subgb.json')
+        for gb in subgb_files:
+          with open(gb[1],'r') as f:
+            gb_json = json.load(f)
+          if 'converged' in gb_json:
+            if gb_json['converged']:
+              #print 'Converged', gb
+              converged_list.append([job]+gb)
+            elif not gb_json['converged']:
+              #print 'Not Converged', gb
+              unconverged_list.append([job]+gb)
+          elif 'converged' not in gb:
+            #print 'subgb missing converged key', gb
+              missing_key_list.append(gb)
+    os.chdir(scratch)
+    return  converged_list, unconverged_list, missing_key_list
 
   def delaunay_analysis():
     """

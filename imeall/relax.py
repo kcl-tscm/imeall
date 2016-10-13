@@ -3,14 +3,15 @@ import sys
 import json
 import shutil
 import ase.io        
+import argparse
 import numpy as np
-from pprint import pprint
-from cStringIO           import StringIO
-from ase.optimize.sciopt import SciPyFminCG
-from quippy              import Atoms, Potential, frange
-from ase.constraints     import UnitCellFilter, StrainFilter
-from quippy.io           import AtomsWriter, AtomsReader, write
-from ase.optimize        import BFGS, FIRE, LBFGS, MDMin, QuasiNewton
+from   pprint import pprint
+from   cStringIO           import StringIO
+from   ase.optimize.sciopt import SciPyFminCG
+from   quippy              import Atoms, Potential, frange
+from   ase.constraints     import UnitCellFilter, StrainFilter
+from   quippy.io           import AtomsWriter, AtomsReader, write
+from   ase.optimize        import BFGS, FIRE, LBFGS, MDMin, QuasiNewton
 
 def relax_gb(gb_file='file.xyz'):
   def converged(grain, smax, fmax):
@@ -66,7 +67,6 @@ def relax_gb(gb_file='file.xyz'):
   alpha       = E_gb_init
   traj_file   = gb_file
   out         = AtomsWriter('{0}'.format('{0}_traj.xyz'.format(traj_file)))
-  #gbid        = (gb_file[:-4]).split('/')[-1]
   gbid        = gb_file
   strain_mask = [0,0,1,0,0,0]
   ucf         = UnitCellFilter(grain, strain_mask)
@@ -84,12 +84,21 @@ def relax_gb(gb_file='file.xyz'):
       j_dict[key] = value
     json.dump(j_dict, outfile, indent=2)
 
-  for i in range(32):
+  for i in range(5):
     opt.run(fmax=0.01, steps=200)
     out.write(grain)
     if max(np.sum(grain.get_forces()**2, axis=1)**0.5) < 0.01:
       CONVERGED = True
       break
+
+# If boundary won't converge in a 1000 steps it is a bad boundary!
+# lower tolerance for convergence
+#  for i in range(2):
+#    opt.run(fmax=0.1, steps=200)
+#    out.write(grain)
+#    if max(np.sum(grain.get_forces()**2, axis=1)**0.5) < 0.1:
+#      CONVERGED = True
+#      break
 
   out.close()
   E_gb = grain.get_potential_energy()
@@ -102,4 +111,8 @@ def relax_gb(gb_file='file.xyz'):
     json.dump(j_dict, outfile, indent=2)
 
 if __name__ == '__main__':
-  relax_gb()
+  parser = argparse.ArgumentParser()
+  parser.add_argument('-inp', '--input_file', help='name of input file')
+  args = parser.parse_args()
+  input_file = args.input_file
+  relax_gb(gb_file=input_file)

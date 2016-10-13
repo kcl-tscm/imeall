@@ -1,8 +1,10 @@
 import os
 import sys
-from models import GBMaintenance 
+from   models import GBMaintenance 
 
 gbm = GBMaintenance()
-for thing in os.listdir('./'):
-  if os.path.isdir(thing) and thing[:3] == sys.argv[1]:
-    gbm.remove_eo_files(thing)
+jobdirs = filter(os.path.isdir, os.listdir('./'))
+
+for thing in jobdirs:
+  gbm.remove_eo_files(thing)
+

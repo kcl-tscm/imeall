@@ -150,7 +150,6 @@ class GBMaintenance(object):
               print 'Converged: ', subgb_dict['converged']
           print filename, os.path.getsize(filename)
         elif dryrun == False:
-          print 'Removing', filename
           dir_name = os.path.dirname(filename)
           subgb_file = os.path.join(dir_name,'subgb.json')
           if os.path.exists(subgb_file):
@@ -158,8 +157,10 @@ class GBMaintenance(object):
               subgb_dict = json.load(f)
             if 'converged' in subgb_dict:
               if subgb_dict['converged']:
+                print 'Removing', filename
                 os.remove(filename)
               else:
+                print 'Not converged leaving xyz', filename
                 pass
           else:
             os.remove(filename)
