@@ -355,8 +355,12 @@ class GBAnalysis():
   def calc_energy(self, gb_dict):
     pot_param     = PotentialParameters()
     ener_per_atom = pot_param.gs_ener_per_atom()
-    gb_ener = 16.02*((gb_dict['E_gb']-(ener_per_atom['PotBH.xml']*float(gb_dict['n_at'])))/(2*gb_dict['A']))
-    return gb_ener
+    try:
+      gb_ener = 16.02*((gb_dict['E_gb']-(ener_per_atom['PotBH.xml']*float(gb_dict['n_at'])))/(2*gb_dict['A']))
+    except KeyError:
+      return None
+    else:
+      return gb_ener
 
   def pull_gamsurf(self, path="./",  potential="PotBH"):
     """
@@ -370,11 +374,20 @@ class GBAnalysis():
     if os.path.isdir(os.path.join(path,potential)):
       self.find_gb_json(os.path.join(path,potential), subgb_files, 'subgb.json')
       gam_surfs   = []
+      unconv      = []
 #Only pulling for PotBH:
       for gb in subgb_files:
         with open(gb[1],'r') as f:
           gb_json = json.load(f)
-        gam_surfs.append((gb_json['rcut'], gb_json['rbt'][0], gb_json['rbt'][1], self.calc_energy(gb_json)))
+        ener = self.calc_energy(gb_json)
+        if ener != None:
+          gam_surfs.append((gb_json['rcut'], gb_json['rbt'][0], gb_json['rbt'][1], ener))
+        else:
+          unconv.append(gb[1])
+      if len(unconv) > 0: 
+        print 'missing energies for:'
+      for un in unconv:
+        print un
       en_list    = [x[3] for x in gam_surfs]
       min_en     = min(en_list)
 #Create lists of (vx bxv rcut)

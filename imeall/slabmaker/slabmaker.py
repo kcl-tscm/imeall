@@ -22,17 +22,17 @@ except:
 set_fortran_indexing(False)
 
 def compare_latt_vecs(cell_a, cell_b):
-  '''
-    Obtain the vector of the ratios of each component of two vectors
-    useful for finding lcm of two vectors. Works for orthorhombic cells.
-  '''
+  """
+  Obtain the vector of the ratios of each component of two vectors
+  useful for finding lcm of two vectors. Works for orthorhombic cells.
+  """
   ratios = [a[0]/a[1] for a in zip(np.diag(cell_a), np.diag(cell_a))]
   return ratios
 
 def take_pic(fname, translate=False, toggle=False):
-  '''
-    Rotate and align xyz file for snapshot using AtomEye. 
-  '''
+  """
+  Rotate and align xyz file for snapshot using AtomEye. 
+  """
   v = view('{0}.xyz'.format(fname))
   v.toggle_bond_mode()
   v.toggle_coordination_coloring()
@@ -77,14 +77,14 @@ def rotate_plane_z(grain, miller):
 
 def build_tilt_sym_gb(gbid='', bp = [3,3,2], v=[1,1,0],
                       c_space=None, target_dir=None, rbt = None):
-  ''' 
-    Generate symmetric tilt grain boundary with appropriate configurations: boundary
-    plane (bp) oriented along z axis and orthogonal directions in the 
-    the other two planes given the orientation axis (v) and an orthogonal vector
-    bpxv so we have a proper cube. If rbt is not None then rigid body
-    translations are present, this is passed as a list of two numbers
-    abs(rbt[0]) < 1. The cell is then displaced as a fxn of these numbers. 
-  '''
+  """ 
+  Generate symmetric tilt grain boundary with appropriate configurations: boundary
+  plane (bp) oriented along z axis and orthogonal directions in the 
+  the other two planes given the orientation axis (v) and an orthogonal vector
+  bpxv so we have a proper cube. If rbt is not None then rigid body
+  translations are present, this is passed as a list of two numbers
+  abs(rbt[0]) < 1. The cell is then displaced as a fxn of these numbers. 
+  """
   bpxv = [(bp[1]*v[2]-v[1]*bp[2]),(bp[2]*v[0]-bp[0]*v[2]),(bp[0]*v[1]- v[0]*bp[1])]
   grain_a = BodyCenteredCubic(directions = [v, bpxv, bp],
                               size = (1,1,1), symbol='Fe', pbc=(1,1,1),
@@ -336,9 +336,9 @@ def csl_lattice_vecs(m,n):
   return np.array([a,b,c,d])
 
 def rotate_vec(q, vec):
-  '''
-    Rotate 3 vector with quaternion
-  '''
+  """
+  Rotate 3 vector with quaternion.
+  """
   vec = np.array([0., vec[0], vec[1], vec[2]])
   qm = quat.quaternion_conjugate(q)
   pos_prime = quat.quaternion_multiply(q, vec)

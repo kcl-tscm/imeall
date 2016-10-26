@@ -38,13 +38,17 @@ if __name__=='__main__':
   parser.add_argument("-s", "--server", help="name of server to sync with")
   parser.add_argument("-a", "--ada",    help="sync with ada", action="store_true")
   parser.add_argument("-m", "--mira",   help="sync with mira", action="store_true")
+  parser.add_argument("-r", "--rosa",   help="sync with rosalind", action="store_true")
   args = parser.parse_args()
 
   mira_params = dict(sync_log="db_synclog", exclude="'*/Fracture/*'", exclude_from="rsync_exclude.txt", rsync_args="-av",
                      src="lambert@mira.alcf.anl.gov:/home/lambert/iron/grain_boundaries", target="./") 
 
-  ada_params = dict(sync_log="db_synclog", exclude="'*/Fracture/*'", exclude_from="rsync_exclude.txt", rsync_args="-auv", 
+  ada_params  = dict(sync_log="db_synclog", exclude="'*/Fracture/*'", exclude_from="rsync_exclude.txt", rsync_args="-auv", 
                      src="k1511981@ada.hpc.kcl.ac.uk:/users/k1511981/sharedscratch/grain_boundaries/grain_boundaries", target="./")
+
+  rosa_params = dict(sync_log="db_synclog", exclude="'*/Fracture/*'", exclude_from="rsync_exclude.txt", rsync_args="-auv", 
+                     src="k1511981@login.rosalind.compute.estate:/users/k1511981/sharedscratch/grain_boundaries", target="./")
 
   #To sync the directory structure of the grainboundary
   #rsync -a -f"+ */" -f"- *" source/ destination/
@@ -60,6 +64,6 @@ if __name__=='__main__':
     sync_ada  = SyncDB(**ada_params)
     sync_ada.sync_db(server="ada")
 
-
-
-
+  if args.rosa:
+    sync_ada  = SyncDB(**rosa_params)
+    sync_ada.sync_db(server="rosalind")
