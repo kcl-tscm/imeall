@@ -21,7 +21,8 @@ def create_json(dir_pattern=''):
 
 def plot_ener(eners, calc_pattern='', A=181.221, reverse=False):
   """
-  :method:`plot_ener` plot energy.
+  :method:`plot_ener` plot grain boundary energies,
+  reference energy should be the first in list.
   """
   ref_en = eners[0][1]
   with open('{0}.dat'.format(calc_pattern), 'w') as f: 
@@ -35,7 +36,8 @@ def plot_ener(eners, calc_pattern='', A=181.221, reverse=False):
 
 def grab_eners(dir_pattern=''):
   """
-  :method:`grab_ener` plot energy.
+  :method:`grab_eners` check the directories in glob(pattern) list
+  for a subgb file and pull the grain boundary energy.
   """
   jobdirs = glob.glob(dir_pattern)
   jobdirs = filter(os.path.isdir, jobdirs)
@@ -65,9 +67,9 @@ if __name__=='__main__':
   area    = args.area
   pattern = args.pattern
   reverse = args.reverse
-
+  print glob.glob(pattern)
   create_json(dir_pattern='{0}*'.format(pattern))
-  eners         = grab_eners('{0}*'.format(pattern))
-  calc_pattern  = '{0}'.format(pattern)
+  eners        = grab_eners('{0}*'.format(pattern))
+  calc_pattern = '{0}'.format(pattern)
   print 'Writing data to ', calc_pattern+'.dat'
   plot_ener(eners=eners, calc_pattern=calc_pattern, A=area, reverse=reverse)
