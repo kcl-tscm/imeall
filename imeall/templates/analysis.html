@@ -76,8 +76,8 @@ $( document ).ready(function() {
         .x(function(d) { return x(d.angle); })
         .y(function(d) { return y(d.min_en); });
 
-//  y.domain(d3.extent(data, function(d) { return d.min_en; }));
 //  x.domain(d3.extent(data, function(d) { return d.angle;  }));
+//  y.domain(d3.extent(data, function(d) { return d.min_en; }));
   x.domain([0.0, d3.max(data, function(d) { return d.angle;  })]);
   y.domain([0.0, d3.max(data, function(d) { return d.min_en;  })]);
 

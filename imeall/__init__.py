@@ -1,6 +1,7 @@
 import os
 try:
   from flask import Flask, render_template
+  NO_FLASK = False
 except:
   NO_FLASK = True
   print 'No Flask Server Available'
