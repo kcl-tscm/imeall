@@ -4,8 +4,6 @@ import argparse
 import subprocess
 from imeall.models import GBAnalysis
 
-
-
 parser = argparse.ArgumentParser()
 parser.add_argument("-s", "--submit", action='store_true', help="submit unconverged jobs.")
 args   = parser.parse_args()

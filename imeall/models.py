@@ -403,9 +403,45 @@ class GBAnalysis():
       gam_dict = {'max_en':0.0, 'min_en':0.0,'min_coords':[],'max_coords':[]}
     return gam_dict
 
+  def list_all_unconverged(self, pattern='b111'):
+    """
+    :method:`list_all_unconverged` searches through subdirectories
+    that pattern match against pattern for subgb.json files.
+    Parameters:
+      pattern: regex to pattern match against.
+    Returns:
+      tuple of lists (converged_dirs, unconverged_dirs, dirs_missing_convergence_keys)
+    """
+    jobdirs = glob.glob('{0}*'.format(pattern))
+    jobdirs = filter(os.path.isdir, jobdirs)
+    scratch = os.getcwd()
+    converged_list   = []
+    unconverged_list = []
+    missing_key_list = []
+    for job in jobdirs:
+      os.chdir(os.path.join(scratch, job))
+      subgb_files = []
+      self.find_gb_json('./', subgb_files, 'subgb.json')
+      for gb in subgb_files:
+        with open(gb[1],'r') as f:
+          gb_json = json.load(f)
+        if 'converged' in gb_json:
+          if gb_json['converged']:
+            #print 'Converged', gb
+            converged_list.append([job]+gb)
+          elif not gb_json['converged']:
+            #print 'Not Converged', gb
+            unconverged_list.append([job]+gb)
+        elif 'converged' not in gb:
+            #print 'subgb missing converged key', gb
+            missing_key_list.append(gb)
+    os.chdir(scratch)
+    return  converged_list, unconverged_list, missing_key_list
+
   def list_unconverged(self, prefix='001', potential='PotBH'):
     """
-    :method:list_unconverged find all files with unconverged in there json file.
+    :method:list_unconverged find all files with unconverged in there json file
+    for a specific potential type.
     """
     jobdirs = glob.glob('{0}*'.format(prefix))
     jobdirs = filter(os.path.isdir, jobdirs)
