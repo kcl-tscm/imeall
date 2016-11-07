@@ -15,6 +15,18 @@ pot     = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale),
 gb      = BodyCenteredCubic(directions = [[1,0,0], [0,1,0], [0,0,1]],
                             size = (8,8,8), symbol='Fe', pbc=(1,1,1),
                             latticeconstant = 2.83)
+
+calc_elast_dipole=True
+if calc_elast_dipole:
+  cell = gb.get_cell()
+  cell = cell*1.01
+  gb.set_cell(cell, scale_atoms=True)
+
+print cell[0,0], cell[1,1], cell[2,2]
+print cell[0,0]*0.01, cell[1,1]*0.01, cell[2,2]*0.01
+print cell[0,0]*cell[1,1]*cell[2,2]
+1/0
+
 tetra_pos = 2.83*np.array([0.25, 0.0, 0.5])
 
 h2 = aseAtoms('H2', positions=[[0, 0, 0],[0, 0, 0.7]])
