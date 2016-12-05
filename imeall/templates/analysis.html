@@ -308,6 +308,7 @@ $( document ).ready(function(){
 <style>
 #potentials {display: none;}
 </style>
+{#DEPRECATED BECAUSE OF MATPLOTLIB Dependenc
 <div id="potentials">
   <h3> Mendelev Potential </h3>
   <p> <img src = "{{url_for('eam_pot', filename='Fe_Mendelev.xml')}}" alt="EAM Potential" width=500 ></p>
@@ -318,4 +319,5 @@ $( document ).ready(function(){
   <h3> Mishin Potential </h3>
   <p> <img src = "{{url_for('eam_pot', filename='iron_mish.xml')}}" alt="EAM Potential" width=500 ></p>
 </div>
+#}
 {% endblock body %}

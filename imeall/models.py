@@ -5,15 +5,15 @@ import glob
 import json
 import argparse
 import numpy as np
-import matplotlib.pyplot as plt
 
 from   quippy import Atoms
 import slabmaker.slabmaker as slabmaker
 
 from  scipy.spatial import Voronoi, voronoi_plot_2d
 try:
-  from  flask  import Flask, request, session, g, redirect
-  from  flask  import url_for, abort, render_template, flash
+  from flask  import Flask, request, session, g, redirect
+  from flask  import url_for, abort, render_template, flash
+  from imeall import app
 except:
   print 'No flask'
   pass
@@ -267,10 +267,7 @@ class GBAnalysis():
       j_list   : empty list  to populate
       filetype : 'subgb.json', 'gb.json'
     """
-    try:
-      lst = os.listdir(path)
-    except OSError:
-      pass
+    lst = os.listdir(path)
     for filename in lst:
       filename = os.path.join(path, filename)
       if os.path.isdir(filename):
@@ -280,7 +277,7 @@ class GBAnalysis():
       else:
         pass
 
-  def extract_energies(self, or_axis='001'):
+  def extract_energies(self, material='alphaFe', or_axis='001'):
 #   pull GB formation energies in two stage recursive process
 #   go into a grain boundary directory, recurse down through
 #   grain boundary to find gb_energies pull them out and plot them
@@ -290,7 +287,9 @@ class GBAnalysis():
     pot_param     = PotentialParameters()
     ener_per_atom = pot_param.gs_ener_per_atom()
     gb_files = []
-    self.find_gb_json('/Users/lambert/pymodules/imeall/imeall/grain_boundaries/alphaFe/{0}/'.format(or_axis), gb_files, 'gb.json')
+#dir str lets us point to whatever material and orientation axisi it is we want in the database.
+    dir_str  = os.path.join(material, or_axis)
+    self.find_gb_json('{0}'.format(os.path.join(app.config['GRAIN_DATABASE'], dir_str)), gb_files, 'gb.json')
     grain_energies = []
     for grain in  gb_files:
       path = grain[0]
