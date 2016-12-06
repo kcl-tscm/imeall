@@ -35,14 +35,14 @@ class SyncDB(object):
 
 if __name__=='__main__':
   parser = argparse.ArgumentParser()
-  parser.add_argument("-n", "--dryrun", help="name of server")
+  parser.add_argument("-n", "--dryrun", help="name of server", action="store_true")
   parser.add_argument("-s", "--server", help="name of server to sync with")
   parser.add_argument("-a", "--ada",    help="sync with ada", action="store_true")
   parser.add_argument("-m", "--mira",   help="sync with mira", action="store_true")
   parser.add_argument("-r", "--rosa",   help="sync with rosalind", action="store_true")
   args = parser.parse_args()
 
-  rsync_args = "-av"
+  rsync_args = "-auv"
   if args.dryrun:
     rsync_args +='n'
   mira_params = dict(sync_log="db_synclog", exclude="'*/Fracture/*'", exclude_from="rsync_exclude.txt", rsync_args="-av",
