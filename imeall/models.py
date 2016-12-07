@@ -278,12 +278,13 @@ class GBAnalysis():
         pass
 
   def extract_energies(self, material='alphaFe', or_axis='001'):
-#   pull GB formation energies in two stage recursive process
-#   go into a grain boundary directory, recurse down through
-#   grain boundary to find gb_energies pull them out and plot them
-#   returns dictionary []
-#   the database should only contain unique grain boundaries
-#   so no key should be overwritten.
+    """
+    :method:`extract_energies` pull GB formation energies in two stage recursive process
+    go into a grain boundary directory, recurse down through.
+    grain boundary to find gb_energies pull them out and plot them
+    returns dictionary [] the database should only contain unique grain boundaries
+    so no key should be overwritten.
+    """
     pot_param     = PotentialParameters()
     ener_per_atom = pot_param.gs_ener_per_atom()
     gb_files = []
