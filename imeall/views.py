@@ -7,8 +7,10 @@ from   imeall  import app
 from   flask   import Flask, request, session, g, redirect, url_for, abort,\
                       render_template, flash, send_file, jsonify, make_response
 from   imeall.models import GBAnalysis
-from   gb_models     import serialize_vector, GRAIN_DATABASE, DATABASE
+from   gb_models     import serialize_vector, GRAIN_DATABASE, DATABASE, GrainBoundary, SubGrainBoundary,\
+                            deserialize_vector_int
 from   models        import PotentialParameters
+from   peewee        import fn
 # Unique key is BBBAAAACCC
 # Common axis=[BBB], misorientation angle=AAAA, and GB plane = (CCC).
 # temporary table should be replaced by database.
@@ -32,7 +34,6 @@ valid_extensions = ['xyz', 'json', 'mp4', 'png','day']
 vasp_files       = ['IBZKPT', 'INCAR', 'CHG', 'CHGCAR', 'DOSCAR', 'EIGENVAL', 
                     'KPOINTS', 'OSZICAR', 'OUTCAR', 'PCDAT', 'POSCAR',
                     'POTCAR', 'WAVECAR', 'XDATCAR']
-
 #
 # Currently the database connection is just a path name to our grain boundary
 # database stored as a file tree. I don't necessarily see any reason not to exploit
@@ -110,25 +111,32 @@ def analysis():
 # gb_list = analyze.extract_energies(or_axis=or_axis)
   gbdat   = []
 # Creates list of grain boundaries ordered by angle.
-  gb_list = GrainBoundary.select().where(GrainBoundary.orientation_axis).dicts()
-  for gb in sorted(gb_list, key = lambda x: x['angle']):
-    for potential in ener_per_atoms.keys():
+  for potential in ener_per_atom.keys():
+    min_en_structs = (GrainBoundary
+     		            .select(GrainBoundary, SubGrainBoundary, GrainBoundary.gbid.alias('root_id'))
+         		        .join(SubGrainBoundary)
+           	     	  .where(SubGrainBoundary.potential==potential)
+    	              .group_by(SubGrainBoundary.canonical_grain)
+							   	  .order_by(GrainBoundary.angle)
+								    .having(SubGrainBoundary.E_gb == fn.Min(SubGrainBoundary.E_gb))
+                     .dicts()
+									   )
+    app.logger.info('Found {0} min_en structures for potential {1}'.format(len(min_en_structs), potential))
 # GrainBoundary Energies in J/m^{2}
-      subgb_energies = [16.02*(subgb.E_gb - subgb.n_at*ener_per_atom[potential])/(2.0*subgb.A)
-                               for subgb in gb.subgrains.where(SubGrainBoundary.potential==potential)]
-      min_en         =  min([en for en in subgb_energies if en > 0])
-      max_en         =  max([en for en in subgb_energies if en > 0])
-      gbdat.append({'param_file': gb[potential],
-                    'or_axis'   : ' '.join(map(str, gb['orientation_axis'])),
-                    'angle'     : gb['angle'],
-                    'min_en'    : min_en, 
-                    'max_en'    : max_en,
-                    'bp'        : ' '.join(map(str, map(int, gb['boundary_plane']))),
-                    'url'       : 'http://127.0.0.1:5000/grain/alphaFe/'
-                                 + ''.join(map(str,gb['orientation_axis']))
-                                 + '/'+gb['gbid']
-                      })
-  gbdat = sorted(gbdat, key=lambda x: x['angle'])
+    for subgb in min_en_structs:
+      app.logger.info('{}'.format(subgb['potential']))
+      app.logger.debug('{}'.format(subgb.keys()))
+      min_en = 16.02*(subgb['E_gb'] - float(subgb['n_at'])*ener_per_atom[potential])/(2.0*subgb['area'])
+      app.logger.debug('n_at {0} min en {1}'.format(subgb['n_at'], min_en))
+      gbdat.append({'param_file': potential,
+                  'or_axis'   : ' '.join(map(str, subgb['orientation_axis'])),
+                  'angle'     : subgb['angle']*(180./(3.14159)),
+                  'min_en'    : min_en, 
+                  'bp'        : ' '.join(map(str, map(int, deserialize_vector_int(subgb['boundary_plane'])))),
+                  #'url'       : 'http://127.0.0.1:5000/grain/alphaFe/'
+                  'url'       : 'http://137.73.5.224:5000/grain/alphaFe/'
+                              + ''.join(map(str, deserialize_vector_int(subgb['orientation_axis'])))
+                              + '/' + subgb['root_id']})
   return render_template('analysis.html', gbdat=json.dumps(gbdat))
 
 @app.route('/orientation/<path:url_path>/<orientation>/')

@@ -387,10 +387,10 @@ class GBAnalysis():
           gam_surfs.append((gb_json['rcut'], gb_json['rbt'][0], gb_json['rbt'][1], ener))
         else:
           unconv.append(gb[1])
-      if len(unconv) > 0: 
-        print 'missing energies for:'
-        for un in unconv:
-          print un
+      #if len(unconv) > 0: 
+        #print 'missing energies for:'
+        #for un in unconv:
+        #  print un
       en_list    = [x[3] for x in gam_surfs]
       min_en     = min(en_list)
 #Create lists of minimum energy structures (vx bxv rcut).
