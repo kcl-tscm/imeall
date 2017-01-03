@@ -119,22 +119,21 @@ def analysis():
     	                  .group_by(SubGrainBoundary.canonical_grain)
 							   	      .order_by(GrainBoundary.angle)
                         .dicts())
-
     app.logger.info('Found {0} min_en structures for potential {1}'.format(len(min_en_structs), potential))
 # GrainBoundary Energies in J/m^{2}
-    for subgb in min_en_dicts:
-      app.logger.info('{}'.format(subgb['potential']))
-      #app.logger.debug('{}'.format(subgb.keys()))
-      min_en = 16.02*(subgb['E_gb'] - float(subgb['n_at'])*ener_per_atom[potential])/(2.0*subgb['area'])
-      app.logger.debug('n_at {0} min en {1}'.format(subgb['n_at'], min_en))
-      gbdat.append({'param_file' : potential,
-                    'or_axis'    : ' '.join(map(str, subgb['orientation_axis'])),
-                    'angle'      : subgb['angle']*(180./(3.14159)),
-                    'min_en'     : min_en, 
-                    'bp'         : ' '.join(map(str, map(int, deserialize_vector_int(subgb['boundary_plane'])))),
-                    'url'        :  'http://137.73.5.224:5000/grain/alphaFe/'
-                                  + ''.join(map(str, deserialize_vector_int(subgb['orientation_axis'])))
-                                  + '/' + subgb['root_id']})
+    for subgb in min_en_structs:
+      if subgb['E_gb'] < 0.0:
+        app.logger.info('{}'.format(subgb['potential']))
+        min_en = 16.02*(subgb['E_gb'] - float(subgb['n_at'])*ener_per_atom[potential])/(2.0*subgb['area'])
+        app.logger.debug('n_at {0} min en {1}'.format(subgb['n_at'], min_en))
+        gbdat.append({'param_file' : potential,
+                      'or_axis'    : ' '.join(map(str, subgb['orientation_axis'].split(','))),
+                      'angle'      : subgb['angle']*(180./(3.14159)),
+                      'min_en'     : min_en,
+                      'bp'         : ' '.join(map(str, map(int, deserialize_vector_int(subgb['boundary_plane'])))),
+                      'url'        : 'http://137.73.5.224:5000/grain/alphaFe/'
+                                    + ''.join(map(str, deserialize_vector_int(subgb['orientation_axis'])))
+                                    + '/' + subgb['root_id']})
   return render_template('analysis.html', gbdat=json.dumps(gbdat))
 
 @app.route('/orientation/<path:url_path>/<orientation>/')
