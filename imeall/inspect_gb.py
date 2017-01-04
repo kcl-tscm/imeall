@@ -14,11 +14,9 @@ GRAIN_DATABASE = "/home/lambert/pymodules/imeall/imeall/grain_boundaries/"
 DATABASE       = "/home/lambert/pymodules/imeall/imeall/gb_database.db"
 database       = SqliteDatabase(DATABASE)
 
-parser  = argparse.ArgumentParser()
-parser.add_argument("-o", "--orientation_axis", default="110")
-
-args = parser.parse_args()
-
+#parser  = argparse.ArgumentParser()
+#parser.add_argument("-o", "--orientation_axis", default="110")
+#args = parser.parse_args()
 
 min_ens = (GrainBoundary
              .select(GrainBoundary, SubGrainBoundary)

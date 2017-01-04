@@ -111,29 +111,25 @@ def analysis():
   oraxis = ','.join([c for c in or_axis])
 # Creates list of grain boundaries ordered by angle.
   for potential in ener_per_atom.keys():
-    min_en_structs = (GrainBoundary
-     		                .select(GrainBoundary, SubGrainBoundary, GrainBoundary.gbid.alias('root_id'))
-         		            .join(SubGrainBoundary)
-           	     	      .where(SubGrainBoundary.potential==potential)
-                        .where(GrainBoundary.orientation_axis==oraxis)
-    	                  .group_by(SubGrainBoundary.canonical_grain)
-							   	      .order_by(GrainBoundary.angle)
-                        .dicts())
-    app.logger.info('Found {0} min_en structures for potential {1}'.format(len(min_en_structs), potential))
 # GrainBoundary Energies in J/m^{2}
-    for subgb in min_en_structs:
-      if subgb['E_gb'] < 0.0:
-        app.logger.info('{}'.format(subgb['potential']))
-        min_en = 16.02*(subgb['E_gb'] - float(subgb['n_at'])*ener_per_atom[potential])/(2.0*subgb['area'])
-        app.logger.debug('n_at {0} min en {1}'.format(subgb['n_at'], min_en))
+    gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).order_by(GrainBoundary.angle)
+    for gb in gbs:
+      subgbs = (gb.subgrains.select(GrainBoundary, SubGrainBoundary)
+                      .where(SubGrainBoundary.potential==potential)
+                      .join(GrainBoundary)
+                      .order_by(SubGrainBoundary.E_gb)
+                      .dicts())
+      subgbs = [(16.02*(subgb['E_gb']-float(subgb['n_at']*ener_per_atom[potential]))/(2.0*subgb['area']), subgb) for subgb in subgbs]
+      subgbs.sort(key = lambda x: x[0])
+      if (len(subgbs) > 0) and subgbs[0][0] < 3.0:
         gbdat.append({'param_file' : potential,
-                      'or_axis'    : ' '.join(map(str, subgb['orientation_axis'].split(','))),
-                      'angle'      : subgb['angle']*(180./(3.14159)),
-                      'min_en'     : min_en,
-                      'bp'         : ' '.join(map(str, map(int, deserialize_vector_int(subgb['boundary_plane'])))),
+                      'or_axis'    : ' '.join(map(str, subgbs[0][1]['orientation_axis'].split(','))),
+                      'angle'      : subgbs[0][1]['angle']*(180./(3.14159)),
+                      'min_en'     : subgbs[0][0],
+                      'bp'         : ' '.join(map(str, map(int, deserialize_vector_int(subgbs[0][1]['boundary_plane'])))),
                       'url'        : 'http://137.73.5.224:5000/grain/alphaFe/'
-                                    + ''.join(map(str, deserialize_vector_int(subgb['orientation_axis'])))
-                                    + '/' + subgb['root_id']})
+                                    + ''.join(map(str, deserialize_vector_int(subgbs[0][1]['orientation_axis'])))
+                                    + '/' + subgbs[0][1]['gbid']})
   return render_template('analysis.html', gbdat=json.dumps(gbdat))
 
 @app.route('/orientation/<path:url_path>/<orientation>/')

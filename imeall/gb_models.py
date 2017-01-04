@@ -6,7 +6,7 @@ import glob
 from   peewee   import *
 from   quippy   import Atoms
 from   datetime import datetime, timedelta
-from   models   import GBAnalysis
+from   models   import GBAnalysis, PotentialParameters
 
 GRAIN_DATABASE = "/home/lambert/pymodules/imeall/imeall/grain_boundaries/"
 DATABASE       = "/home/lambert/pymodules/imeall/imeall/gb_database.db"
@@ -59,7 +59,6 @@ class SubGrainBoundary(BaseModel):
 		indexes=(
      				  (('potential', 'gbid'), True), #trailing comma is necessary
     				)
-
 
 class Fracture(BaseModel):
   """
@@ -175,23 +174,34 @@ def populate_db(or_axis='001'):
 
 if __name__=="__main__":
   #create_tables(database)
-  populate_db(or_axis="111")
-  max_ens = (GrainBoundary
-              .select(GrainBoundary, SubGrainBoundary)
-              .join(SubGrainBoundary)
-              .where(SubGrainBoundary.potential=='PotBH.xml')
-              .group_by(SubGrainBoundary.canonical_grain)
-              .having(SubGrainBoundary.E_gb == fn.MAX(SubGrainBoundary.E_gb))
-              .dicts())
+  #populate_db(or_axis="111")
+  oraxis = '1,1,1'
+  pot_param     = PotentialParameters()
+  ener_per_atom = pot_param.gs_ener_per_atom()
 
-  min_ens = (GrainBoundary
-              .select(GrainBoundary, SubGrainBoundary)
-              .join(SubGrainBoundary)
-              .where(SubGrainBoundary.potential=='PotBH.xml')
-              .group_by(SubGrainBoundary.canonical_grain)
-              .order_by(GrainBoundary.angle)
-              .having(SubGrainBoundary.E_gb == fn.Min(SubGrainBoundary.E_gb))
-              .dicts())
+#  max_ens = (SubGrainBoundary
+#              .select(GrainBoundary, SubGrainBoundary, SubGrainBoundary.n_at.alias('subn_at'))
+#              .join(GrainBoundary)
+#              .where((SubGrainBoundary.potential=='PotBH.xml')&(GrainBoundary.orientation_axis==oraxis))
+#              .having(SubGrainBoundary.E_gb == fn.MAX(SubGrainBoundary.E_gb))
+#              .order_by(GrainBoundary.angle)
+#              .dicts())
 
-  for subgb1, subgb2 in zip(min_ens, max_ens) :
-    print subgb1['gbid'], subgb1['angle'], subgb1['E_gb'], subgb1['area']
+#  min_ens = (SubGrainBoundary
+#              .select(GrainBoundary, SubGrainBoundary, SubGrainBoundary.n_at.alias('subn_at'))
+#              .join(GrainBoundary)
+#              .where((SubGrainBoundary.potential=='PotBH.xml')&(GrainBoundary.orientation_axis==oraxis))
+#              .having(SubGrainBoundary.E_gb <= fn.Min(SubGrainBoundary.E_gb))
+#              .order_by(GrainBoundary.angle)
+#              .dicts())
+  for gb in GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).order_by(GrainBoundary.angle):
+    subgbs = gb.subgrains.select(GrainBoundary, SubGrainBoundary).where(SubGrainBoundary.potential=='PotBH.xml').join(GrainBoundary).dicts()
+    #subgbs = gb.select().where(SubGrainBoundary.potential=='PotBH.xml').dicts()
+    if len(subgbs) > 0:
+      #for subgb in subgbs:
+      #  print 16.02*(subgb['E_gb']-float(subgb['n_at']*ener_per_atom['PotBH.xml']))/(2.0*subgb['area'])
+      subgbs = [(16.02*(subgb['E_gb']-float(subgb['n_at']*ener_per_atom['PotBH.xml']))/(2.0*subgb['area']), subgb) for subgb in subgbs]
+      subgbs.sort(key = lambda x: x[0])
+    #max_en = 16.02*(subgb2['E_gb']-float(subgb2['n_at']*ener_per_atom['PotBH.xml']))/(2.0*subgb2['area'])
+      print subgbs[0][1]['potential'], gb.orientation_axis, round(gb.angle*(180.0/3.14159),2), subgbs[0][0]
+      #print subgbs[0][1]
