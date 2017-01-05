@@ -10,10 +10,11 @@ from   quippy import Atoms
 import slabmaker.slabmaker as slabmaker
 
 from  scipy.spatial import Voronoi, voronoi_plot_2d
+from imeall import app
+
 try:
   from flask  import Flask, request, session, g, redirect
   from flask  import url_for, abort, render_template, flash
-  from imeall import app
 except:
   print 'No flask'
   pass
@@ -309,7 +310,6 @@ class GBAnalysis():
           if sub_dict['param_file'] not in calc_types:
             calc_types.append(sub_dict['param_file'])
         except KeyError:
-          #print subgrain[0], 'badly formed'
           pass
 #Initialize a dictionary of dictionaries for each calc type:
       gb_dict = {}
@@ -485,7 +485,7 @@ if __name__ == '__main__':
                                                       level directory down for a particular orientation axis")
   parser.add_argument("-g",  "--gam_min",    action="store_true", help="Potential")
   parser.add_argument("-v",  "--potential",  default="PotBH", help="Potential paramfile string")
-  parser.add_argument("-or", "--orientation", action="store_true", help="Orientation axis", default ="001")
+  parser.add_argument("-or", "--orientation", help="Orientation axis", default ="001")
   args = parser.parse_args()
 
   analyze =  GBAnalysis()
@@ -495,7 +495,10 @@ if __name__ == '__main__':
     gb_list = analyze.extract_energies(or_axis=or_axis)
     for gb in sorted(gb_list, key = lambda x: x['angle']):
       if gb['param_file']=='PotBH.xml':
-        print gb['param_file'], gb['angle'], gb['energies']
+        try:
+          print gb['param_file'], gb['angle'], min(gb['energies']), max(gb['energies'])
+        except ValueError:
+          print 'Value Error: ', gb['param_file'], gb['angle']
   
   if args.gam_min:
 #   Search potential directory for all the gamma surface it contains
