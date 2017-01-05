@@ -485,7 +485,7 @@ if __name__ == '__main__':
   parser.add_argument("-t",  "--toplevelen", action="store_true", help="Pull energies from the top \
                                                       level directory down for a particular orientation axis")
   parser.add_argument("-g",  "--gam_min",    action="store_true", help="Potential")
-  parser.add_argument("-v",  "--potential",  default="PotBH", help="Potential paramfile string")
+  parser.add_argument("-d",  "--directory",  default="PotBH", help="Directory to search for min_en structure")
   parser.add_argument("-or", "--orientation", help="Orientation axis", default ="001")
   args = parser.parse_args()
 
@@ -499,21 +499,26 @@ if __name__ == '__main__':
         try:
           print gb['param_file'], gb['angle'], min(gb['energies']), max(gb['energies'])
         except ValueError:
-          print 'Value Error: ', gb['param_file'], gb['angle']
+          print 'No Valid Energy: ', gb['param_file'], gb['angle']
   
   if args.gam_min:
 #   Search potential directory for all the gamma surface it contains
 #   for all the cutoff radii.
     subgb_files = []
-    analyze.find_gb_json(args.potential, subgb_files, 'subgb.json')
+    analyze.find_gb_json(args.directory, subgb_files, 'subgb.json')
     gam_surfs = []
     for gb in subgb_files:
       with open(gb[1],'r') as f:
         gb_json = json.load(f)
-      gam_surfs.append((gb_json['rcut'], gb_json['rbt'][0], gb_json['rbt'][1], analyze.calc_energy(gb_json)))
+      locen = analyze.calc_energy(gb_json)
+      if locen is not None and locen >= 0.0:
+        gam_surfs.append((gb_json['rcut'], gb_json['rbt'][0], gb_json['rbt'][1], locen))
+      else:
+        pass
     for gs in gam_surfs:
       print gs
     en_list = [x[3] for x in gam_surfs]
+    en_list  = [x for x in en_list if x is not None]
     min_en  = min(en_list)
     print 'Min Energy: ', min_en, 'J/m^{2}' 
     min_coords = filter(lambda x: round(x[3], 5) == round(min_en, 5), gam_surfs)

@@ -3,13 +3,18 @@ import sys
 import argparse
 import json
 import glob
-from   peewee import *
+from   peewee   import *
+from   quippy   import Atoms
 from   datetime import datetime, timedelta
-from   quippy import Atoms
-from   models import GBAnalysis
+from   models   import GBAnalysis, PotentialParameters
 
 GRAIN_DATABASE = "/home/lambert/pymodules/imeall/imeall/grain_boundaries/"
-DATABASE       = "/home/lambert/pymodules/imeall/imeall/gb_database.db"
+
+try: 
+  DATABASE   = os.environ['GBDATABASE']
+except KeyError:
+  sys.exit("NO SQL GBDATABASE in Environment")
+
 database       = SqliteDatabase(DATABASE)
 class BaseModel(Model):
   class Meta():
@@ -57,9 +62,8 @@ class SubGrainBoundary(BaseModel):
   gbid            = CharField()
   class Meta:
 		indexes=(
-     					(('potential', 'gbid'), True), #trailing comma is necessary
+     				  (('potential', 'gbid'), True), #trailing comma is necessary
     				)
-
 
 class Fracture(BaseModel):
   """
@@ -122,7 +126,6 @@ def populate_db(or_axis='001'):
     except IntegrityError:
       GB_model_object = GrainBoundary.select().where(GrainBoundary.gbid==gb_json['gbid']).get()
       print 'GB already in database'
-#   GB_model_object = {}
     subgb_files = []
     analyze.find_gb_json('{0}'.format(gb[0]), subgb_files, 'subgb.json')
     with database.atomic() as transaction:
@@ -150,14 +153,12 @@ def populate_db(or_axis='001'):
           area = subgb_json['A']
         except KeyError:
           structs = glob.glob(os.path.join(subgb[0], '*.xyz'))
-          print structs
           struct  = Atoms(structs[-1])
           cell    = struct.get_cell()
           area    = cell[0][0]*cell[1][1]
           subgb_json['n_at'] = len(struct)
-          print area, len(struct)
           
-        subgb_dict = {"canonical_grain"   : GB_model_object,
+        subgb_dict = {"canonical_grain"  : GB_model_object,
                       "converged"        : converged,
                       "E_gb_init"        : E_gb_init, 
                       "potential"        : subgb_json["param_file"],
@@ -170,7 +171,6 @@ def populate_db(or_axis='001'):
                       "notes"            : "",
                       "gbid"             : gbid
                     }
-        print subgb_dict
         try:
           SubGrainBoundary.create(**subgb_dict)        
         except IntegrityError:
@@ -178,24 +178,18 @@ def populate_db(or_axis='001'):
           pass
 
 if __name__=="__main__":
-  create_tables(database)
-  populate_db("001")
-  max_ens = (GrainBoundary
-              .select(GrainBoundary, SubGrainBoundary)
-              .join(SubGrainBoundary)
-              .where(SubGrainBoundary.potential=='PotBH.xml')
-              .group_by(SubGrainBoundary.canonical_grain)
-              .having(SubGrainBoundary.E_gb == fn.MAX(SubGrainBoundary.E_gb))
-              .dicts())
+  #create_tables(database)
+  #populate_db(or_axis="111")
+  oraxis = '1,1,1'
+  pot_param     = PotentialParameters()
+  ener_per_atom = pot_param.gs_ener_per_atom()
 
-  min_ens = (GrainBoundary
-              .select(GrainBoundary, SubGrainBoundary)
-              .join(SubGrainBoundary)
-              .where(SubGrainBoundary.potential=='PotBH.xml')
-              .group_by(SubGrainBoundary.canonical_grain)
-              .order_by(GrainBoundary.angle)
-              .having(SubGrainBoundary.E_gb == fn.Min(SubGrainBoundary.E_gb))
-              .dicts())
+  for gb in GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).order_by(GrainBoundary.angle):
+    subgbs = (gb.subgrains.select(GrainBoundary, SubGrainBoundary)
+                .where(SubGrainBoundary.potential=='PotBH.xml')
+                .join(GrainBoundary).dicts())
 
-  for subgb1, subgb2 in zip(min_ens, max_ens) :
-    print subgb1['gbid'], subgb1['angle'], subgb1['E_gb'], subgb1['area']
+    if len(subgbs) > 0:
+      subgbs = [(16.02*(subgb['E_gb']-float(subgb['n_at']*ener_per_atom['PotBH.xml']))/(2.0*subgb['area']), subgb) for subgb in subgbs]
+      subgbs.sort(key = lambda x: x[0])
+      print subgbs[0][1]['potential'], gb.orientation_axis, round(gb.angle*(180.0/3.14159),2), subgbs[0][0]
