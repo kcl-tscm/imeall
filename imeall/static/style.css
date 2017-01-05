@@ -4,7 +4,7 @@ h1, h2          { font-family: 'Roman', serif; color: #25383C; margin: 0; }
 h1              { border-bottom: 2px solid #eee; }
 h2              { font-size: 1.2em; }
 
-.banner h2 img  {display: inline; width=100%; }
+.banner h2 img  {display: inline; width=300%; }
 .page           { margin: 1em auto; width: 900 em; border: 5px solid #3d3d42;
                   padding: 0.8em; background: white; }
 .entries        { list-style: none; margin: 0; padding: 0; }
