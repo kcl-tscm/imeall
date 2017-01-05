@@ -279,12 +279,13 @@ class GBAnalysis():
         pass
 
   def extract_energies(self, material='alphaFe', or_axis='001'):
-#   pull GB formation energies in two stage recursive process
-#   go into a grain boundary directory, recurse down through
-#   grain boundary to find gb_energies pull them out and plot them
-#   returns dictionary []
-#   the database should only contain unique grain boundaries
-#   so no key should be overwritten.
+    """
+    :method:`extract_energies` pull GB formation energies in two stage recursive process
+    go into a grain boundary directory, recurse down through.
+    grain boundary to find gb_energies pull them out and plot them
+    returns dictionary [] the database should only contain unique grain boundaries
+    so no key should be overwritten.
+    """
     pot_param     = PotentialParameters()
     ener_per_atom = pot_param.gs_ener_per_atom()
     gb_files = []
@@ -386,10 +387,10 @@ class GBAnalysis():
           gam_surfs.append((gb_json['rcut'], gb_json['rbt'][0], gb_json['rbt'][1], ener))
         else:
           unconv.append(gb[1])
-      if len(unconv) > 0: 
-        print 'missing energies for:'
-        for un in unconv:
-          print un
+      #if len(unconv) > 0: 
+        #print 'missing energies for:'
+        #for un in unconv:
+        #  print un
       en_list    = [x[3] for x in gam_surfs]
       min_en     = min(en_list)
 #Create lists of minimum energy structures (vx bxv rcut).
