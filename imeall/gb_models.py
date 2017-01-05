@@ -9,7 +9,12 @@ from   datetime import datetime, timedelta
 from   models   import GBAnalysis, PotentialParameters
 
 GRAIN_DATABASE = "/home/lambert/pymodules/imeall/imeall/grain_boundaries/"
-DATABASE       = "/home/lambert/pymodules/imeall/imeall/gb_database.db"
+
+try: 
+  DATABASE   = os.environ['GBDATABASE']
+except KeyError:
+  sys.exit("NO SQL GBDATABASE in Environment")
+
 database       = SqliteDatabase(DATABASE)
 class BaseModel(Model):
   class Meta():
