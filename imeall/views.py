@@ -7,6 +7,10 @@ from   imeall  import app
 from   flask   import Flask, request, session, g, redirect, url_for, abort,\
                       render_template, flash, send_file, jsonify, make_response
 from   imeall.models import GBAnalysis
+from   gb_models     import serialize_vector, GRAIN_DATABASE, DATABASE, GrainBoundary, SubGrainBoundary,\
+                            deserialize_vector_int
+from   models        import PotentialParameters
+from   peewee        import fn
 # Unique key is BBBAAAACCC
 # Common axis=[BBB], misorientation angle=AAAA, and GB plane = (CCC).
 # temporary table should be replaced by database.
@@ -30,7 +34,6 @@ valid_extensions = ['xyz', 'json', 'mp4', 'png','day']
 vasp_files       = ['IBZKPT', 'INCAR', 'CHG', 'CHGCAR', 'DOSCAR', 'EIGENVAL', 
                     'KPOINTS', 'OSZICAR', 'OUTCAR', 'PCDAT', 'POSCAR',
                     'POTCAR', 'WAVECAR', 'XDATCAR']
-
 #
 # Currently the database connection is just a path name to our grain boundary
 # database stored as a file tree. I don't necessarily see any reason not to exploit
@@ -97,41 +100,42 @@ def _log_in():
 @app.route('/analysis/')
 def analysis():
   """
-    This view collates data from the grainboundary database.
+  This view collates data from the grainboundary database.
   """
 # User chooses what orientation angle to look at via a GET argument:
-  or_axis = request.args.get('or_axis', '001')
-  analyze = GBAnalysis()
-  gb_list = analyze.extract_energies(or_axis=or_axis)
-  gbdat   = []
+# This should be a separate Table.
+  pot_param     = PotentialParameters()
+  ener_per_atom = pot_param.gs_ener_per_atom()
+  or_axis       = request.args.get('or_axis', '001')
+  gbdat         = []
+  oraxis = ','.join([c for c in or_axis])
 # Creates list of grain boundaries ordered by angle.
-  for gb in sorted(gb_list, key = lambda x: x['angle']):
-    try:
-      min_en = min([x for x in gb['energies'] if x > 0.])
-      max_en = max(gb['energies'])
-      try:
-        gbdat.append({'param_file': gb['param_file'],
-                      'or_axis':' '.join(map(str, gb['orientation_axis'])),
-                      'angle': gb['angle'],
-                      'min_en':min_en, 
-                      'max_en':max_en,
-                      'bp':' '.join(map(str, map(int, gb['boundary_plane']))),
-                      'url':   'http://127.0.0.1:5000/grain/alphaFe/'
-                             + ''.join(map(str,gb['orientation_axis']))
-                             +'/'
-                             + gb['gbid']
-                      })
-      except KeyError:
-        pass
-    except ValueError:
-      pass
-  gbdat = sorted(gbdat, key=lambda x: x['angle'])
+  for potential in ener_per_atom.keys():
+# GrainBoundary Energies in J/m^{2}
+    gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).order_by(GrainBoundary.angle)
+    for gb in gbs:
+      subgbs = (gb.subgrains.select(GrainBoundary, SubGrainBoundary)
+                      .where(SubGrainBoundary.potential==potential)
+                      .join(GrainBoundary)
+                      .order_by(SubGrainBoundary.E_gb)
+                      .dicts())
+      subgbs = [(16.02*(subgb['E_gb']-float(subgb['n_at']*ener_per_atom[potential]))/(2.0*subgb['area']), subgb) for subgb in subgbs]
+      subgbs.sort(key = lambda x: x[0])
+      if (len(subgbs) > 0) and subgbs[0][0] < 3.0:
+        gbdat.append({'param_file' : potential,
+                      'or_axis'    : ' '.join(map(str, subgbs[0][1]['orientation_axis'].split(','))),
+                      'angle'      : subgbs[0][1]['angle']*(180./(3.14159)),
+                      'min_en'     : subgbs[0][0],
+                      'bp'         : ' '.join(map(str, map(int, deserialize_vector_int(subgbs[0][1]['boundary_plane'])))),
+                      'url'        : 'http://137.73.5.224:5000/grain/alphaFe/'
+                                    + ''.join(map(str, deserialize_vector_int(subgbs[0][1]['orientation_axis'])))
+                                    + '/' + gb.gbid})
   return render_template('analysis.html', gbdat=json.dumps(gbdat))
 
 @app.route('/orientation/<path:url_path>/<orientation>/')
 def orientations(url_path, orientation):
   """
-    List different orientation axis in the material database.
+  List different orientation axis in the material database.
   """
   url_path = url_path+'/'+orientation
   path     = os.path.join(g.gb_dir, url_path)
@@ -147,7 +151,7 @@ def orientations(url_path, orientation):
 
 def make_tree(path):
   """
-    Recurse through subgrain directories collecting json and png files.
+  Recurse through subgrain directories collecting json and png files.
   """
   tree = dict(name=os.path.basename(path), children=[], fullpath='')
   try: 

@@ -10,17 +10,12 @@ from   quippy import Atoms
 import slabmaker.slabmaker as slabmaker
 
 from  scipy.spatial import Voronoi, voronoi_plot_2d
+from imeall import app
 
 try:
-  import matplotlib.pyplot as plt
-except ImportError:
-  print "no matplotlib available"
-  pass
-
-try:
-  from  flask  import Flask, request, session, g, redirect
-  from  flask  import url_for, abort, render_template, flash
-except ImportError:
+  from flask  import Flask, request, session, g, redirect
+  from flask  import url_for, abort, render_template, flash
+except:
   print 'No flask'
   pass
 
@@ -273,10 +268,7 @@ class GBAnalysis():
       j_list   : empty list  to populate
       filetype : 'subgb.json', 'gb.json'
     """
-    try:
-      lst = os.listdir(path)
-    except OSError:
-      pass
+    lst = os.listdir(path)
     for filename in lst:
       filename = os.path.join(path, filename)
       if os.path.isdir(filename):
@@ -286,17 +278,20 @@ class GBAnalysis():
       else:
         pass
 
-  def extract_energies(self, or_axis='001'):
-#   pull GB formation energies in two stage recursive process
-#   go into a grain boundary directory, recurse down through
-#   grain boundary to find gb_energies pull them out and plot them
-#   returns dictionary []
-#   the database should only contain unique grain boundaries
-#   so no key should be overwritten.
+  def extract_energies(self, material='alphaFe', or_axis='001'):
+    """
+    :method:`extract_energies` pull GB formation energies in two stage recursive process
+    go into a grain boundary directory, recurse down through.
+    grain boundary to find gb_energies pull them out and plot them
+    returns dictionary [] the database should only contain unique grain boundaries
+    so no key should be overwritten.
+    """
     pot_param     = PotentialParameters()
     ener_per_atom = pot_param.gs_ener_per_atom()
     gb_files = []
-    self.find_gb_json('/Users/lambert/pymodules/imeall/imeall/grain_boundaries/alphaFe/{0}/'.format(or_axis), gb_files, 'gb.json')
+#dir str lets us point to whatever material and orientation axisi it is we want in the database.
+    dir_str  = os.path.join(material, or_axis)
+    self.find_gb_json('{0}'.format(os.path.join(app.config['GRAIN_DATABASE'], dir_str)), gb_files, 'gb.json')
     grain_energies = []
     for grain in  gb_files:
       path = grain[0]
@@ -316,7 +311,6 @@ class GBAnalysis():
           if sub_dict['param_file'] not in calc_types:
             calc_types.append(sub_dict['param_file'])
         except KeyError:
-          #print subgrain[0], 'badly formed'
           pass
 #Initialize a dictionary of dictionaries for each calc type:
       gb_dict = {}
@@ -366,8 +360,12 @@ class GBAnalysis():
   def calc_energy(self, gb_dict):
     pot_param     = PotentialParameters()
     ener_per_atom = pot_param.gs_ener_per_atom()
-    gb_ener = 16.02*((gb_dict['E_gb']-(ener_per_atom['PotBH.xml']*float(gb_dict['n_at'])))/(2*gb_dict['A']))
-    return gb_ener
+    try:
+      gb_ener = 16.02*((gb_dict['E_gb']-(ener_per_atom['PotBH.xml']*float(gb_dict['n_at'])))/(2*gb_dict['A']))
+    except KeyError:
+      return None
+    else:
+      return gb_ener
 
   def pull_gamsurf(self, path="./",  potential="PotBH"):
     """
@@ -379,14 +377,23 @@ class GBAnalysis():
     if os.path.isdir(os.path.join(path,potential)):
       self.find_gb_json(os.path.join(path,potential), subgb_files, 'subgb.json')
       gam_surfs   = []
+      unconv      = []
 #Only pulling for PotBH:
       for gb in subgb_files:
         with open(gb[1],'r') as f:
           gb_json = json.load(f)
-        gam_surfs.append((gb_json['rcut'], gb_json['rbt'][0], gb_json['rbt'][1], self.calc_energy(gb_json)))
-      en_list     = [x[3] for x in gam_surfs]
-      min_en      = min(en_list)
-#Create lists of (vx bxv rcut)
+        ener = self.calc_energy(gb_json)
+        if ener != None:
+          gam_surfs.append((gb_json['rcut'], gb_json['rbt'][0], gb_json['rbt'][1], ener))
+        else:
+          unconv.append(gb[1])
+      #if len(unconv) > 0: 
+        #print 'missing energies for:'
+        #for un in unconv:
+        #  print un
+      en_list    = [x[3] for x in gam_surfs]
+      min_en     = min(en_list)
+#Create lists of minimum energy structures (vx bxv rcut).
       min_coords  = [(gam[1], gam[2], gam[0]) for gam in filter(lambda x: round(x[3], 5) == round(min_en, 5), gam_surfs)]
       max_en      =   max(en_list)
       max_coords  = [(gam[1], gam[2], gam[0]) for gam in filter(lambda x: round(x[3], 5)==round(max_en, 5), gam_surfs)]
@@ -396,9 +403,45 @@ class GBAnalysis():
       gam_dict = {'max_en':0.0, 'min_en':0.0,'min_coords':[],'max_coords':[]}
     return gam_dict
 
+  def list_all_unconverged(self, pattern='b111'):
+    """
+    :method:`list_all_unconverged` searches through subdirectories
+    that pattern match against pattern for subgb.json files.
+    Parameters:
+      pattern: regex to pattern match against.
+    Returns:
+      tuple of lists (converged_dirs, unconverged_dirs, dirs_missing_convergence_keys)
+    """
+    jobdirs = glob.glob('{0}*'.format(pattern))
+    jobdirs = filter(os.path.isdir, jobdirs)
+    scratch = os.getcwd()
+    converged_list   = []
+    unconverged_list = []
+    missing_key_list = []
+    for job in jobdirs:
+      os.chdir(os.path.join(scratch, job))
+      subgb_files = []
+      self.find_gb_json('./', subgb_files, 'subgb.json')
+      for gb in subgb_files:
+        with open(gb[1],'r') as f:
+          gb_json = json.load(f)
+        if 'converged' in gb_json:
+          if gb_json['converged']:
+            #print 'Converged', gb
+            converged_list.append([job]+gb)
+          elif not gb_json['converged']:
+            #print 'Not Converged', gb
+            unconverged_list.append([job]+gb)
+        elif 'converged' not in gb:
+            #print 'subgb missing converged key', gb
+            missing_key_list.append(gb)
+    os.chdir(scratch)
+    return  converged_list, unconverged_list, missing_key_list
+
   def list_unconverged(self, prefix='001', potential='PotBH'):
     """
-    :method:list_unconverged find all files with unconverged in there json file.
+    :method:list_unconverged find all files with unconverged in there json file
+    for a specific potential type.
     """
     jobdirs = glob.glob('{0}*'.format(prefix))
     jobdirs = filter(os.path.isdir, jobdirs)
@@ -442,8 +485,8 @@ if __name__ == '__main__':
   parser.add_argument("-t",  "--toplevelen", action="store_true", help="Pull energies from the top \
                                                       level directory down for a particular orientation axis")
   parser.add_argument("-g",  "--gam_min",    action="store_true", help="Potential")
-  parser.add_argument("-v",  "--potential",  default="PotBH", help="Potential paramfile string")
-  parser.add_argument("-or", "--orientation", action="store_true", help="Orientation axis", default ="001")
+  parser.add_argument("-d",  "--directory",  default="PotBH", help="Directory to search for min_en structure")
+  parser.add_argument("-or", "--orientation", help="Orientation axis", default ="001")
   args = parser.parse_args()
 
   analyze =  GBAnalysis()
@@ -453,21 +496,29 @@ if __name__ == '__main__':
     gb_list = analyze.extract_energies(or_axis=or_axis)
     for gb in sorted(gb_list, key = lambda x: x['angle']):
       if gb['param_file']=='PotBH.xml':
-        print gb['param_file'], gb['angle'], gb['energies']
+        try:
+          print gb['param_file'], gb['angle'], min(gb['energies']), max(gb['energies'])
+        except ValueError:
+          print 'No Valid Energy: ', gb['param_file'], gb['angle']
   
   if args.gam_min:
 #   Search potential directory for all the gamma surface it contains
 #   for all the cutoff radii.
     subgb_files = []
-    analyze.find_gb_json(args.potential, subgb_files, 'subgb.json')
+    analyze.find_gb_json(args.directory, subgb_files, 'subgb.json')
     gam_surfs = []
     for gb in subgb_files:
       with open(gb[1],'r') as f:
         gb_json = json.load(f)
-      gam_surfs.append((gb_json['rcut'], gb_json['rbt'][0], gb_json['rbt'][1], analyze.calc_energy(gb_json)))
+      locen = analyze.calc_energy(gb_json)
+      if locen is not None and locen >= 0.0:
+        gam_surfs.append((gb_json['rcut'], gb_json['rbt'][0], gb_json['rbt'][1], locen))
+      else:
+        pass
     for gs in gam_surfs:
       print gs
     en_list = [x[3] for x in gam_surfs]
+    en_list  = [x for x in en_list if x is not None]
     min_en  = min(en_list)
     print 'Min Energy: ', min_en, 'J/m^{2}' 
     min_coords = filter(lambda x: round(x[3], 5) == round(min_en, 5), gam_surfs)

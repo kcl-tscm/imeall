@@ -1,0 +1,19 @@
+#!/usr/bin/env python
+import os
+import sys
+import glob
+import shutil
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-p", "--prefix", help="prefix of orientation axis.", required=True)
+args   = parser.parse_args()
+
+jobdirs = filter(os.path.isdir, glob.glob("{0}*".format(args.prefix)))
+print jobdirs
+
+for job in jobdirs:
+  structs_dir = os.path.join(job,"structs")
+  print os.listdir(structs_dir)
+  shutil.rmtree(structs_dir)
+

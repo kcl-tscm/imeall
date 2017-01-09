@@ -4,9 +4,9 @@ import subprocess
 
 class SyncDB(object):
   """
-    Class for synchronizing the local database with remote servers e.g. ADA, Rosalind, Archer, MIRA etc.
-    Needs to be updated so that subprocess can handle log in credentials via the browser.
-    Database information is stored in db_synclog.
+  Class for synchronizing the local database with remote servers e.g. ADA, Rosalind, Archer, MIRA etc.
+  Needs to be updated so that subprocess can handle log in credentials via the browser.
+  Database information is stored in db_synclog.
   """
   def __init__(self, sync_log="db_synclog",exclude="'*/Fracture/*'", exclude_from="rsync_exclude.txt",
                src="lambert@mira.alcf.anl.gov:/home/lambert/iron/grain_boundaries",
@@ -35,16 +35,27 @@ class SyncDB(object):
 
 if __name__=='__main__':
   parser = argparse.ArgumentParser()
+  parser.add_argument("-n", "--dryrun", help="name of server", action="store_true")
   parser.add_argument("-s", "--server", help="name of server to sync with")
   parser.add_argument("-a", "--ada",    help="sync with ada", action="store_true")
   parser.add_argument("-m", "--mira",   help="sync with mira", action="store_true")
+  parser.add_argument("-r", "--rosa",   help="sync with rosalind", action="store_true")
   args = parser.parse_args()
 
+  rsync_args = "-auv"
+  if args.dryrun:
+    rsync_args +='n'
   mira_params = dict(sync_log="db_synclog", exclude="'*/Fracture/*'", exclude_from="rsync_exclude.txt", rsync_args="-av",
                      src="lambert@mira.alcf.anl.gov:/home/lambert/iron/grain_boundaries", target="./") 
 
-  ada_params = dict(sync_log="db_synclog", exclude="'*/Fracture/*'", exclude_from="rsync_exclude.txt", rsync_args="-auv", 
+  rsync_args = "-auv"
+  if args.dryrun:
+    rsync_args +='n'
+  ada_params  = dict(sync_log="db_synclog", exclude="'*/Fracture/*'", exclude_from="rsync_exclude.txt", rsync_args="-auv", 
                      src="k1511981@ada.hpc.kcl.ac.uk:/users/k1511981/sharedscratch/grain_boundaries/grain_boundaries", target="./")
+
+  rosa_params = dict(sync_log="db_synclog", exclude="'*/Fracture/*'", exclude_from="rsync_exclude.txt", rsync_args="-auv", 
+                     src="k1511981@login.rosalind.compute.estate:/users/k1511981/sharedscratch/grain_boundaries", target="./")
 
   #To sync the directory structure of the grainboundary
   #rsync -a -f"+ */" -f"- *" source/ destination/
@@ -60,6 +71,6 @@ if __name__=='__main__':
     sync_ada  = SyncDB(**ada_params)
     sync_ada.sync_db(server="ada")
 
-
-
-
+  if args.rosa:
+    sync_ada  = SyncDB(**rosa_params)
+    sync_ada.sync_db(server="rosalind")

@@ -86,7 +86,3 @@ for deg in deg_list:
    deg_dict[round(deg[0],2)]=deg[1][0]
    print deg[1][0]
 
-
-
-
-
