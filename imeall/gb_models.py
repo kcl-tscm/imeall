@@ -96,6 +96,86 @@ def create_tables(database):
   database.connect()
   database.create_tables([GrainBoundary,SubGrainBoundary], True)
 
+def add_conv_key(material='alphaFe', or_axis='001'):
+  analyze  = GBAnalysis()
+  gb_files = []
+  analyze.find_gb_json('{0}'.format(os.path.join(GRAIN_DATABASE, os.path.join(material, or_axis))), gb_files, 'gb.json')
+  for gb in gb_files:
+    print gb[0], gb[1]
+    with open(gb[1], 'r') as f:
+      gb_json = json.load(f)
+    GB_model = GrainBoundary.select().where(GrainBoundary.gbid==gb_json['gbid']).get()
+    for subgb_model in GB_model.subgrains:
+      subgb_dict_path = os.path.join(subgb_model.path,'subgb.json')
+      subgb_dict_path = os.path.join(GRAIN_DATABASE, subgb_dict_path)
+      with open(subgb_dict_path,'r') as f:
+        subgb_dict = json.load(f)
+      try:
+        print subgb_dict['gbid'], subgb_dict['converged']
+      except KeyError:
+        print 'Adding Convergence Keys'
+        if 'E_gb' in subgb_dict.keys():
+          subgb_dict['converged'] = True
+        else:
+          subgb_dict['converged'] = False
+        with open(subgb_dict_path,'w') as f:
+          json.dump(subgb_dict, f, indent=2)
+
+def check_dir_integrity(material='alphaFe', or_axis='001'):
+  analyze  = GBAnalysis()
+  gb_files = []
+  analyze.find_gb_json('{0}'.format(os.path.join(GRAIN_DATABASE, os.path.join(material, or_axis))), gb_files, 'gb.json')
+  for gb in gb_files:
+    with open(gb[1], 'r') as f:
+      gb_json = json.load(f)
+    GB_model = GrainBoundary.select().where(GrainBoundary.gbid==gb_json['gbid']).get()
+    for subgb_model in GB_model.subgrains:
+      subgb_dict_path = os.path.join(subgb_model.path,'subgb.json')
+      subgb_dict_path = os.path.join(GRAIN_DATABASE, subgb_dict_path)
+      try:
+        with open(subgb_dict_path,'r') as f:
+          subgb_dict = json.load(f)
+      except IOError:
+        NOINPUT = True
+        print subgb_dict_path
+        while NOINPUT:
+          user_input = raw_input("Directory missing delete model (y/n)?")
+          if user_input == 'y':
+            print 'Deleting Model'
+            subgb_model.delete_instance()
+            NOINPUT=False
+          elif user_input =='n':
+            print 'Keeping Model'
+            NOINPUT=False
+          else:
+            pass
+
+def gb_update_db(material='alphaFe', or_axis='001'):
+#Now load the subgb.json file. and compare old converged energy 
+#and new and old boolean:
+  analyze  = GBAnalysis()
+  gb_files = []
+  analyze.find_gb_json('{0}'.format(os.path.join(GRAIN_DATABASE, os.path.join(material, or_axis))), gb_files, 'gb.json')
+  for gb in gb_files:
+    with open(gb[1], 'r') as f:
+      gb_json = json.load(f)
+    GB_model = GrainBoundary.select().where(GrainBoundary.gbid==gb_json['gbid']).get()
+    for subgb_model in GB_model.subgrains:
+      subgb_dict_path = os.path.join(subgb_model.path,'subgb.json')
+      subgb_dict_path = os.path.join(GRAIN_DATABASE, subgb_dict_path)
+      with open(subgb_dict_path,'r') as f:
+        subgb_dict = json.load(f)
+      #print 'MODEL INSTANCE
+      try:
+        print subgb_dict_path    
+        assert subgb_dict['gbid']==subgb_model.gbid
+      except AssertionError:
+        print subgb_dict['gbid'], subgb_model.gbid
+        subgb_model.gbid = subgb_dict['gbid']
+        print subgb_model.gbid
+        
+      #assert abs(subgb_dict['E_gb']-subgb_model.E_gb) < 1e-7
+
 def populate_db(or_axis='001'):
   analyze  = GBAnalysis()
   dir_str  = os.path.join('alphaFe', or_axis)
@@ -180,16 +260,29 @@ def populate_db(or_axis='001'):
 if __name__=="__main__":
   #create_tables(database)
   #populate_db(or_axis="111")
-  oraxis = '1,1,1'
-  pot_param     = PotentialParameters()
-  ener_per_atom = pot_param.gs_ener_per_atom()
+  parser = argparse.ArgumentParser()
+  parser.add_argument("-l", "--list",   help="list converged structures in database.", action="store_true")
+  parser.add_argument("-u", "--update", help="update structures in database.", action="store_true")
+  parser.add_argument("-c", "--check_dir", help="checks that database tree corresponds to SQL database.", action="store_true")
+  args   = parser.parse_args()
 
-  for gb in GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).order_by(GrainBoundary.angle):
-    subgbs = (gb.subgrains.select(GrainBoundary, SubGrainBoundary)
-                .where(SubGrainBoundary.potential=='PotBH.xml')
-                .join(GrainBoundary).dicts())
+  if args.list:
+    oraxis = '1,1,1'
+    pot_param     = PotentialParameters()
+    ener_per_atom = pot_param.gs_ener_per_atom()
+  
+    for gb in GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).order_by(GrainBoundary.angle):
+      subgbs = (gb.subgrains.select(GrainBoundary, SubGrainBoundary)
+                  .where(SubGrainBoundary.potential=='PotBH.xml')
+                  .join(GrainBoundary).dicts())
+  
+      if len(subgbs) > 0:
+        subgbs = [(16.02*(subgb['E_gb']-float(subgb['n_at']*ener_per_atom['PotBH.xml']))/(2.0*subgb['area']), subgb) for subgb in subgbs]
+        subgbs.sort(key = lambda x: x[0])
+        print subgbs[0][1]['potential'], gb.orientation_axis, round(gb.angle*(180.0/3.14159),2), subgbs[0][0]
 
-    if len(subgbs) > 0:
-      subgbs = [(16.02*(subgb['E_gb']-float(subgb['n_at']*ener_per_atom['PotBH.xml']))/(2.0*subgb['area']), subgb) for subgb in subgbs]
-      subgbs.sort(key = lambda x: x[0])
-      print subgbs[0][1]['potential'], gb.orientation_axis, round(gb.angle*(180.0/3.14159),2), subgbs[0][0]
+  if args.update:
+    gb_update_db()
+
+  if args.check_dir:
+    check_dir_integrity()

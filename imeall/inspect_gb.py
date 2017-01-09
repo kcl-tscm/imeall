@@ -14,7 +14,6 @@ GRAIN_DATABASE = "/home/lambert/pymodules/imeall/imeall/grain_boundaries/"
 DATABASE       = "/home/lambert/pymodules/imeall/imeall/gb_database.db"
 database       = SqliteDatabase(DATABASE)
 
-
 class Inspector(object):
   """
   This class inspects the SQLdatabase to list GB energies according to potential,
