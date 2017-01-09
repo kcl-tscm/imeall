@@ -5,16 +5,22 @@ import glob
 import json
 import argparse
 import numpy as np
-import matplotlib.pyplot as plt
 
 from   quippy import Atoms
 import slabmaker.slabmaker as slabmaker
 
 from  scipy.spatial import Voronoi, voronoi_plot_2d
+
+try:
+  import matplotlib.pyplot as plt
+except ImportError:
+  print "no matplotlib available"
+  pass
+
 try:
   from  flask  import Flask, request, session, g, redirect
   from  flask  import url_for, abort, render_template, flash
-except:
+except ImportError:
   print 'No flask'
   pass
 

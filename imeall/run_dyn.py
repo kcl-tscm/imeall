@@ -19,6 +19,9 @@ import argparse
 import numpy as np
 
 class Capturing(list):
+  """
+  :class:`Capturing` wraps a function to capture output for redirection.
+  """
   def __enter__(self):
     self._stdout = sys.stdout
     sys.stdout=self._stringio = StringIO()
@@ -74,8 +77,6 @@ class ImeallIO(object):
 # Common pattern might be I have a list of grain dir directories
 # with xyz files in them. Say the relaxed EAM grainboundaries for
 # a certain orientation. /gb/EAM/gbid_criteria/gbid_traj.xyz.
-
-
   def copy_struct(self, from_dir, target_dir, from_sub_dir, 
       target_sub_dir, calc_suffix='_d2.0', calc_point='final', md_step=1):
 # The calc_suffix determines which subgrain directories to
@@ -132,7 +133,7 @@ class ImeallIO(object):
 
   def xyz_to_vasp(self, target_dir, target_sub_dir, calc_suffix='_d2.0'):
     """
-    Initialize a vasp calculation. Read in the xyz file 
+    :method:`xyz_to_vasp` Initialize a vasp calculation. Read in the xyz file 
     if it is present and generate an INCAR, POSCAR, 
     run_vasp file in the directory the vasp template.
     """
@@ -526,9 +527,10 @@ if __name__=='__main__':
     i_bxv = float(args.i_bxv)
 # Generate the appropriate grain boundary in this directory.
     gbrelax.gen_super_rbt(rcut=rcut, bp=bp, v=v, sup_v=sup_v, sup_bxv=sup_bxv, rbt=[i_v, i_bxv])
-#Switch to the appropriate subgrain directory.
+# Switch to the appropriate subgrain directory.
     os.chdir(gbrelax.subgrain_dir)
-# Call the relax function from this directory, reads in the initial struct_file, relaxes cell, writes json.
+# Call the relax function from this directory, reads in the initial struct_file,
+# relaxes cell, writes json.
     relax_gb(gb_file=gbrelax.name)
   else:
     print "No Job Mode selected."
