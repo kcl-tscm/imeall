@@ -197,11 +197,26 @@ def gb_check_conv(material='alphaFe', or_axis='001', modify_db=False):
             print 'Model: ', subgb_model.converged, 'Json:', subgb_dict['converged']
             subgb_model.converged = subgb_dict['converged']
             subgb_model.save()
+      try:
+        assert (abs(subgb_model.E_gb - subgb_dict['E_gb']) < 1e-8)
+      except AssertionError:
+        print 'Model:', subgb_model.E_gb, 'JSON:',  subgb_dict['E_gb'], subgb_model.E_gb-subgb_dict['E_gb']
+        print subgb_dict_path
+        subgb_model.E_gb = subgb_dict['E_gb']
+        subgb_model.save()
+      except KeyError:
+        print 'No Key'
+        print subgb_dict_path
+        print subgb_dict['converged']
+        subgb_dict['converged']=False
+        with open(subgb_dict_path, 'w') as f:
+          json.dump(subgb_dict, f, indent=2)
 
 def gb_check_force(material='alphaFe', or_axis='001', force_tol=0.025, modify_db=False):
   """
   :method:`gb_check_force`. Recurse through directory tree, loading the structure file, json dict 
-  and the model for each subgrain. Check that the force tolerance has actually been met for convergence.
+  and the model for each subgrain. Check that the force tolerance in structure file has actually been 
+  met for convergence.
   """
   analyze  = GBAnalysis()
   gb_files = []
