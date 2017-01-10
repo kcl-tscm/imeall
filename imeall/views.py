@@ -67,8 +67,8 @@ def home_page():
 
 @app.route('/<material>/')
 def material(material):
-  path     = os.path.join(g.gb_dir, material)
-  url_path = material
+  path         = os.path.join(app.config['GRAIN_DATABASE'], material)
+  url_path     = material
   orientations = []
   files =  os.listdir(path)
   for filename in files: 
