@@ -74,7 +74,6 @@ def relax_gb(gb_file='file_name'):
   grain.set_calculator(pot)
   grain.info['adsorbate_info'] = None
   E_gb_init   = grain.get_potential_energy()
-  alpha       = E_gb_init
   traj_file   = gb_file
   if 'traj' in traj_file:
     out       = AtomsWriter('{0}'.format('{0}.xyz'.format(traj_file)))
@@ -97,12 +96,15 @@ def relax_gb(gb_file='file_name'):
       j_dict[key] = value
     json.dump(j_dict, outfile, indent=2)
   CONVERGED = False
-  FORCE_TOL = 0.025
+  FORCE_TOL = 0.05
   for i in range(5):
     opt.run(fmax=FORCE_TOL, steps=120)
     out.write(grain)
+    force_array = grain.get_forces()
+    max_force_II = max([max(f) for f in force_array])
     max_forces = [(fx**2+fy**2+fz**2)**0.5 for fx, fy, fz in zip(grain.properties['force'][0], grain.properties['force'][1], grain.properties['force'][2])]
     print max(max_forces)
+    print max_force_II
     if max(max_forces) <= FORCE_TOL:
       CONVERGED = True
       break
@@ -110,6 +112,8 @@ def relax_gb(gb_file='file_name'):
 
   gb_dict['converged'] = CONVERGED
   E_gb    = grain.get_potential_energy()
+  gb_dict['E_gb']=E_gb
+  #gb_dict['E_gb_init']=E_gb_init
   with open('subgb.json', 'w') as outfile:
     for key, value in gb_dict.items():
       j_dict[key] = value
