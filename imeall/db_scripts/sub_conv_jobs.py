@@ -31,8 +31,8 @@ if submit:
   # pbs_str   = open('/users/k1511981/pymodules/templates/calc_rundyn.pbs', 'r').read()
   # gb_args   = '-rc {rc} -i_v {i_v} -i_bxv {i_bxv}'.format(rc=gb_dict['rcut'], i_v=gb_dict['rbt'][0], i_bxv=gb_dict['rbt'][1])
     pbs_str    = open('/users/k1511981/pymodules/templates/relax.pbs', 'r').read()
-    input_file = gb_dict['gbid']
-    pbs_str = pbs_str.format(jname='fe'+os.path.basename(gb[1][:8]), time='1:00:00', queue='smp.q', input_file=input_file)
+    input_file = gb_dict['gbid']+'_traj'
+    pbs_str = pbs_str.format(jname='fe'+os.path.basename(gb[1][:8]), time='1:00:00', queue='LowMemShortterm.q', input_file=input_file)
     with open('relax.pbs', 'w') as pbs_file:
       print >> pbs_file, pbs_str
     qsub_args = 'qsub relax.pbs'
