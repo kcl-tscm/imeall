@@ -55,10 +55,10 @@ class Inspector(object):
         print unconv[1]
 
 if __name__=="__main__":
-  parser = argparse.ArgumentParser()
+  parser    = argparse.ArgumentParser()
   parser.add_argument("-p", "--potential", help="potential to pull from database.", default="PotBH.xml")
   parser.add_argument("-o", "--or_axis",   help="orientation axis to pull from database.", default="001")
   parser.add_argument("-c", "--converged", help="print list of unconverged grains.", action="store_true")
-  args   = parser.parse_args()
+  args      = parser.parse_args()
   inspector = Inspector()
   inspector.list_gb(potential=args.potential, or_axis=args.or_axis, print_unconverged=args.converged)

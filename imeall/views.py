@@ -67,8 +67,8 @@ def home_page():
 
 @app.route('/<material>/')
 def material(material):
-  path     = os.path.join(g.gb_dir, material)
-  url_path = material
+  path         = os.path.join(app.config['GRAIN_DATABASE'], material)
+  url_path     = material
   orientations = []
   files =  os.listdir(path)
   for filename in files: 
@@ -84,10 +84,6 @@ def synchronization():
     db_log = f.read().split('\n\n')
   db_log.reverse()
   return render_template('synchronization.html', db_log=db_log)
-
-  #date_re  = re.compile("([0-9]{2}:[0-9]{2}:[0-9]{2}\s+[0-9-]+)", re.S)
-  #db_log   = re.split(date_re, db_log)
-  #return render_template('synchronization.html', db_log='\n'.join(db_log))
 
 @app.route("/log/")
 def _log_in():
