@@ -194,7 +194,7 @@ def grain_boundary(url_path, gbid):
   tree  = make_tree(path)
   json_files = []
   extract_json(path, json_files)
-  subgrains = []
+  subgrains  = []  
   subgrainsj = []
   for i, gb_path in enumerate(json_files):
     try: 
@@ -205,7 +205,6 @@ def grain_boundary(url_path, gbid):
   #Pull gamma surface
   analyze  = GBAnalysis()
   gam_dict = analyze.pull_gamsurf(path=path) 
-  print gam_dict
 
   return render_template('grain_boundary.html', gbid=gbid, url_path=url_path,
                           gb_info=gb_info, tree=tree, subgrains=subgrains, 

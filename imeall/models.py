@@ -5,12 +5,11 @@ import glob
 import json
 import argparse
 import numpy as np
-
-from   quippy import Atoms
 import slabmaker.slabmaker as slabmaker
 
+from  imeall import app
+from  quippy import Atoms
 from  scipy.spatial import Voronoi, voronoi_plot_2d
-from imeall import app
 
 try:
   from flask  import Flask, request, session, g, redirect
@@ -357,11 +356,15 @@ class GBAnalysis():
         grain_energies.append(gdict)
     return grain_energies
 
-  def calc_energy(self, gb_dict):
+  def calc_energy(self, gb_dict, paramfile='PotBH.xml'):
+    """
+    :method:given a subgb.json dictionary, and a potential
+    calculate grainboundary energy.
+    """
     pot_param     = PotentialParameters()
     ener_per_atom = pot_param.gs_ener_per_atom()
     try:
-      gb_ener = 16.02*((gb_dict['E_gb']-(ener_per_atom['PotBH.xml']*float(gb_dict['n_at'])))/(2*gb_dict['A']))
+      gb_ener = 16.02*((gb_dict['E_gb']-(ener_per_atom[paramfile]*float(gb_dict['n_at'])))/(2*gb_dict['A']))
     except KeyError:
       return None
     else:
@@ -370,7 +373,7 @@ class GBAnalysis():
   def pull_gamsurf(self, path="./",  potential="PotBH"):
     """
     :method:pull_gamsurf Loop over subgrain directories of a potential (default PotBH) 
-    find the minimum and maximum energies of the screening procedure, return
+    to find the minimum and maximum energies in the canonical grain, return
     a dictionary, with information about the lowest energy structure.
     """
     subgb_files = []
@@ -387,21 +390,55 @@ class GBAnalysis():
           gam_surfs.append((gb_json['rcut'], gb_json['rbt'][0], gb_json['rbt'][1], ener))
         else:
           unconv.append(gb[1])
-      #if len(unconv) > 0: 
-        #print 'missing energies for:'
-        #for un in unconv:
-        #  print un
-      en_list    = [x[3] for x in gam_surfs]
-      min_en     = min(en_list)
+      en_list     = [x[3] for x in gam_surfs]
+      min_en      = min(en_list)
 #Create lists of minimum energy structures (vx bxv rcut).
       min_coords  = [(gam[1], gam[2], gam[0]) for gam in filter(lambda x: round(x[3], 5) == round(min_en, 5), gam_surfs)]
-      max_en      =   max(en_list)
+      max_en      =  max(en_list)
       max_coords  = [(gam[1], gam[2], gam[0]) for gam in filter(lambda x: round(x[3], 5)==round(max_en, 5), gam_surfs)]
       gam_dict    = {'max_en':max_en, 'min_en':min_en, 'min_coords':min_coords, 'max_coords':max_coords}
     else:
       print "No potential directory:", potential, "found."
       gam_dict = {'max_en':0.0, 'min_en':0.0,'min_coords':[],'max_coords':[]}
     return gam_dict
+
+  def plot_gamsurf(self, pot_dir='PotBH', rcut=1.7, print_gamsurf=False):
+    """
+    :method:`plot_gamsurf` return a dictionary for the gamma surface 
+             and the directory with the lowest energy structure.
+    """
+    subgb_files = []
+    self.find_gb_json(pot_dir, subgb_files, 'subgb.json')
+    gam_surfs   = []
+    for gb in subgb_files:
+      with open(gb[1],'r') as f:
+        gb_json = json.load(f)
+      locen = self.calc_energy(gb_json)
+      if locen is not None and locen >= 0.0:
+        gam_surfs.append((gb_json['rcut'], gb_json['rbt'][0], gb_json['rbt'][1], locen, gb[0]))
+      else:
+        pass
+    gam_surf_rcut = filter(lambda x: x[0]==rcut, gam_surfs)
+    if print_gamsurf:
+      for count, gs in enumerate(gam_surf_rcut):
+        print gs[1], gs[2], gs[3]
+        if ((count+1)%6==0):
+          print '\n'
+    en_list = [x[3] for x in gam_surfs]
+    en_list = [x for x in en_list if x is not None]
+    min_en  = min(en_list)
+    print 'Min Energy: ', min_en, 'J/m^{2}' 
+    min_coords = filter(lambda x: round(x[3], 5) == round(min_en, 5), gam_surfs)
+    print 'Coordinates of Min Energy Grain Boundaries:'
+    for m in min_coords:
+      print m
+    max_en  = max(en_list)
+    print 'Max Energy: ', max_en, 'J/m^{2}'
+    print 'Coordinates of Max Energy Grain Boundaries:'
+    max_coords = filter(lambda x: round(x[3], 5)==round(max_en, 5), gam_surfs)
+    for m in max_coords:
+      print m
+    return min_coords, max_coords
 
   def list_all_unconverged(self, pattern='b111'):
     """
@@ -486,7 +523,7 @@ if __name__ == '__main__':
                                                       level directory down for a particular orientation axis")
   parser.add_argument("-g",  "--gam_min",    action="store_true", help="Potential")
   parser.add_argument("-d",  "--directory",  default="PotBH", help="Directory to search for min_en structure")
-  parser.add_argument("-or", "--orientation", help="Orientation axis", default ="001")
+  parser.add_argument("-o", "--orientation", help="Orientation axis", default ="001")
   args = parser.parse_args()
 
   analyze =  GBAnalysis()
@@ -512,7 +549,8 @@ if __name__ == '__main__':
         gb_json = json.load(f)
       locen = analyze.calc_energy(gb_json)
       if locen is not None and locen >= 0.0:
-        gam_surfs.append((gb_json['rcut'], gb_json['rbt'][0], gb_json['rbt'][1], locen))
+        gam_surfs.append((gb_json['rcut'], gb_json['rbt'][0], gb_json['rbt'][1], locen,
+                          gb[0]))
       else:
         pass
     for gs in gam_surfs:
