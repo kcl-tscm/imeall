@@ -13,7 +13,6 @@ import transformations as quat
 
 from quippy import io
 from quippy import set_fortran_indexing
-
 try:
   from qlab import set_fortran_indexing, view, gcat
 except:
@@ -31,7 +30,7 @@ def compare_latt_vecs(cell_a, cell_b):
 
 def take_pic(fname, translate=False, toggle=False):
   """
-  Rotate and align xyz file for snapshot using AtomEye. 
+  :method:`take_pic` Rotate and align xyz file for snapshot using AtomEye. 
   """
   v = view('{0}.xyz'.format(fname))
   v.toggle_bond_mode()
@@ -52,11 +51,11 @@ def take_pic(fname, translate=False, toggle=False):
   #time.sleep(60)
 
 def rotate_plane_z(grain, miller):
-  ''' 
-    Rotates atoms in grain so that planes parallel to plane
-    defined by miller index n are parallel to the xy 
-    plotting plane.
-  '''
+  """ 
+  Rotates atoms in grain so that planes parallel to plane
+  defined by miller index n are parallel to the xy 
+  plotting plane.
+  """
   z = np.array([0.,0., 1.])
   p = np.cross(miller, z)
   p *= 1./np.linalg.norm(p)
@@ -78,7 +77,7 @@ def rotate_plane_z(grain, miller):
 def build_tilt_sym_gb(gbid='', bp = [3,3,2], v=[1,1,0],
                       c_space=None, target_dir=None, rbt = None):
   """ 
-  Generate symmetric tilt grain boundary with appropriate configurations: boundary
+  :method:`build_tilt_sym_gb` Generate symmetric tilt grain boundary with appropriate configurations: boundary
   plane (bp) oriented along z axis and orthogonal directions in the 
   the other two planes given the orientation axis (v) and an orthogonal vector
   bpxv so we have a proper cube. If rbt is not None then rigid body
@@ -337,7 +336,8 @@ def csl_lattice_vecs(m,n):
 
 def rotate_vec(q, vec):
   """
-  Rotate 3 vector with quaternion.
+  :method:`rotate_vec` Rotate 3 vector with quaternion.
+  return 3 vector.
   """
   vec = np.array([0., vec[0], vec[1], vec[2]])
   qm = quat.quaternion_conjugate(q)
@@ -347,13 +347,11 @@ def rotate_vec(q, vec):
   return vec
 
 def rotate_grain(grain, theta=0., x=[0.,0.,0.], q=[]):
-  '''
-    Rotate the grain according to quaternion = [Theta, u,v,w] = [w,x,y,z]
-    Standard routine is passed angle and vector
-    this generates the quaternion to do the rotation 
-    however if a quaternion, q!=None, is passed to routine the plane is rotated
-    using q.
-  '''
+  """
+  :method: Rotate the grain according to quaternion=[Theta, u,v,w]=[w,x,y,z]
+  Standard routine is passed angle and vector this generates the quaternion to do the rotation 
+  however if a quaternion, q!=None, is passed to routine the plane is rotated using q.
+  """
   if q==[]:
     q = quat.quaternion_about_axis(theta, x)
     qm = quat.quaternion_conjugate(q)
@@ -371,6 +369,9 @@ def print_points(atoms, f):
     print>>f, '{0:12.7f} {1:12.7f} {2:12.7f}'.format(atom.position[0], atom.position[1], atom.position[2])
 
 def find_densest_plane(grain_dict):
+  """
+  :method:'find_densest_plane'
+  """
   maxx = max([len(a) for a in grain_dict.values()])
   len_keys = dict([(x,len(y)) for x,y in grain_dict.items()])
   keys_2   = [x for x,y in grain_dict.items()]
@@ -383,9 +384,11 @@ def find_densest_plane(grain_dict):
   return key1, key2
 
 def simplify_csl(m, b=0.00,target_dir='./'):
-# Simplify the dat files of the csl so that atoms in grain_a are below the line
-# defined by the boundary plane in the current projection and atoms from grain_b
-# are above.
+  """ 
+  :method:`simplify_csl` Simplify the dat files of the csl so that atoms in grain_a are below the line
+  defined by the boundary plane in the current projection and atoms from grain_b
+  are above.
+  """
   graina_list = ['grainaT.dat', 'grainaB.dat']
   grainb_list = ['grainbT.dat', 'grainbB.dat']
   for name in graina_list:
@@ -897,19 +900,15 @@ if __name__=='__main__':
 					 [np.pi*(57.35/180.), np.array([37.0, 1.0, -38.0])],
 	         [np.pi*(60.0/180.), np.array([1.0, 0.0, -1.0])]]
 
-
   surfaces = [[np.pi*(0.0), np.array([0,0,1])]]
-
 ####CHOOSE ORIENTATION AXIS and LIST of Sym_Tilt_GBs:
 #   orientation_axis = np.array([1, 1, 1])
   orientation_axis = np.array([1, 1, 0])
-  #for gb in sym_tilt_111:
   for gb in surfaces:
-#  orientation_axis = np.array([0, 0, 1])
-#  for gb in sym_tilt_100:
+#   orientation_axis = np.array([0, 0, 1])
+#   for gb in sym_tilt_100:
 #   orientation_axis = np.array([1, 1, 0])
 #   for gb in sym_tilt_110:
-
     angle_str      = str(round((gb[0]*180./np.pi),2)).replace('.', '')
     if len(angle_str) > 4:
       angle_str = angle_str[:-1]
@@ -938,11 +937,11 @@ if __name__=='__main__':
     cell = grain_c.get_cell()
     A    = cell[0][0]*cell[1][1]
     H    = cell[2][2]
-    gb_dict = { "gbid"  : gbid, "boundary_plane" : list(gb[1]),
-                "orientation_axis" : list(orientation_axis), 
-                "type": "symmetric tilt boundary",
-                "angle": gb[0], "zplanes" : zplanes, "coincident_sites": dups,
-                "n_at" : nunitcell, 'A':A , 'H':H}
+    gb_dict = {"gbid"  : gbid, "boundary_plane" : list(gb[1]),
+               "orientation_axis" : list(orientation_axis), 
+               "type": "symmetric tilt boundary",
+               "angle": gb[0], "zplanes" : zplanes, "coincident_sites": dups,
+               "n_at" : nunitcell, 'A':A , 'H':H}
 
     with open(os.path.join(target_dir, 'gb.json'), 'w') as outfile:
       json.dump(gb_dict, outfile, indent=2)
