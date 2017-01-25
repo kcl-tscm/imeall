@@ -91,7 +91,7 @@ def build_twist_sym_gb(gbid='', bp =[0,0,1], v=[3,5,0],
   :method:`build_twist_sym_gb` the or_axis is the boundary plane in this case.
   the X axis of the grain.
   """
-  print v
+  print "Symmetry Axis", v, "Orientation Axis", bp
   bpxv    = [(bp[1]*v[2]-v[1]*bp[2]), (bp[2]*v[0]-bp[0]*v[2]), (bp[0]*v[1]- v[0]*bp[1])]
   grain_a =  BodyCenteredCubic(directions = [v, bpxv, bp],
                                size = (1,1,1), symbol='Fe', pbc=(1,1,1),
@@ -252,7 +252,7 @@ if __name__=='__main__':
     if not os.path.isdir(target_dir):
       os.mkdir(target_dir)
     else:
-      'directory already exists'
+      print 'directory already exists'
     gen_csl(orientation_axis, gb, target_dir=target_dir, gbid=gbid, gb_type="twist")
     zplanes, dups, nunitcell, grain_c = build_twist_sym_gb(gbid, bp=orientation_axis, v=gb[1], 
                                                            c_space=None, target_dir=target_dir,
