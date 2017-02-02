@@ -3,6 +3,7 @@ import re
 import sys
 import glob
 import json
+import logging
 import argparse
 import numpy as np
 import slabmaker.slabmaker as slabmaker
@@ -32,6 +33,7 @@ class PotentialParameters(object):
   """
   def __init__(self):
     self.name = 'Potential Parameters'
+
   def gs_ener_per_atom(self): 
     eperat = {'Fe_Mendelev.xml' : -4.12243503431,
               'PotBH.xml'       : -4.01298214176,
@@ -166,6 +168,7 @@ class GBMaintenance(object):
     cell = at.get_cell()
     A    = cell[0,0]*cell[1,1]
     new_json['A']    = A
+    new_json['H']    = cell[2,2]
     new_json['n_at'] = len(at) 
 
   def update_json(self, dirname):
@@ -260,7 +263,7 @@ class GBAnalysis():
 
   def find_gb_json(self, path, j_list, filetype):
     """ 
-    :method:find_gb_json Populates the list j_list with lists of the form
+    :method:`find_gb_json` Populates the list j_list with lists of the form
     [/directory_path/, /subgb_file_path].
     attributes:
       path     : root directory to begin recursive search
@@ -358,7 +361,7 @@ class GBAnalysis():
 
   def calc_energy(self, gb_dict, paramfile='PotBH.xml'):
     """
-    :method:given a subgb.json dictionary, and a potential
+    :method:`calc_energy` given a subgb.json dictionary, and a potential
     calculate grainboundary energy.
     """
     pot_param     = PotentialParameters()
@@ -372,7 +375,7 @@ class GBAnalysis():
 
   def pull_gamsurf(self, path="./",  potential="PotBH"):
     """
-    :method:pull_gamsurf Loop over subgrain directories of a potential (default PotBH) 
+    :method:`pull_gamsurf` Loop over subgrain directories of a potential (default PotBH) 
     to find the minimum and maximum energies in the canonical grain, return
     a dictionary, with information about the lowest energy structure.
     """
@@ -402,7 +405,7 @@ class GBAnalysis():
       gam_dict = {'max_en':0.0, 'min_en':0.0,'min_coords':[],'max_coords':[]}
     return gam_dict
 
-  def plot_gamsurf(self, pot_dir='PotBH', rcut=1.7, print_gamsurf=False):
+  def plot_gamsurf(self, pot_dir='PotBH', rcut=None, print_gamsurf=False):
     """
     :method:`plot_gamsurf` return a dictionary for the gamma surface 
              and the directory with the lowest energy structure.
@@ -418,12 +421,18 @@ class GBAnalysis():
         gam_surfs.append((gb_json['rcut'], gb_json['rbt'][0], gb_json['rbt'][1], locen, gb[0]))
       else:
         pass
-    gam_surf_rcut = filter(lambda x: x[0]==rcut, gam_surfs)
+    logging.info('gam_surfs', gam_surfs)
+    if rcut is not None:
+      gam_surf_rcut = filter(lambda x: x[0]==rcut, gam_surfs)
+    else:
+      gam_surf_rcut = gam_surfs
+
     if print_gamsurf:
       for count, gs in enumerate(gam_surf_rcut):
         print gs[1], gs[2], gs[3]
         if ((count+1)%6==0):
           print '\n'
+
     en_list = [x[3] for x in gam_surfs]
     en_list = [x for x in en_list if x is not None]
     min_en  = min(en_list)
@@ -477,7 +486,7 @@ class GBAnalysis():
 
   def list_unconverged(self, prefix='001', potential='PotBH'):
     """
-    :method:list_unconverged find all files with unconverged in there json file
+    :method:`list_unconverged` find all files with unconverged in there json file
     for a specific potential type.
     """
     jobdirs = glob.glob('{0}*'.format(prefix))
@@ -549,14 +558,13 @@ if __name__ == '__main__':
         gb_json = json.load(f)
       locen = analyze.calc_energy(gb_json)
       if locen is not None and locen >= 0.0:
-        gam_surfs.append((gb_json['rcut'], gb_json['rbt'][0], gb_json['rbt'][1], locen,
-                          gb[0]))
+        gam_surfs.append((gb_json['rcut'], gb_json['rbt'][0], gb_json['rbt'][1], locen, gb[0]))
       else:
         pass
     for gs in gam_surfs:
       print gs
     en_list = [x[3] for x in gam_surfs]
-    en_list  = [x for x in en_list if x is not None]
+    en_list = [x for x in en_list if x is not None]
     min_en  = min(en_list)
     print 'Min Energy: ', min_en, 'J/m^{2}' 
     min_coords = filter(lambda x: round(x[3], 5) == round(min_en, 5), gam_surfs)

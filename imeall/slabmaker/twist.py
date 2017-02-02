@@ -1,26 +1,23 @@
-from ase.io import read
-from ase.io import write
-from ase.lattice.spacegroup import crystal
-from ase.lattice.surface import surface, bcc111,bcc110
-from ase.lattice.cubic   import BodyCenteredCubic
-from ase.utils.geometry  import get_duplicate_atoms
-
 import os
+import sys 
 import json
 import time
 import operator
 import numpy as np
 import transformations as quat
 
+from ase.io import read
+from ase.io import write
+from ase.lattice.spacegroup import crystal
+from ase.lattice.surface import surface, bcc111,bcc110
+from ase.lattice.cubic   import BodyCenteredCubic
+from ase.geometry  import get_duplicate_atoms
+
 from slabmaker import gen_csl
 from fractions import gcd
 from quippy import io
 from quippy import set_fortran_indexing
 from quippy import Atoms
-try:
-  from qlab import set_fortran_indexing, view, gcat
-except:
-  pass
 
 set_fortran_indexing(False)
 
@@ -111,25 +108,39 @@ def build_twist_sym_gb(gbid='', bp =[0,0,1], v=[3,5,0],
                               size = (1,1,1), symbol='Fe', pbc=(1,1,1),
                               latticeconstant = 2.83)
   n = 2
-  while(grain_b.get_cell()[2,2]< 22.0 and n < 10):
+  while(grain_b.get_cell()[2,2] < 22.0 and n < 10):
     grain_b = BodyCenteredCubic(directions = [v2, bpxv, bp],
                               size = (1,1,n), symbol='Fe', pbc=(1,1,1),
                               latticeconstant = 2.83)
     n += 1
   grain_c = grain_a.copy()
+
+  # Get sigma number
+  grain_d = grain_a.copy()
+  grain_d.extend(grain_b)
+  dups = get_duplicate_atoms(grain_d)
+  shared_atoms = [grain_d[dup[0]] for dup in dups]
+  for at in shared_atoms:
+    print '\t', at.index, at.position
+  print '\t There are {0} shared atoms'.format(len(shared_atoms))
+  sigma_csl = float(len(grain_a))/float(len(shared_atoms))
+
   if c_space==None:
     s1      = surface('Fe', (0,0,1), n)
     c_space = grain_b.get_cell()[2,2]/float(n)
-    c_space = np.array(2.83)
-    s2 = surface('Fe', (map(int, v)), 1)
+    c_space = np.array(0.0)
+    s2      = surface('Fe', (map(int, v)), 1)
     x_space = s2.get_cell()[0,0] #-s1.positions[:,2].max()
-    s3 = surface('Fe', (map(int, bpxv)), 1)
+    s3      = surface('Fe', (map(int, bpxv)), 1)
     y_space = s3.get_cell()[1,1] #-s1.positions[:,2].max()
   print '\t Interplanar spacing: ', x_space.round(2), y_space.round(2), c_space.round(2), 'A'
   if sum([int(n)%2 for n in bp])%2 == 0 :
     grain_b.positions[:,2]  -= (grain_b.positions[:,2].max() + c_space)
   else:
     grain_b.positions[:,2]  -= (grain_b.positions[:,2].max() + c_space/2.0)
+  print len(grain_c), len(grain_b)
+  for x,y in zip(grain_c.positions[:,:], grain_b.positions[:,:]):
+    print x,y 
   grain_c.extend(grain_b)
   grain_c.set_cell([grain_c.get_cell()[0,0], grain_c.get_cell()[1,1], 2.*grain_c.get_cell()[2,2]])
   grain_c.positions[:,2] += abs(grain_c.positions[:,2].min())
@@ -150,6 +161,7 @@ def build_twist_sym_gb(gbid='', bp =[0,0,1], v=[3,5,0],
     print '\t', at.index, at.position
   print '\t There are {0} shared atoms'.format(len(shared_atoms))
 #Space bicrystal properly.
+  c_space = np.array(2.83)
   if sum([int(n)%2 for n in bp])%2 == 0 :
 	  grain_c.center(vacuum=c_space/2.0, axis=2)
   else:
@@ -161,11 +173,61 @@ def build_twist_sym_gb(gbid='', bp =[0,0,1], v=[3,5,0],
     n_grain_unt = len(grain_c)
     z_planes = [round(atom.position[2],4) for atom in shared_atoms]
     z_planes = list(sorted(set(z_planes)))
-    return [z_planes, len(dups), n_grain_unit, grain_c]
+    return [z_planes, sigma_csl, n_grain_unit, grain_c]
   else:
     return grain_c
 
 if __name__=='__main__':
+  sym_twist_111 = [ 
+	         [np.pi*(0.0/180.), np.array([2.0, -1.0, -1.0])],
+	         [np.pi*(2.65/180.), np.array([25.0, -13.0, -12.0])],
+	         [np.pi*(2.88/180.), np.array([35.0, -1.0, -34.0])],
+					 [np.pi*(3.15/180.), np.array([21.0, -11.0, -10.0])],
+					 [np.pi*(3.89/180.), np.array([17.0, -9.0, -8.0])],
+					 [np.pi*(5.09/180.), np.array([13.0, -7.0, -6.0])],
+					 [np.pi*(6.01/180.), np.array([11.0, -6.0, -5.0])],
+					 [np.pi*(7.34/180.), np.array([9.0, -5.0, -4.0])],
+					 [np.pi*(9.43/180.), np.array([7.0, -4.0, -3.0])],
+					 [np.pi*(10.42/180.), np.array([11.0, 8.0, -19.0])],
+					 [np.pi*(10.99/180.), np.array([7.0, 5.0, -12.0])],
+					 [np.pi*(11.64/180.), np.array([10.0, 7.0, -17.0])],
+					 [np.pi*(12.36/180.), np.array([19.0, 13.0, -32.0])],
+					 [np.pi*(13.17/180.), np.array([3.0, 2.0, -5.0])],
+					 [np.pi*(14.11/180.), np.array([17.0, 11.0, -28.0])],
+					 [np.pi*(15.18/180.), np.array([8.0, 5.0, -13.0])],
+					 [np.pi*(16.43/180.), np.array([5.0, 3.0, -8.0])],
+					 [np.pi*(17.9/180.), np.array([7.0, 4.0, -11.0])],
+					 [np.pi*(19.65/180.), np.array([13.0, 7.0, -20.0])],
+					 [np.pi*(20.67/180.), np.array([25.0, 13.0, -38.0])],
+					 [np.pi*(21.79/180.), np.array([2.0, 1.0, -3.0])],
+					 [np.pi*(23.04/180.), np.array([23.0, 11.0, -34.0])],
+					 [np.pi*(24.43/180.), np.array([11.0, 5.0, -16.0])],
+					 [np.pi*(26.01/180.), np.array([7.0, 3.0, -10.0])],
+					 [np.pi*(27.8/180.), np.array([5.0, 2.0, -7.0])],
+					 [np.pi*(29.84/180.), np.array([19.0, 7.0, -26.0])],
+					 [np.pi*(30.59/180.), np.array([14.0, 5.0, -19.0])],
+					 [np.pi*(32.2/180.), np.array([3.0, 1.0, -4.0])],
+					 [np.pi*(33.99/180.), np.array([13.0, 4.0, -17.0])],
+					 [np.pi*(34.96/180.), np.array([17.0, 5.0, -22.0])],
+					 [np.pi*(35.98/180.), np.array([25.0, 7.0, -32.0])],
+					 [np.pi*(38.21/180.), np.array([4.0, 1.0, -5.0])],
+					 [np.pi*(40.07/180.), np.array([31.0, 7.0, -38.0])],
+					 [np.pi*(40.73/180.), np.array([23.0, 5.0, -28.0])],
+					 [np.pi*(42.1/180.), np.array([5.0, 1.0, -6.0])],
+					 [np.pi*(43.57/180.), np.array([11.0, 2.0, -13.0])],
+					 [np.pi*(44.35/180.), np.array([29.0, 5.0, -34.0])],
+					 [np.pi*(46.83/180.), np.array([7.0, 1.0, -8.0])],
+					 [np.pi*(49.58/180.), np.array([9.0, 1.0, -10.0])],
+					 [np.pi*(50.57/180.), np.array([10.0, 1.0, -11.0])],
+					 [np.pi*(51.39/180.), np.array([11.0, 1.0, -12.0])],
+					 [np.pi*(52.66/180.), np.array([13.0, 1.0, -14.0])],
+					 [np.pi*(53.99/180.), np.array([16.0, 1.0, -17.0])],
+					 [np.pi*(54.91/180.), np.array([19.0, 1.0, -20.0])],
+					 [np.pi*(56.11/180.), np.array([25.0, 1.0, -26.0])],
+					 [np.pi*(56.85/180.), np.array([31.0, 1.0, -32.0])],
+					 [np.pi*(57.35/180.), np.array([37.0, 1.0, -38.0])],
+	         [np.pi*(60.0/180.), np.array([1.0, 0.0, -1.0])]]
+
   sym_twist_001 = [
 	         [np.pi*(7.15/180.), np.array([1.0, 16.0, 0.0])],
 	         [np.pi*(7.63/180.), np.array([1.0, 15.0, 0.0])],
@@ -233,9 +295,11 @@ if __name__=='__main__':
   #gen_sym_twist_gb()
   #build_twist_sym_gb(target_dir='./')
   orientation_axis  = np.array([0,0,1])
+  #orientation_axis  = np.array([1,1,1])
   #surfaces = [[np.pi*(0.0), np.array([0,0,1])]]
   #surfaces = [[np.pi*(61.93/180.), np.array([3.0, 5.0, 0.0])]]
   surfaces = sym_twist_001
+  #surfaces = sym_twist_111
   for gb in surfaces:
     angle_str      = str(round((gb[0]*180./np.pi),2)).replace('.', '')
     if len(angle_str) > 4:
@@ -246,6 +310,7 @@ if __name__=='__main__':
            + angle_str  \
            + '{0}{1}{2}'.format(orientation_axis[0],orientation_axis[1], orientation_axis[2])
     print '\t Grain Boundary ID',  gbid
+    #gb_dir     = os.path.join('./boundaries/twist', '111')
     gb_dir     = os.path.join('./boundaries/twist', '001')
     target_dir = os.path.join(gb_dir, gbid)
     print '\t Grain Boundary Dir', gb_dir
@@ -254,7 +319,7 @@ if __name__=='__main__':
     else:
       print 'directory already exists'
     gen_csl(orientation_axis, gb, target_dir=target_dir, gbid=gbid, gb_type="twist")
-    zplanes, dups, nunitcell, grain_c = build_twist_sym_gb(gbid, bp=orientation_axis, v=gb[1], 
+    zplanes, sigma_csl, nunitcell, grain_c = build_twist_sym_gb(gbid, bp=orientation_axis, v=gb[1], 
                                                            c_space=None, target_dir=target_dir,
                                                            rbt=[0.0, 0.0])
     cell    = grain_c.get_cell()
@@ -263,7 +328,7 @@ if __name__=='__main__':
     gb_dict = {"gbid":gbid, "boundary_plane":list(orientation_axis),
                "orientation_axis":list(orientation_axis), 
                "type": "symmetric twist boundary",
-               "angle": gb[0], "zplanes":zplanes, "coincident_sites": dups,
+               "angle": gb[0], "zplanes":zplanes, "sigma_csl": sigma_csl,
                "n_at": nunitcell, 'A':A , 'H':H}
 
     with open(os.path.join(target_dir, 'gb.json'), 'w') as outfile:

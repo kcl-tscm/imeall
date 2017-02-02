@@ -245,7 +245,7 @@ class GBRelax(object):
     self.subgrain_dir = io.make_dir(self.subgrain_dir, self.name)
     print "delete atoms"
     grain = self.delete_atoms(grain=grain, rcut=rcut)
-#Deposit all initial structures in the struct dir:
+#Deposit all initial structures in the subgrain directory:
     grain.write('{0}.xyz'.format(os.path.join(self.subgrain_dir, self.name)))
 # Finally deposit json and grain file with translation information.
     try:
@@ -300,7 +300,7 @@ class GBRelax(object):
         print 'No duplicate atoms in list.'
     else:
       pass
-  # Now create super cell:
+# Now create super cell:
     x = x*(sup_v, sup_bxv, 1)
     x.set_scaled_positions(x.get_scaled_positions())
 
