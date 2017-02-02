@@ -243,9 +243,9 @@ class GBRelax(object):
     self.name    = '{0}_v{1}bxv{2}_tv{3}bxv{4}_d{5}z'.format(self.gbid,
     str(sup_v), str(sup_bxv), str(round(rbt[0],2)), str(round(rbt[1],2)), str(rcut))
     self.subgrain_dir = io.make_dir(self.subgrain_dir, self.name)
-    print "Deleting atoms."
+    print "delete atoms"
     grain = self.delete_atoms(grain=grain, rcut=rcut)
-# Deposit all initial structures in the struct dir:
+#Deposit all initial structures in the struct dir:
     grain.write('{0}.xyz'.format(os.path.join(self.subgrain_dir, self.name)))
 # Finally deposit json and grain file with translation information.
     try:
@@ -256,10 +256,16 @@ class GBRelax(object):
       f = open('{0}/subgb.json'.format(self.subgrain_dir), 'w')
       j_dict = {}
 # Terms to append to subgrain dictionary:
+    cell           = grain.get_cell()
+    cell_area      = cell[0,0]*cell[1,1]
+    cell_height    = cell[2,2]
     j_dict['param_file'] = self.param_file
     j_dict['name'] = self.name
     j_dict['rbt']  = rbt
     j_dict['rcut'] = rcut
+    j_dict['H']    = cell_height
+    j_dict['A']    = cell_area
+    j_dict['n_at'] = len(grain)
     f = open('{0}/subgb.json'.format(self.subgrain_dir), 'w')
     json.dump(j_dict, f, indent=2)
     f.close()
@@ -278,10 +284,6 @@ class GBRelax(object):
     struct_dir = os.path.join(self.grain_dir, 'structs')  
     self.name  = '{0}_v{1}bxv{2}_tv{3}bxv{4}_d{5}z'.format(self.gbid,
     str(sup_v), str(sup_bxv), '0.0', '0.0', str(rcut))
-# If this structure already exists for this grain boundary
-# don't recreate it. Otherwise build the supercell and deposit 
-# it in the structs directory.
-    #if self.name+'.xyz' in struct_files:
     if rcut > 0.0:
       x.set_cutoff(2.4)
       x.calc_connect()
@@ -300,9 +302,10 @@ class GBRelax(object):
         print 'No duplicate atoms in list.'
     else:
       pass
-  #Now create super cell:
-    x = x*(sup_v, sup_bxv, 1)
-    x.set_scaled_positions(x.get_scaled_positions())
+  # Now create super cell:
+      x = x*(sup_v, sup_bxv, 1)
+      x.set_scaled_positions(x.get_scaled_positions())
+
     if rbt == None:
       self.struct_file  = self.name
       self.subgrain_dir = io.make_dir(self.calc_dir, self.name)
@@ -367,7 +370,7 @@ class GBRelax(object):
 
 if __name__=='__main__':
 # run_dyn a command line tool for generating grain boundary supercells
-  parser = argparse.ArgumentParser()
+  parser = argparse.ArgumentParser() 
   parser.add_argument("-p", "--prefix", help="Subsequent commands will act on all \
                                                 subdirectories with first characters matching prefix.", default='001')
   parser.add_argument("-ct", "--calc_type", help="Name of calculation type TB, EAM, DFT, etc.", default='PotBH')
@@ -457,4 +460,3 @@ if __name__=='__main__':
 ##    print job_dir
 ##    im_io.copy_struct(job_dir, job_dir, 'EAM', 'DFT')
 #########################################################################
-

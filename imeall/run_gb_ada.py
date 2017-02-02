@@ -16,9 +16,9 @@ scratch = os.getcwd()
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-gbt", "--gb_type", help="Specify type of boundary twist or tilt.", default="tilt")
-parser.add_argument("-p",   "--pattern", help="Job pattern to select grainboundaries", default="001")
+parser.add_argument("-p",   "--pattern", help="Job pattern to select grainboundaries.", default="001")
+parser.add_argument("-d",   "--delay",   help="Time delay between job submissions.", type=int, default=60)
 args = parser.parse_args()
-print args
 
 def chunker(seq, size):
   return (seq[pos:pos + size] for pos in xrange(0, len(seq), size))
@@ -51,7 +51,7 @@ else:
   sys.exit()
 
 njobs  = len(jobdirs)
-jtime  = '1:00:00'
+jtime  = '2:00:00'
 #test for parallel environ qsub
 which_qsub = subprocess.call("which qsub".split())
 if which_qsub == 0:
@@ -59,10 +59,10 @@ if which_qsub == 0:
 else: 
   parallel = False
 
+log  = open('gbcalclog.out', 'a')
 for job_tract in chunker(jobdirs, 72):
   for job in job_tract:
     os.chdir(os.path.join(scratch, job[0]))
-    log     = open('gbcalclog.out', 'a')
     print 'Current Working Directory', os.getcwd()
     if parallel:
       pbs_str = open('/users/k1511981/pymodules/templates/calc_rundyn.pbs', 'r').read()
@@ -80,8 +80,8 @@ for job_tract in chunker(jobdirs, 72):
       print job, gb_args
       job = subprocess.Popen(gb_args.split())
       job.wait()
-  time.sleep(1500)
+  time.sleep(args.delay)
   os.chdir(scratch)
   now       = datetime.now()
-  print >> sync_log, now.strftime("%Y-%m-%d %H:%M:%S")
-  script_root = "/users/k1511981/pymodules/imeall/imeall/db_scripts/remove_xyz.py"
+  log.flush()
+log.close()

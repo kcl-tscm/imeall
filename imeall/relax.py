@@ -15,9 +15,12 @@ from   ase.optimize        import BFGS, FIRE, LBFGS, MDMin, QuasiNewton
 
 set_fortran_indexing(False)
 
-def relax_gb(gb_file='file_name', traj_steps=120):
+def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200):
   """
   :method:`relax_gb` function definition to relax a grain_boundary.
+      gb_file     = gbid or subgbid.
+      traj_steps  = number of steps between print trajectories.
+      total_steps = total number of force relaxation steps.
   """
   def converged(grain, smax, fmax):
 
@@ -97,10 +100,10 @@ def relax_gb(gb_file='file_name', traj_steps=120):
     json.dump(j_dict, outfile, indent=2)
 
   CONVERGED = False
-  FORCE_TOL = 0.01
+  FORCE_TOL = 0.05
 
 #default to 5 if traj_steps = 120, otherwise increases
-  num_iters = int(float(600)/float(traj_steps))
+  num_iters = int(float(total_steps)/float(traj_steps))
   print 'num_iters', num_iters
   for i in range(num_iters):
     opt.run(fmax=FORCE_TOL, steps=traj_steps)
