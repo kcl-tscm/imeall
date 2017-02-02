@@ -220,28 +220,11 @@ class GBRelax(object):
     print 'Generate Job in:'
     print '\t', self.calc_dir
 
-<<<<<<< HEAD
-  def gen_super_rbt(self, bp=[],v=[], rbt=[0.0, 0.0], sup_v=6, sup_bxv=4, rcut=2.0,gb_type="tilt"):
-=======
   def gen_super_rbt(self, bp=[],v=[], rbt=[0.0, 0.0], sup_v=6, sup_bxv=4, rcut=2.0, gb_type="tilt"):
->>>>>>> a0e0df8435bf352b3aea2655ff1db99ee6e4a478
     """
     Create a grain boundary with rigid body translations.
     """
     io = ImeallIO()
-<<<<<<< HEAD
-    if gb_type == "tilt":
-      grain = build_tilt_sym_gb(bp=bp, v=v, rbt=rbt)
-    elif gb_type == "twist":
-      grain = build_twist_sym_gb(bp=bp, v=v, rbt=rbt)
-    else:
-      print "Tilt/twist not implemented."
-      sys.exit()
-# For RBT we build a top level dir with just the translated supercell and no
-# deleted atoms then we create subdirectories with particular deletion criteria
-# to them. This means we don't have to duplicate the structure files.
-    place_in_struct_dir = False
-=======
     if gb_type=="tilt":
       grain = build_tilt_sym_gb(bp=bp, v=v, rbt=rbt)
     elif gb_type=="twist":
@@ -252,7 +235,6 @@ class GBRelax(object):
 # Restoring the write to file
 # Check if this initial grain with the atom deletion criterion and the rigid body translations
 # is present if not generate it:
->>>>>>> a0e0df8435bf352b3aea2655ff1db99ee6e4a478
     m, n, grain  = self.gen_super(grain=grain, rbt=rbt, sup_v=sup_v, sup_bxv=sup_bxv,  rcut=0.0)
     self.name    = '{0}_v{1}bxv{2}_tv{3}bxv{4}'.format(self.gbid,
     str(m), str(n), str(round(rbt[0],2)), str(round(rbt[1],2)))
@@ -261,15 +243,9 @@ class GBRelax(object):
     self.name    = '{0}_v{1}bxv{2}_tv{3}bxv{4}_d{5}z'.format(self.gbid,
     str(sup_v), str(sup_bxv), str(round(rbt[0],2)), str(round(rbt[1],2)), str(rcut))
     self.subgrain_dir = io.make_dir(self.subgrain_dir, self.name)
-<<<<<<< HEAD
-    print "Deleting atoms."
-    grain = self.delete_atoms(grain=grain, rcut=rcut)
-# Deposit all initial structures in the struct dir:
-=======
     print "delete atoms"
     grain = self.delete_atoms(grain=grain, rcut=rcut)
 #Deposit all initial structures in the struct dir:
->>>>>>> a0e0df8435bf352b3aea2655ff1db99ee6e4a478
     grain.write('{0}.xyz'.format(os.path.join(self.subgrain_dir, self.name)))
 # Finally deposit json and grain file with translation information.
     try:
@@ -280,18 +256,19 @@ class GBRelax(object):
       f = open('{0}/subgb.json'.format(self.subgrain_dir), 'w')
       j_dict = {}
 # Terms to append to subgrain dictionary:
+    cell           = grain.get_cell()
+    cell_area      = cell[0,0]*cell[1,1]
+    cell_height    = cell[2,2]
     j_dict['param_file'] = self.param_file
     j_dict['name'] = self.name
     j_dict['rbt']  = rbt
     j_dict['rcut'] = rcut
-<<<<<<< HEAD
-    with pen('{0}/subgb.json'.format(self.subgrain_dir), 'w') as f:
-      json.dump(j_dict, f, indent=2)
-=======
+    j_dict['H']    = cell_height
+    j_dict['A']    = cell_area
+    j_dict['n_at'] = len(grain)
     f = open('{0}/subgb.json'.format(self.subgrain_dir), 'w')
     json.dump(j_dict, f, indent=2)
     f.close()
->>>>>>> a0e0df8435bf352b3aea2655ff1db99ee6e4a478
 
   def gen_super(self, grain=None, rbt=None, sup_v=6, sup_bxv=2, rcut=2.0):
     """ 
@@ -307,17 +284,6 @@ class GBRelax(object):
     struct_dir = os.path.join(self.grain_dir, 'structs')  
     self.name  = '{0}_v{1}bxv{2}_tv{3}bxv{4}_d{5}z'.format(self.gbid,
     str(sup_v), str(sup_bxv), '0.0', '0.0', str(rcut))
-<<<<<<< HEAD
-    try:
-      struct_files = os.listdir(struct_dir)
-    except OSError:
-      pass
-=======
->>>>>>> a0e0df8435bf352b3aea2655ff1db99ee6e4a478
-# If this structure already exists for this grain boundary
-# don't recreate it. Otherwise build the supercell and deposit 
-# it in the structs directory.
-    #if self.name+'.xyz' in struct_files:
     if rcut > 0.0:
       x.set_cutoff(2.4)
       x.calc_connect()
@@ -337,14 +303,9 @@ class GBRelax(object):
     else:
       pass
   # Now create super cell:
-<<<<<<< HEAD
       x = x*(sup_v, sup_bxv, 1)
       x.set_scaled_positions(x.get_scaled_positions())
-=======
-    x = x*(sup_v, sup_bxv, 1)
-    x.set_scaled_positions(x.get_scaled_positions())
 
->>>>>>> a0e0df8435bf352b3aea2655ff1db99ee6e4a478
     if rbt == None:
       self.struct_file  = self.name
       self.subgrain_dir = io.make_dir(self.calc_dir, self.name)
@@ -407,73 +368,9 @@ class GBRelax(object):
     with open(os.path.join(self.subgrain_dir, 'fe{0}.pbs'.format(self.name)) ,'w') as pbs_file:
       print >> pbs_file, pbs_str
 
-<<<<<<< HEAD
-  def go_relax(self, maxiters = 400):
-    """
-    :method:`go_relax` take the grain_boundary structure and relax it.
-    """
-    if self.struct_file == '':
-      print 'No pointer to struct file. Have you specified a job?'
-      return None
-    else:
-      print '\t Print Relaxing {0}.xyz with {1} potential'.format(self.struct_file, self.calc_type)
-      print '\t In directory {0}'.format(self.subgrain_dir) 
-    if self.calc_type[:3] == 'EAM':
-      grain       = Atoms('{0}.xyz'.format(os.path.join(self.subgrain_dir,
-                            self.struct_file)))
-# Load potential and Attach calculator
-      pot         = Potential(self.potential, param_filename=self.param_file)
-      grain.set_calculator(pot)
-      strain_mask = [0,0,0,0,0,0]
-      ucf            = UnitCellFilter(grain, mask=strain_mask)
-      self.traj_file = self.name+'.traj'
-      traj_loc    = os.path.join(self.subgrain_dir, self.traj_file)
-      traj        = ase.io.Trajectory(traj_loc, 'w', grain)
-      E_gb_init   = grain.get_potential_energy()
-      opt         = BFGS(ucf)
-      opt.attach(traj.write, interval=25)
-#Cant get printing the output from bfgs to behave...
-      #with open(os.path.join(self.subgrain_dir, 'bfgsmin.txt'), 'w') as outfile:
-      #  sysold = sys.stdout
-      #  sys.stdout = StringIO()
-      opt.run(fmax = self.fmax, steps=maxiters)
-      #  print >> outfile, output
-      #  sys.stdout.close()
-      #  sys.stdout = sysold
-      traj.close()
-      out = AtomsWriter('{0}'.format(os.path.join(self.subgrain_dir,
-                        '{0}_traj.xyz'.format(self.gbid))))
-#This is a hack way of making sure we only have xyz files of trajectories
-      for at in AtomsReader(traj_loc):
-        out.write(at)
-      out.close()
-      os.remove(traj_loc)
-#convert traj file to extended xyz
-      E_gb = grain.get_potential_energy()
-      cell = grain.get_cell()
-      A    = cell[0][0]*cell[1][1]
-# Calculation dumps total energyenergy and grainboundary area data to json file.
-      gb_dict = {'E_gb':E_gb, 'E_gb_init':E_gb_init, 'A': A, 'n_at':len(grain)}
-      with open(os.path.join(self.subgrain_dir, 'subgb.json'), 'w') as outfile:
-        json.dump(gb_dict, outfile, indent=2)
-
-=======
->>>>>>> a0e0df8435bf352b3aea2655ff1db99ee6e4a478
 if __name__=='__main__':
 # run_dyn a command line tool for generating grain boundary supercells
-  parser = argparse.ArgumentParser()
-<<<<<<< HEAD
-  parser.add_argument("-p",  "--prefix", help = "Subsequent commands will act on all \
-                                                 subdirectories with first characters matching prefix.", default='001')
-  parser.add_argument("-ct", "--calc_type", help = "Name of calculation type TB, EAM, DFT, etc.", default='PotBH')
-  parser.add_argument("-q",  "--queue",  help = "Jobs will be submitted to this queue.", default='smp.q')
-  parser.add_argument("-t",  "--time",   help = "Time limit on jobs.", default='1:00:00')
-  parser.add_argument("-hyd",  "--hydrogen", type = int, help="If greater than 0 add n hydrogens to the boundary.", default=0)
-  parser.add_argument("-rc", "--rcut",     type = float, help = "Deletion criterion for nearest neighbour atoms.", default=2.0)
-  parser.add_argument("-i_v", "--i_v",     type = float, help="Rigid body translation along i_v.", default=0.0)
-  parser.add_argument("-i_bxv", "--i_bxv", type = float, help="Rigid body translation along i_bxv.", default=0.0)
-  parser.add_argument("-gbt", "--gb_type", help="Grain Boundary Type: tilt or twist.", default="tilt")
-=======
+  parser = argparse.ArgumentParser() 
   parser.add_argument("-p", "--prefix", help="Subsequent commands will act on all \
                                                 subdirectories with first characters matching prefix.", default='001')
   parser.add_argument("-ct", "--calc_type", help="Name of calculation type TB, EAM, DFT, etc.", default='PotBH')
@@ -484,7 +381,6 @@ if __name__=='__main__':
   parser.add_argument("-i_v",   "--i_v",    type = float, help="Rigid body translation along i_v.", default=0.0)
   parser.add_argument("-i_bxv", "--i_bxv",  type = float, help="Rigid body translation along i_bxv.", default=0.0)
   parser.add_argument("-gbt",   "--gb_type", help="Specify type of boundary twist or tilt.", default="tilt")
->>>>>>> a0e0df8435bf352b3aea2655ff1db99ee6e4a478
 
   args = parser.parse_args()
   calc_type = args.calc_type
@@ -564,4 +460,3 @@ if __name__=='__main__':
 ##    print job_dir
 ##    im_io.copy_struct(job_dir, job_dir, 'EAM', 'DFT')
 #########################################################################
-
