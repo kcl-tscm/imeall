@@ -243,9 +243,9 @@ class GBRelax(object):
     self.name    = '{0}_v{1}bxv{2}_tv{3}bxv{4}_d{5}z'.format(self.gbid,
     str(sup_v), str(sup_bxv), str(round(rbt[0],2)), str(round(rbt[1],2)), str(rcut))
     self.subgrain_dir = io.make_dir(self.subgrain_dir, self.name)
-    print "delete atoms"
+    print "Deleting atoms."
     grain = self.delete_atoms(grain=grain, rcut=rcut)
-#Deposit all initial structures in the subgrain directory:
+# Deposit all initial structures in the struct dir:
     grain.write('{0}.xyz'.format(os.path.join(self.subgrain_dir, self.name)))
 # Finally deposit json and grain file with translation information.
     try:
@@ -255,7 +255,7 @@ class GBRelax(object):
     except IOError:
       f = open('{0}/subgb.json'.format(self.subgrain_dir), 'w')
       j_dict = {}
-#terms to append to subgrain dictionary:
+# Terms to append to subgrain dictionary:
     j_dict['param_file'] = self.param_file
     j_dict['name'] = self.name
     j_dict['rbt']  = rbt
@@ -266,7 +266,7 @@ class GBRelax(object):
 
   def gen_super(self, grain=None, rbt=None, sup_v=6, sup_bxv=2, rcut=2.0):
     """ 
-    To create a grain boundary super cell we use the parameters of
+    :method:`gen_super` to create a grain boundary super cell we use the parameters of
     Rittner and Seidman (PRB 54 6999).
     """
     io = ImeallIO()
@@ -300,10 +300,9 @@ class GBRelax(object):
         print 'No duplicate atoms in list.'
     else:
       pass
-# Now create super cell:
+  #Now create super cell:
     x = x*(sup_v, sup_bxv, 1)
     x.set_scaled_positions(x.get_scaled_positions())
-
     if rbt == None:
       self.struct_file  = self.name
       self.subgrain_dir = io.make_dir(self.calc_dir, self.name)
@@ -357,7 +356,7 @@ class GBRelax(object):
 
   def gen_pbs(self, time='02:30:00', queue='serial.q'):
     """ 
-    Generates job pbs file.
+    :method:`gen_pbs` generates job pbs file.
     """
     pbs_str = open('/users/k1511981/pymodules/templates/calc_ada.pbs','r').read()
     pbs_str = pbs_str.format(jname='fe'+self.name, xyz_file='{0}.xyz'.format(self.name), 
@@ -449,7 +448,6 @@ if __name__=='__main__':
     os.chdir(gbrelax.subgrain_dir)
 # Call the relax function from this directory, reads in the initial struct_file,
     relax_gb(gb_file = gbrelax.name)
-
 #########################################################################
 ## COPY Directories across im_io.copy_struct(dir, sub_dir, dir, sub_dir)#
 #########################################################################
