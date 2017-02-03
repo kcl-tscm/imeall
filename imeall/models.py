@@ -8,9 +8,13 @@ import argparse
 import numpy as np
 import slabmaker.slabmaker as slabmaker
 
-from  imeall import app
 from  quippy import Atoms
 from  scipy.spatial import Voronoi, voronoi_plot_2d
+
+try:
+  from  imeall import app
+except ImportError:
+  print 'No app'
 
 try:
   from flask  import Flask, request, session, g, redirect

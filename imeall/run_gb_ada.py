@@ -15,7 +15,7 @@ npj     = 1 # nodes per job
 scratch = os.getcwd()
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-gbt", "--gb_type", help="Specify type of boundary twist or tilt.", default="tilt")
+parser.add_argument("-gbt", "--gb_type", help="Specify type of boundary twist or tilt.", required=True)
 parser.add_argument("-p",   "--pattern", help="Job pattern to select grainboundaries.", default="001")
 parser.add_argument("-d",   "--delay",   help="Time delay between job submissions.", type=int, default=60)
 args = parser.parse_args()
@@ -37,12 +37,12 @@ if args.gb_type=="tilt":
   jobdirs = filter(lambda x: os.path.isdir(x[0]), jdirs)
 elif args.gb_type=="twist":
   jobdirs   = glob.glob('{}*'.format(args.pattern))
-  jobdirs   = filter(os.path.isdir, jobdirs)
+  jobdirs   = filter(os.path.isdir, jobdirs[1:])
   print jobdirs
   jdirs     = []
   job_index = 0
   for job in jobdirs:
-    for rc in np.arange(1.4, 2.3, 0.1):
+    for rc in np.arange(1.1, 2.3, 0.1):
       job_index += 1
       jdirs.append((job, rc, 0.0, 0.0, job_index))
   jobdirs = filter(lambda x: os.path.isdir(x[0]), jdirs)
