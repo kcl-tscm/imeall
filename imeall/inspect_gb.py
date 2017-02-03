@@ -16,15 +16,21 @@ database       = SqliteDatabase(DATABASE)
 
 class Inspector(object):
   """
-  This class inspects the SQLdatabase to list GB energies according to potential,
-  orientation axis etc., it highlights unconverged calculations. 
+  :object:`Inspector` This class inspects the SQLdatabase to list GB energies according to potential,
+  orientation axis etc. 
   """
   def __init__(self):
     pass
 
   def list_gb(self, potential="PotBH.xml", or_axis="001", print_unconverged=True):
     """
-    list energies, and convergence for gbs for potential and orientation axis. 
+    :method:`list_gb` list energies, and convergence for grain boundaries for a particular 
+    potential and orientation axis. 
+    :attributes:
+      potential: Potential used to determine energies and forces.
+      or_axis: orientation_axis
+      print_unconverged: If true prints the files for unconverged grainboundaries which can
+      be resubmitted with `sub_unconv.py`.
     """
     pot_param     = PotentialParameters()
     ener_per_atom = pot_param.gs_ener_per_atom()
@@ -48,11 +54,11 @@ class Inspector(object):
             unconverged.append((subgb[1]['gbid'], subgb[1]['path']))
       else:
         print "No Subgrains."
-
     print "{} unconverged subgrains".format(len(unconverged))
     if print_unconverged:
-      for unconv in unconverged:
-        print unconv[1]
+      with open('unconv_list_{or_axis}.txt'.format(or_axis=or_axis), 'w') as f:
+        for unconv in unconverged:
+          print >>f,  unconv[1]
 
 if __name__=="__main__":
   parser    = argparse.ArgumentParser()
@@ -60,5 +66,8 @@ if __name__=="__main__":
   parser.add_argument("-o", "--or_axis",   help="orientation axis to pull from database.", default="001")
   parser.add_argument("-c", "--converged", help="print list of unconverged grains.", action="store_true")
   args      = parser.parse_args()
+
   inspector = Inspector()
   inspector.list_gb(potential=args.potential, or_axis=args.or_axis, print_unconverged=args.converged)
+
+

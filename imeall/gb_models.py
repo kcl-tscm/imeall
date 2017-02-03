@@ -2,14 +2,14 @@ import os
 import sys
 import json
 import glob
+import logging
 import argparse
 import numpy as np
+
 from   peewee   import *
 from   quippy   import Atoms, set_fortran_indexing, Potential, AtomsReader
 from   datetime import datetime, timedelta
 from   models   import GBAnalysis, PotentialParameters
-
-
 
 set_fortran_indexing(False)
 GRAIN_DATABASE = "/home/lambert/pymodules/imeall/imeall/grain_boundaries/"
@@ -26,11 +26,8 @@ class BaseModel(Model):
 
 class GrainBoundary(BaseModel):
   """
-  Canonical Parent Grain
-  Vectors are serialized to csv. We may want to 
-  separate this out into tables if heavy searching
-  becomes necessary.
-  :params: angle misorientation angle in radians.
+  Canonical Parent Grain Model.
+  Vectors are serialized to csv.
   """
   gb_type          = CharField()
   boundary_plane   = CharField()
@@ -48,6 +45,7 @@ class GrainBoundary(BaseModel):
 
 class SubGrainBoundary(BaseModel):
   """
+  SubGrainBoundary Model
   :path: relative to the grainboundary database root.
   :params: rbt rigid body translations.
   :params: grain_boundary every grain is a subgrain of the GrainBoundary Class.
@@ -71,6 +69,7 @@ class SubGrainBoundary(BaseModel):
 
 class Fracture(BaseModel):
   """
+  Fracture Simulation Model
   :params:G stress energy release rate.
   :params:strain_rate.
   :params:sim_T simulation temperature.
@@ -101,6 +100,10 @@ def create_tables(database):
   database.create_tables([GrainBoundary,SubGrainBoundary], True)
 
 def add_conv_key(material='alphaFe', or_axis='001'):
+  """
+  :method:`add_conv_key` check if subgb.json directory contains a convergence
+  key. If not add key to subgb.json file and default to false.
+  """
   analyze  = GBAnalysis()
   gb_files = []
   analyze.find_gb_json('{0}'.format(os.path.join(GRAIN_DATABASE, os.path.join(material, or_axis))), gb_files, 'gb.json')
@@ -118,16 +121,15 @@ def add_conv_key(material='alphaFe', or_axis='001'):
         print subgb_dict['gbid'], subgb_dict['converged']
       except KeyError:
         print 'Adding Convergence Keys'
-        if 'E_gb' in subgb_dict.keys():
-          subgb_dict['converged'] = True
-        else:
-          subgb_dict['converged'] = False
+        subgb_dict['converged'] = False
         with open(subgb_dict_path,'w') as f:
           json.dump(subgb_dict, f, indent=2)
 
 def gb_check_dir_integrity(material='alphaFe', or_axis='001'):
   """
-  :method:check if dir in directory tree and update sql to reflect that.
+  :method:`gb_check_dir_integrity` check if directory in directory tree contains 
+  a grain boundary json file, and update sql database to include the parent grain
+  if it is missing.
   """
   analyze  = GBAnalysis()
   gb_files = []
@@ -159,12 +161,13 @@ def gb_check_dir_integrity(material='alphaFe', or_axis='001'):
 
 def gb_check_conv(material='alphaFe', or_axis='001', modify_db=False):
   """
-  :method:`gb_check_conv` scan through grainboundary directory tree,
-           inspect the json dictionary and update the SQLite model.
+  :method:`gb_check_conv` scans through grainboundary directory tree,
+           inspecting the json dictionary and update the SQLite model if 
+           the grain boundary energy or convergence flag is inconsistent.
   :attributes:
-    material: Which material to do convergence integrity on.
+    material: Which material to do check json/database convergence consistency on.
     or_axis: Which orientation axis to check.
-    modify_db: Boolean. If True updates gb_model in database.
+    modify_db: Boolean. If True updates gb_model in database otherwise just prints inconsistent grain json/database value.
   """
   analyze  = GBAnalysis()
   gb_files = []
@@ -182,7 +185,7 @@ def gb_check_conv(material='alphaFe', or_axis='001', modify_db=False):
       struct_path = os.path.join(subgb_model.path, subgb_model.gbid+'_traj.xyz')
       struct_path = os.path.join(GRAIN_DATABASE, struct_path)
       try:
-        #print struct_path
+        logging.debug(struct_path)
         assert subgb_model.converged==subgb_dict['converged']
       except AssertionError:
         if not modify_db:
@@ -221,7 +224,7 @@ def gb_check_conv(material='alphaFe', or_axis='001', modify_db=False):
 def gb_check_force(material='alphaFe', or_axis='001', force_tol=0.05, modify_db=False):
   """
   :method:`gb_check_force`. Recurse through directory tree, loading the structure file, json dict 
-  and the model for each subgrain. Check that the force tolerance in structure file has actually been 
+  and the model for each subgrain. Check that the force tolerance in the structure file has actually been 
   met for convergence.
   """
   analyze  = GBAnalysis()
@@ -260,28 +263,6 @@ def gb_check_force(material='alphaFe', or_axis='001', force_tol=0.05, modify_db=
         else:
           if max(forces) <= force_tol:
             conv_check = True
-            POT_DIR     = os.environ['POTDIR']
-            param_file = subgb_dict['param_file']
-            if param_file == 'iron_mish.xml':
-              eam_pot = os.path.join(POT_DIR, 'iron_mish.xml')
-              r_scale = 1.0129007626
-            elif param_file == 'Fe_Mendelev.xml':
-              eam_pot = os.path.join(POT_DIR, 'Fe_Mendelev.xml')
-              r_scale = 1.00894848312
-            elif param_file == 'PotBH.xml':
-              eam_pot = os.path.join(POT_DIR, 'PotBH.xml')
-              r_scale = 1.00894848312
-            elif param_file == 'Fe_Ackland.xml':
-              eam_pot = os.path.join(POT_DIR,'Fe_Ackland.xml')
-              r_scale = 1.00894185389
-            elif param_file == 'Fe_Dudarev.xml':
-              eam_pot = os.path.join(POT_DIR,'Fe_Dudarev.xml')
-              r_scale = 1.01279093417 
-            #print eam_pot, r_scale
-            #pot  = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=eam_pot)
-            #ats.set_calculator(pot)
-            #E_gb = ats.get_potential_energy()
-            #subgb_dict['E_gb'] = E_gb
           else:
             conv_check = False
             subgb_dict['E_gb'] = 0.0
@@ -295,16 +276,18 @@ def gb_check_force(material='alphaFe', or_axis='001', force_tol=0.05, modify_db=
       else:
         print struct_path
         try:
-          print subgb_dict['converged'], conv_check
+          print 'JSON', subgb_dict['converged'], conv_check
         except KeyError:
           print 'no convergence key'
           subgb_dict['converged']=conv_check
           with open(subgb_dict_path, 'w') as f:
             json.dump(subgb_dict, f, indent=2)
 
-def gbid_json_to_model(material='alphaFe', or_axis='001'):
-#Now load the subgb.json file. and compare old converged energy 
-#and new and old boolean:
+def change_json_key(material='alphaFe', or_axis='001'):
+  """
+  :method:`change_json_key` replaces '_traj' string in subgb_dict['gbid']
+  method could be useful if we wish to change database/subgb strings.
+  """
   analyze  = GBAnalysis()
   gb_files = []
   analyze.find_gb_json('{0}'.format(os.path.join(GRAIN_DATABASE, os.path.join(material, or_axis))), gb_files, 'gb.json')
@@ -331,6 +314,9 @@ def gbid_json_to_model(material='alphaFe', or_axis='001'):
         print subgb_model.gbid
 
 def populate_db(or_axis='001'):
+  """
+  method:`populate_db` add grains to database.
+  """
   analyze  = GBAnalysis()
   dir_str  = os.path.join('alphaFe', or_axis)
   gb_files = []
@@ -408,13 +394,14 @@ def populate_db(or_axis='001'):
         try:
           SubGrainBoundary.create(**subgb_dict)        
         except IntegrityError:
-          print 'GB already in DB'
+          logging.debug('GB already in DB')
           pass
 
 if __name__=="__main__":
   #create_tables(database)
   #populate_db(or_axis="111")
   parser = argparse.ArgumentParser()
+  parser.add_argument("-a", "--populate",    help="Recurse through directory tree add subgrains to SQLite database.", action="store_true")
   parser.add_argument("-l", "--list",        help="List converged structures in database and their energies.", action="store_true")
   parser.add_argument("-p", "--prune",       help="Remove structures from SQL database that are no longer in directory tree.", action="store_true")
   parser.add_argument("-c", "--check_conv",  help="Check that convergence status of database json files corresponds to SQL database.", action="store_true")
@@ -438,6 +425,9 @@ if __name__=="__main__":
         subgbs = [(16.02*(subgb['E_gb']-float(subgb['n_at']*ener_per_atom['PotBH.xml']))/(2.0*subgb['area']), subgb) for subgb in subgbs]
         subgbs.sort(key = lambda x: x[0])
         print subgbs[0][1]['potential'], gb.orientation_axis, round(gb.angle*(180.0/3.14159),2), subgbs[0][0]
+
+  if args.populate:
+    populate_db(or_axis=args.or_axis)
 
   if args.prune:
     gb_check_dir_integrity(or_axis=args.or_axis)

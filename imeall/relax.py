@@ -17,7 +17,7 @@ set_fortran_indexing(False)
 
 def relax_gb(gb_file='file_name'):
   """
-  function definition to relax a grain_boundary.
+  :method:`relax_gb` Function definition to relax a grain_boundary.
   """
   def converged(grain, smax, fmax):
 
@@ -112,7 +112,6 @@ def relax_gb(gb_file='file_name'):
   gb_dict['converged'] = CONVERGED
   E_gb    = grain.get_potential_energy()
   gb_dict['E_gb']=E_gb
-  #gb_dict['E_gb_init']=E_gb_init
   with open('subgb.json', 'w') as outfile:
     for key, value in gb_dict.items():
       j_dict[key] = value
