@@ -15,9 +15,12 @@ from   ase.optimize        import BFGS, FIRE, LBFGS, MDMin, QuasiNewton
 
 set_fortran_indexing(False)
 
-def relax_gb(gb_file='file_name'):
+def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200):
   """
-  :method:`relax_gb` Function definition to relax a grain_boundary.
+  :method:`relax_gb` function definition to relax a grain_boundary.
+      gb_file     = gbid or subgbid.
+      traj_steps  = number of steps between print trajectories.
+      total_steps = total number of force relaxation steps.
   """
   def converged(grain, smax, fmax):
 
@@ -94,14 +97,20 @@ def relax_gb(gb_file='file_name'):
     for key, value in gb_dict.items():
       j_dict[key] = value
     json.dump(j_dict, outfile, indent=2)
+
   CONVERGED = False
   FORCE_TOL = 0.05
-  for i in range(5):
-    opt.run(fmax=FORCE_TOL, steps=120)
+
+#default to 5 if traj_steps = 120, otherwise increases
+  num_iters = int(float(total_steps)/float(traj_steps))
+  print 'num_iters', num_iters
+  for i in range(num_iters):
+    opt.run(fmax=FORCE_TOL, steps=traj_steps)
     out.write(grain)
     force_array = grain.get_forces()
     max_force_II = max([max(f) for f in force_array])
-    max_forces = [(fx**2+fy**2+fz**2)**0.5 for fx, fy, fz in zip(grain.properties['force'][0], grain.properties['force'][1], grain.properties['force'][2])]
+    max_forces = [(fx**2+fy**2+fz**2)**0.5 for fx, fy, fz in zip(grain.properties['force'][0], 
+                  grain.properties['force'][1], grain.properties['force'][2])]
     print max(max_forces)
     print max_force_II
     if max(max_forces) <= FORCE_TOL:
@@ -111,15 +120,18 @@ def relax_gb(gb_file='file_name'):
 
   gb_dict['converged'] = CONVERGED
   E_gb    = grain.get_potential_energy()
-  gb_dict['E_gb']=E_gb
+  gb_dict['E_gb']      = E_gb
+  gb_dict['E_gb_init'] = E_gb_init 
   with open('subgb.json', 'w') as outfile:
     for key, value in gb_dict.items():
       j_dict[key] = value
     json.dump(j_dict, outfile, indent=2)
 
 if __name__ == '__main__':
+#Command line tool for relaxing grainboundary structure
   parser = argparse.ArgumentParser()
   parser.add_argument('-inp', '--input_file', help='name of input file')
+  parser.add_argument('-ts',  '--traj_steps', help='Number of steps to write trajectory to file', type=int, default=120)
   args = parser.parse_args()
   input_file = args.input_file
-  relax_gb(gb_file=input_file)
+  relax_gb(gb_file=input_file, traj_steps=args.traj_steps)
