@@ -69,7 +69,6 @@ def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200):
   
   print 'Using: ', eam_pot
   pot_file    = eam_pot.split('/')[-1]
-  #grain       = Atoms('{0}'.format(sys.argv[1]))
   print '{0}.xyz'.format(gb_file)
   print os.getcwd()
   grain       = AtomsReader('{0}.xyz'.format(gb_file))[-1]

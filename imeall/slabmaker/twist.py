@@ -88,8 +88,9 @@ def build_twist_sym_gb(gbid='', bp =[0,0,1], v=[3,5,0],
   :method:`build_twist_sym_gb` the or_axis is the boundary plane in this case.
   the X axis of the grain.
   """
-  print "Symmetry Axis", v, "Orientation Axis", bp
   bpxv    = [(bp[1]*v[2]-v[1]*bp[2]), (bp[2]*v[0]-bp[0]*v[2]), (bp[0]*v[1]- v[0]*bp[1])]
+  print "Symmetry Axis", v, "Orientation Axis", bp
+  print "bpxv", bpxv
   grain_a =  BodyCenteredCubic(directions = [v, bpxv, bp],
                                size = (1,1,1), symbol='Fe', pbc=(1,1,1),
                                latticeconstant = 2.83)
@@ -101,8 +102,15 @@ def build_twist_sym_gb(gbid='', bp =[0,0,1], v=[3,5,0],
                               latticeconstant = 2.83)
     n += 1
   v2      = v.copy()
-  v2[0]   = -v2[0]
-  print v2
+
+  if np.allclose(orientation_axis, [0,0,1]):
+    v2[0]   = -v2[0]
+  elif np.allclose(orientation_axis, [1,1,0]):
+    v2[2]   = -v2[2]
+  elif np.allclose(orientation_axis, [1,1,1]):
+    v2[1]   = -v2[1]
+    v2[2]   = -v2[2]
+
   bpxv    = [(bp[1]*v2[2]-v2[1]*bp[2]),(bp[2]*v2[0]-bp[0]*v2[2]),(bp[0]*v2[1]- v2[0]*bp[1])]
   grain_b = BodyCenteredCubic(directions = [v2, bpxv, bp],
                               size = (1,1,1), symbol='Fe', pbc=(1,1,1),
@@ -115,19 +123,11 @@ def build_twist_sym_gb(gbid='', bp =[0,0,1], v=[3,5,0],
     n += 1
   grain_c = grain_a.copy()
 
-  # Get sigma number
-  grain_d = grain_a.copy()
-  grain_d.extend(grain_b)
-  dups = get_duplicate_atoms(grain_d)
-  shared_atoms = [grain_d[dup[0]] for dup in dups]
-  for at in shared_atoms:
-    print '\t', at.index, at.position
-  print '\t There are {0} shared atoms'.format(len(shared_atoms))
-  sigma_csl = float(len(grain_a))/float(len(shared_atoms))
 
   if c_space==None:
     s1      = surface('Fe', (0,0,1), n)
     c_space = grain_b.get_cell()[2,2]/float(n)
+    print 'Cspace', c_space
     c_space = np.array(0.0)
     s2      = surface('Fe', (map(int, v)), 1)
     x_space = s2.get_cell()[0,0] #-s1.positions[:,2].max()
@@ -138,9 +138,7 @@ def build_twist_sym_gb(gbid='', bp =[0,0,1], v=[3,5,0],
     grain_b.positions[:,2]  -= (grain_b.positions[:,2].max() + c_space)
   else:
     grain_b.positions[:,2]  -= (grain_b.positions[:,2].max() + c_space/2.0)
-  print len(grain_c), len(grain_b)
-  for x,y in zip(grain_c.positions[:,:], grain_b.positions[:,:]):
-    print x,y 
+
   grain_c.extend(grain_b)
   grain_c.set_cell([grain_c.get_cell()[0,0], grain_c.get_cell()[1,1], 2.*grain_c.get_cell()[2,2]])
   grain_c.positions[:,2] += abs(grain_c.positions[:,2].min())
@@ -154,14 +152,24 @@ def build_twist_sym_gb(gbid='', bp =[0,0,1], v=[3,5,0],
 #grain_c.set_cell([grain_c.get_cell()[0,0], grain_c.get_cell()[1,1], 2.*grain_c.get_cell()[2,2]])
   grain_c.positions[:,2] += abs(grain_c.positions[:,2].min())
   dups = get_duplicate_atoms(grain_c)
-  for dup in dups:
-      grain_c[dup[1]].position[2] += grain_a.get_cell()[2,2]
   shared_atoms = [grain_c[dup[0]] for dup in dups]
   for at in shared_atoms:
     print '\t', at.index, at.position
   print '\t There are {0} shared atoms'.format(len(shared_atoms))
+
+  # Get sigma number
+  grain_d = grain_a.copy()
+  grain_d.extend(grain_b)
+  dups = get_duplicate_atoms(grain_d)
+  shared_atoms_csl = [grain_d[dup[0]] for dup in dups]
+  sigma_csl = float(len(grain_a))/float(len(shared_atoms_csl)+len(shared_atoms))
+  dups = get_duplicate_atoms(grain_c, delete=True)
 #Space bicrystal properly.
-  c_space = np.array(2.83)
+  if np.allclose(orientation_axis, [0,0,1]):
+    c_space = np.array(2.83)
+  elif np.allclose(orientation_axis, [1,1,0]):
+    c_space = np.array(2.001)
+
   if sum([int(n)%2 for n in bp])%2 == 0 :
 	  grain_c.center(vacuum=c_space/2.0, axis=2)
   else:
@@ -292,13 +300,140 @@ if __name__=='__main__':
 					 [np.pi*(86.3/180.), np.array([15.0, 16.0, 0.0])],
 	         [np.pi*(90.0/180.), np.array([1.0, 1.0, 0.0])]]
 
+  sym_twist_110 = [[np.pi*(10.1/180.), np.array([-1.0, 1.0, 16.0])],
+	     [np.pi*(10.77/180.), np.array([-1.0, 1.0, 15.0])],
+	     [np.pi*(11.54/180.), np.array([-1.0, 1.0, 14.0])],
+	     [np.pi*(12.42/180.), np.array([-1.0, 1.0, 13.0])],
+	     [np.pi*(13.44/180.), np.array([-1.0, 1.0, 12.0])],
+	     [np.pi*(14.65/180.), np.array([-1.0, 1.0, 11.0])],
+	     [np.pi*(16.1/180.), np.array([-1.0, 1.0, 10.0])],
+	     [np.pi*(17.86/180.), np.array([-1.0, 1.0, 9.0])],
+			 [np.pi*(20.05/180.), np.array([-1.0, 1.0, 8.0])],
+			 [np.pi*(21.36/180.), np.array([-2.0, 2.0, 15.0])],
+			 [np.pi*(22.84/180.), np.array([-1.0, 1.0, 7.0])],
+			 [np.pi*(24.55/180.), np.array([-2.0, 2.0, 13.0])],
+			 [np.pi*(26.53/180.), np.array([-1.0, 1.0, 6.0])],
+			 [np.pi*(28.84/180.), np.array([-2.0, 2.0, 11.0])],
+			 [np.pi*(29.7/180.), np.array([-3.0, 3.0, 16.0])],
+			 [np.pi*(31.59/180.), np.array([-1.0, 1.0, 5.0])],
+			 [np.pi*(33.72/180.), np.array([-3.0, 3.0, 14.0])],
+			 [np.pi*(34.89/180.), np.array([-2.0, 2.0, 9.0])],
+			 [np.pi*(36.15/180.), np.array([-3.0, 3.0, 13.0])],
+			 [np.pi*(38.94/180.), np.array([-1.0, 1.0, 4.0])],
+			 [np.pi*(42.18/180.), np.array([-3.0, 3.0, 11.0])],
+			 [np.pi*(44.0/180.), np.array([-2.0, 2.0, 7.0])],
+			 [np.pi*(45.98/180.), np.array([-3.0, 3.0, 10.0])],
+			 [np.pi*(47.03/180.), np.array([-4.0, 4.0, 13.0])],
+			 [np.pi*(47.69/180.), np.array([-5.0, 5.0, 16.0])],
+			 [np.pi*(50.48/180.), np.array([-1.0, 1.0, 3.0])],
+			 [np.pi*(53.59/180.), np.array([-5.0, 5.0, 14.0])],
+			 [np.pi*(55.88/180.), np.array([-3.0, 3.0, 8.0])],
+			 [np.pi*(58.99/180.), np.array([-2.0, 2.0, 5.0])],
+			 [np.pi*(61.02/180.), np.array([-5.0, 5.0, 12.0])],
+			 [np.pi*(62.44/180.), np.array([-3.0, 3.0, 7.0])],
+			 [np.pi*(63.49/180.), np.array([-7.0, 7.0, 16.0])],
+			 [np.pi*(64.3/180.), np.array([-4.0, 4.0, 9.0])],
+			 [np.pi*(65.47/180.), np.array([-5.0, 5.0, 11.0])],
+			 [np.pi*(66.27/180.), np.array([-6.0, 6.0, 13.0])],
+			 [np.pi*(66.85/180.), np.array([-7.0, 7.0, 15.0])],
+			 [np.pi*(70.53/180.), np.array([-1.0, 1.0, 2.0])],
+			 [np.pi*(76.31/180.), np.array([-5.0, 5.0, 9.0])],
+			 [np.pi*(80.63/180.), np.array([-3.0, 3.0, 5.0])],
+			 [np.pi*(83.97/180.), np.array([-7.0, 7.0, 11.0])],
+			 [np.pi*(86.63/180.), np.array([-2.0, 2.0, 3.0])],
+			 [np.pi*(88.79/180.), np.array([-9.0, 9.0, 13.0])],
+			 [np.pi*(90.58/180.), np.array([-5.0, 5.0, 7.0])],
+			 [np.pi*(92.09/180.), np.array([-11.0, 11.0, 15.0])],
+			 [np.pi*(93.37/180.), np.array([-3.0, 3.0, 4.0])],
+			 [np.pi*(95.45/180.), np.array([-7.0, 7.0, 9.0])],
+			 [np.pi*(97.05/180.), np.array([-4.0, 4.0, 5.0])],
+			 [np.pi*(98.33/180.), np.array([-9.0, 9.0, 11.0])],
+			 [np.pi*(99.37/180.), np.array([-5.0, 5.0, 6.0])],
+			 [np.pi*(100.23/180.), np.array([-11.0, 11.0, 13.0])],
+			 [np.pi*(100.96/180.), np.array([-6.0, 6.0, 7.0])],
+			 [np.pi*(101.58/180.), np.array([-13.0, 13.0, 15.0])],
+			 [np.pi*(102.12/180.), np.array([-7.0, 7.0, 8.0])],
+			 [np.pi*(103.0/180.), np.array([-8.0, 8.0, 9.0])],
+			 [np.pi*(103.69/180.), np.array([-9.0, 9.0, 10.0])],
+			 [np.pi*(104.25/180.), np.array([-10.0, 10.0, 11.0])],
+			 [np.pi*(104.71/180.), np.array([-11.0, 11.0, 12.0])],
+			 [np.pi*(105.09/180.), np.array([-12.0, 12.0, 13.0])],
+			 [np.pi*(105.42/180.), np.array([-13.0, 13.0, 14.0])],
+			 [np.pi*(105.7/180.), np.array([-14.0, 14.0, 15.0])],
+			 [np.pi*(105.95/180.), np.array([-15.0, 15.0, 16.0])],
+			 [np.pi*(109.47/180.), np.array([-1.0, 1.0, 1.0])],
+			 [np.pi*(112.92/180.), np.array([-16.0, 16.0, 15.0])],
+			 [np.pi*(113.15/180.), np.array([-15.0, 15.0, 14.0])],
+			 [np.pi*(113.42/180.), np.array([-14.0, 14.0, 13.0])],
+			 [np.pi*(113.73/180.), np.array([-13.0, 13.0, 12.0])],
+			 [np.pi*(114.1/180.), np.array([-12.0, 12.0, 11.0])],
+			 [np.pi*(114.53/180.), np.array([-11.0, 11.0, 10.0])],
+			 [np.pi*(115.05/180.), np.array([-10.0, 10.0, 9.0])],
+			 [np.pi*(115.7/180.), np.array([-9.0, 9.0, 8.0])],
+			 [np.pi*(116.51/180.), np.array([-8.0, 8.0, 7.0])],
+			 [np.pi*(117.0/180.), np.array([-15.0, 15.0, 13.0])],
+			 [np.pi*(117.56/180.), np.array([-7.0, 7.0, 6.0])],
+			 [np.pi*(118.21/180.), np.array([-13.0, 13.0, 11.0])],
+			 [np.pi*(118.98/180.), np.array([-6.0, 6.0, 5.0])],
+			 [np.pi*(119.9/180.), np.array([-11.0, 11.0, 9.0])],
+			 [np.pi*(121.01/180.), np.array([-5.0, 5.0, 4.0])],
+			 [np.pi*(122.38/180.), np.array([-9.0, 9.0, 7.0])],
+			 [np.pi*(124.12/180.), np.array([-4.0, 4.0, 3.0])],
+			 [np.pi*(125.18/180.), np.array([-15.0, 15.0, 11.0])],
+			 [np.pi*(126.41/180.), np.array([-7.0, 7.0, 5.0])],
+			 [np.pi*(127.83/180.), np.array([-13.0, 13.0, 9.0])],
+			 [np.pi*(129.52/180.), np.array([-3.0, 3.0, 2.0])],
+			 [np.pi*(131.55/180.), np.array([-11.0, 11.0, 7.0])],
+			 [np.pi*(134.02/180.), np.array([-5.0, 5.0, 3.0])],
+			 [np.pi*(137.11/180.), np.array([-9.0, 9.0, 5.0])],
+			 [np.pi*(141.06/180.), np.array([-2.0, 2.0, 1.0])],
+			 [np.pi*(143.48/180.), np.array([-15.0, 15.0, 7.0])],
+			 [np.pi*(143.85/180.), np.array([-13.0, 13.0, 6.0])],
+			 [np.pi*(144.36/180.), np.array([-11.0, 11.0, 5.0])],
+			 [np.pi*(145.11/180.), np.array([-9.0, 9.0, 4.0])],
+			 [np.pi*(145.62/180.), np.array([-16.0, 16.0, 7.0])],
+			 [np.pi*(146.28/180.), np.array([-7.0, 7.0, 3.0])],
+			 [np.pi*(147.17/180.), np.array([-12.0, 12.0, 5.0])],
+			 [np.pi*(148.41/180.), np.array([-5.0, 5.0, 2.0])],
+			 [np.pi*(150.3/180.), np.array([-8.0, 8.0, 3.0])],
+			 [np.pi*(151.65/180.), np.array([-14.0, 14.0, 5.0])],
+			 [np.pi*(153.47/180.), np.array([-3.0, 3.0, 1.0])],
+			 [np.pi*(155.08/180.), np.array([-16.0, 16.0, 5.0])],
+			 [np.pi*(155.45/180.), np.array([-13.0, 13.0, 4.0])],
+			 [np.pi*(156.05/180.), np.array([-10.0, 10.0, 3.0])],
+			 [np.pi*(157.16/180.), np.array([-7.0, 7.0, 2.0])],
+			 [np.pi*(158.17/180.), np.array([-11.0, 11.0, 3.0])],
+			 [np.pi*(159.95/180.), np.array([-4.0, 4.0, 1.0])],
+			 [np.pi*(161.46/180.), np.array([-13.0, 13.0, 3.0])],
+			 [np.pi*(162.14/180.), np.array([-9.0, 9.0, 2.0])],
+			 [np.pi*(162.77/180.), np.array([-14.0, 14.0, 3.0])],
+			 [np.pi*(163.9/180.), np.array([-5.0, 5.0, 1.0])],
+			 [np.pi*(164.9/180.), np.array([-16.0, 16.0, 3.0])],
+			 [np.pi*(165.35/180.), np.array([-11.0, 11.0, 2.0])],
+			 [np.pi*(166.56/180.), np.array([-6.0, 6.0, 1.0])],
+			 [np.pi*(167.58/180.), np.array([-13.0, 13.0, 2.0])],
+			 [np.pi*(168.46/180.), np.array([-7.0, 7.0, 1.0])],
+			 [np.pi*(169.23/180.), np.array([-15.0, 15.0, 2.0])],
+			 [np.pi*(169.9/180.), np.array([-8.0, 8.0, 1.0])],
+			 [np.pi*(171.02/180.), np.array([-9.0, 9.0, 1.0])],
+			 [np.pi*(171.91/180.), np.array([-10.0, 10.0, 1.0])],
+			 [np.pi*(172.64/180.), np.array([-11.0, 11.0, 1.0])],
+			 [np.pi*(173.26/180.), np.array([-12.0, 12.0, 1.0])],
+			 [np.pi*(173.77/180.), np.array([-13.0, 13.0, 1.0])],
+			 [np.pi*(174.22/180.), np.array([-14.0, 14.0, 1.0])],
+			 [np.pi*(174.6/180.), np.array([-15.0, 15.0, 1.0])],
+	     [np.pi*(174.94/180.), np.array([-16.0, 16.0, 1.0])]]
+
   #gen_sym_twist_gb()
   #build_twist_sym_gb(target_dir='./')
-  orientation_axis  = np.array([0,0,1])
+  #orientation_axis  = np.array([0,0,1])
+  orientation_axis  = np.array([1,1,0])
   #orientation_axis  = np.array([1,1,1])
   #surfaces = [[np.pi*(0.0), np.array([0,0,1])]]
   #surfaces = [[np.pi*(61.93/180.), np.array([3.0, 5.0, 0.0])]]
-  surfaces = sym_twist_001
+  #surfaces = sym_twist_001
+  #surfaces = [[np.pi*(174.6/180.), np.array([-15.0, 15.0, 1.0])]]
+  surfaces = sym_twist_110
   #surfaces = sym_twist_111
   for gb in surfaces:
     angle_str      = str(round((gb[0]*180./np.pi),2)).replace('.', '')
@@ -311,25 +446,26 @@ if __name__=='__main__':
            + '{0}{1}{2}'.format(orientation_axis[0],orientation_axis[1], orientation_axis[2])
     print '\t Grain Boundary ID',  gbid
     #gb_dir     = os.path.join('./boundaries/twist', '111')
-    gb_dir     = os.path.join('./boundaries/twist', '001')
+    #gb_dir     = os.path.join('./boundaries/twist', '001')
+    gb_dir     = os.path.join('./boundaries/twist', '110')
     target_dir = os.path.join(gb_dir, gbid)
     print '\t Grain Boundary Dir', gb_dir
     if not os.path.isdir(target_dir):
       os.mkdir(target_dir)
     else:
       print 'directory already exists'
-    gen_csl(orientation_axis, gb, target_dir=target_dir, gbid=gbid, gb_type="twist")
+    gen_csl(orientation_axis, gb, target_dir = target_dir, gbid=gbid, gb_type="twist")
     zplanes, sigma_csl, nunitcell, grain_c = build_twist_sym_gb(gbid, bp=orientation_axis, v=gb[1], 
                                                            c_space=None, target_dir=target_dir,
                                                            rbt=[0.0, 0.0])
     cell    = grain_c.get_cell()
     A       = cell[0][0]*cell[1][1]
     H       = cell[2][2]
-    gb_dict = {"gbid":gbid, "boundary_plane":list(orientation_axis),
-               "orientation_axis":list(orientation_axis), 
+    gb_dict = {"gbid": gbid, "boundary_plane": list(orientation_axis),
+               "orientation_axis": list(orientation_axis), 
                "type": "symmetric twist boundary",
-               "angle": gb[0], "zplanes":zplanes, "sigma_csl": sigma_csl,
-               "n_at": nunitcell, 'A':A , 'H':H}
+               "angle": gb[0], "zplanes": zplanes, "sigma_csl": sigma_csl,
+               "n_at": nunitcell, 'A': A, 'H': H}
 
     with open(os.path.join(target_dir, 'gb.json'), 'w') as outfile:
       json.dump(gb_dict, outfile, indent=2)

@@ -525,9 +525,17 @@ def csl_twist_factory(bp, v, gbid, target_dir):
                                latticeconstant = 2.83)
   n_grain_unit = len(grain_a)
   n = 2
-  v2      = v.copy()
-  v2[0]   = -v2[0]
-  bpxv    = [(bp[1]*v2[2]-v2[1]*bp[2]),(bp[2]*v2[0]-bp[0]*v2[2]),(bp[0]*v2[1]- v2[0]*bp[1])]
+
+  v2 = v.copy()
+  if np.allclose(bp, [0,0,1]):
+    v2[0] = -v2[0]
+  elif np.allclose(bp, [1,1,0]):
+    v2[2]   = -v2[2]
+  elif np.allclose(bp, [1,1,1]):
+    v2[1]   = -v2[1]
+    v2[2]   = -v2[2]
+
+  bpxv = [(bp[1]*v2[2]-v2[1]*bp[2]),(bp[2]*v2[0]-bp[0]*v2[2]),(bp[0]*v2[1]- v2[0]*bp[1])]
   grain_b = BodyCenteredCubic(directions = [v2, bpxv, bp],
                               size = (1,1,1), symbol='Fe', pbc=(1,1,1),
                               latticeconstant = 2.83)
