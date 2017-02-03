@@ -34,7 +34,6 @@ valid_extensions = ['xyz', 'json', 'mp4', 'png','day']
 vasp_files       = ['IBZKPT', 'INCAR', 'CHG', 'CHGCAR', 'DOSCAR', 'EIGENVAL', 
                     'KPOINTS', 'OSZICAR', 'OUTCAR', 'PCDAT', 'POSCAR',
                     'POTCAR', 'WAVECAR', 'XDATCAR']
-#
 # Currently the database connection is just a path name to our grain boundary
 # database stored as a file tree. I don't necessarily see any reason not to exploit
 # the existing filesystem and tools associated for searching. Why?
@@ -49,8 +48,8 @@ vasp_files       = ['IBZKPT', 'INCAR', 'CHG', 'CHGCAR', 'DOSCAR', 'EIGENVAL',
 #      visible we still preserve a hierarchical relationship for all the grain
 #      boundaries within a class of materials and for different classes of
 #      materials. This tree structure would resemble a collection of documents and
-#      could be mapped onto a NoSQL type of database fairly easily. 
-#
+#      could be mapped onto a NoSQL type of database or serialized and normalized 
+#      in a closure tree.
 @app.before_request
 def before_request():
   g.gb_dir = app.config['GRAIN_DATABASE']
@@ -77,7 +76,6 @@ def material(material):
       orientations.append(filename)
   return render_template('material.html', url_path=url_path, orientations=orientations)
 
-
 @app.route("/db_sync/")
 def synchronization():
   with open('./imeall/db_synclog','r') as f:
@@ -96,7 +94,9 @@ def _log_in():
 @app.route('/analysis/')
 def analysis():
   """
-  This view collates data from the grainboundary database.
+  :method:`analysis` 
+  This view collates data from the grainboundary database
+  and forwards it to d3 database.
   """
 # User chooses what orientation angle to look at via a GET argument:
 # This should be a separate Table.
@@ -131,7 +131,7 @@ def analysis():
 @app.route('/orientation/<path:url_path>/<orientation>/')
 def orientations(url_path, orientation):
   """
-  List different orientation axis in the material database.
+  :method:`orientations` List different orientation axes in the material database.
   """
   url_path = url_path+'/'+orientation
   path     = os.path.join(g.gb_dir, url_path)
@@ -147,7 +147,7 @@ def orientations(url_path, orientation):
 
 def make_tree(path):
   """
-  Recurse through subgrain directories collecting json and png files.
+  :method:`make_tree` recurse through subgrain directories collecting json and png files.
   """
   tree = dict(name=os.path.basename(path), children=[], fullpath='')
   try: 
@@ -182,9 +182,8 @@ def extract_json(path, json_files):
 @app.route('/grain/<path:url_path>/<gbid>/')
 def grain_boundary(url_path, gbid):
   """
-  :method:grain_boundary Top view for a canonical grain boundary. CSL 
-  lattice, and list of subgrain directories, 
-  energies, etc.
+  :method:`grain_boundary` Top view for a canonical grain boundary. CSL 
+  lattice, and list of subgrain directories, energies, etc.
   """
   url_path  = url_path+'/'+gbid
   path      = os.path.join(g.gb_dir, url_path)
@@ -213,7 +212,7 @@ def grain_boundary(url_path, gbid):
 #Check for Ovito in different paths.
 def run_ovito(filename):
   """ 
-  run_ovito launches the Ovito application with the
+  :method:`run_ovito` launches the Ovito application with the
   associated grain boundary trajectory file loaded, the os command should
   ensure we are in the working directory so that any modifications, or
   videos generated will be saved in the correct place. ovito must be set
@@ -234,7 +233,7 @@ def run_ovito(filename):
 @app.route('/img/<path:filename>/<gbid>/<img_type>')
 def serve_img(filename, gbid, img_type):
   """
-  Serve the different images to the browser.
+  :method:`serve_img` serve image_file to the browser.
   """
   print 'Calling serve img', gbid, img_type, filename
   img = os.path.join(filename,'{0}.png'.format(gbid))
@@ -254,7 +253,7 @@ def serve_img(filename, gbid, img_type):
 @app.route('/textfile/<gbid>/<path:filename>')
 def serve_file(gbid, filename):
   """
-    Serve different common file types to the browser.
+  :method:`serve_file` serve different common file types to the browser.
   """
   textpath = request.args.get('textpath')
   with open('{0}'.format(textpath),'r') as text_file:
@@ -296,8 +295,8 @@ def serve_file(gbid, filename):
 @app.route('/eam_pot/<path:filename>')
 def eam_pot(filename):
   """
-    Matplotlib to inspect xml potential files in the database.
-    Based on gist at https://gist.github.com/wilsaj/862153.
+  :method:`eam_pot` Matplotlib to inspect xml potential files in the database.
+  Based on gist at https://gist.github.com/wilsaj/862153.
   """
   import random
   import datetime

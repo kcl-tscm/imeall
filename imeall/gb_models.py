@@ -2,14 +2,14 @@ import os
 import sys
 import json
 import glob
+import logging
 import argparse
 import numpy as np
+
 from   peewee   import *
-from   quippy   import Atoms, set_fortran_indexing
+from   quippy   import Atoms, set_fortran_indexing, Potential, AtomsReader
 from   datetime import datetime, timedelta
 from   models   import GBAnalysis, PotentialParameters
-
-
 
 set_fortran_indexing(False)
 GRAIN_DATABASE = "/home/lambert/pymodules/imeall/imeall/grain_boundaries/"
@@ -26,11 +26,8 @@ class BaseModel(Model):
 
 class GrainBoundary(BaseModel):
   """
-  Canonical Parent Grain
-  Vectors are serialized to csv. We may want to 
-  separate this out into tables if heavy searching
-  becomes necessary.
-  :params: angle misorientation angle in radians.
+  Canonical Parent Grain Model.
+  Vectors are serialized to csv.
   """
   gb_type          = CharField()
   boundary_plane   = CharField()
@@ -48,6 +45,7 @@ class GrainBoundary(BaseModel):
 
 class SubGrainBoundary(BaseModel):
   """
+  SubGrainBoundary Model
   :path: relative to the grainboundary database root.
   :params: rbt rigid body translations.
   :params: grain_boundary every grain is a subgrain of the GrainBoundary Class.
@@ -71,6 +69,7 @@ class SubGrainBoundary(BaseModel):
 
 class Fracture(BaseModel):
   """
+  Fracture Simulation Model
   :params:G stress energy release rate.
   :params:strain_rate.
   :params:sim_T simulation temperature.
@@ -101,6 +100,10 @@ def create_tables(database):
   database.create_tables([GrainBoundary,SubGrainBoundary], True)
 
 def add_conv_key(material='alphaFe', or_axis='001'):
+  """
+  :method:`add_conv_key` check if subgb.json directory contains a convergence
+  key. If not add key to subgb.json file and default to false.
+  """
   analyze  = GBAnalysis()
   gb_files = []
   analyze.find_gb_json('{0}'.format(os.path.join(GRAIN_DATABASE, os.path.join(material, or_axis))), gb_files, 'gb.json')
@@ -118,14 +121,16 @@ def add_conv_key(material='alphaFe', or_axis='001'):
         print subgb_dict['gbid'], subgb_dict['converged']
       except KeyError:
         print 'Adding Convergence Keys'
-        if 'E_gb' in subgb_dict.keys():
-          subgb_dict['converged'] = True
-        else:
-          subgb_dict['converged'] = False
+        subgb_dict['converged'] = False
         with open(subgb_dict_path,'w') as f:
           json.dump(subgb_dict, f, indent=2)
 
-def check_dir_integrity(material='alphaFe', or_axis='001'):
+def gb_check_dir_integrity(material='alphaFe', or_axis='001'):
+  """
+  :method:`gb_check_dir_integrity` check if directory in directory tree contains 
+  a grain boundary json file, and update sql database to include the parent grain
+  if it is missing.
+  """
   analyze  = GBAnalysis()
   gb_files = []
   analyze.find_gb_json('{0}'.format(os.path.join(GRAIN_DATABASE, os.path.join(material, or_axis))), gb_files, 'gb.json')
@@ -156,12 +161,13 @@ def check_dir_integrity(material='alphaFe', or_axis='001'):
 
 def gb_check_conv(material='alphaFe', or_axis='001', modify_db=False):
   """
-  :method:`gb_conv_json_model` scan through grainboundary directory tree,
-           inspect the json dictionary and update the SQLite model.
+  :method:`gb_check_conv` scans through grainboundary directory tree,
+           inspecting the json dictionary and update the SQLite model if 
+           the grain boundary energy or convergence flag is inconsistent.
   :attributes:
-    test_run: Boolean. If True do not update gb_model in database.
-    material: Which material to do convergence integrity on.
+    material: Which material to do check json/database convergence consistency on.
     or_axis: Which orientation axis to check.
+    modify_db: Boolean. If True updates gb_model in database otherwise just prints inconsistent grain json/database value.
   """
   analyze  = GBAnalysis()
   gb_files = []
@@ -179,6 +185,7 @@ def gb_check_conv(material='alphaFe', or_axis='001', modify_db=False):
       struct_path = os.path.join(subgb_model.path, subgb_model.gbid+'_traj.xyz')
       struct_path = os.path.join(GRAIN_DATABASE, struct_path)
       try:
+        logging.debug(struct_path)
         assert subgb_model.converged==subgb_dict['converged']
       except AssertionError:
         if not modify_db:
@@ -200,34 +207,37 @@ def gb_check_conv(material='alphaFe', or_axis='001', modify_db=False):
       try:
         assert (abs(subgb_model.E_gb - subgb_dict['E_gb']) < 1e-8)
       except AssertionError:
-        print 'Model:', subgb_model.E_gb, 'JSON:',  subgb_dict['E_gb'], subgb_model.E_gb-subgb_dict['E_gb']
-        print subgb_dict_path
-        subgb_model.E_gb = subgb_dict['E_gb']
-        subgb_model.save()
+        if not modify_db:
+          print 'Not updating:'
+          print 'Model E_gb:', subgb_model.E_gb, 'JSON E_gb:',  subgb_dict['E_gb']
+        else:
+          print 'Model E_gb:', subgb_model.E_gb, 'JSON E_gb:',  subgb_dict['E_gb']
+          print subgb_dict_path
+          subgb_model.E_gb = subgb_dict['E_gb']
+          subgb_model.save()
       except KeyError:
-        print 'No Key'
-        print subgb_dict_path
-        print subgb_dict['converged']
         subgb_dict['converged']=False
+        subgb_dict['E_gb'] = 0.0
         with open(subgb_dict_path, 'w') as f:
           json.dump(subgb_dict, f, indent=2)
 
-def gb_check_force(material='alphaFe', or_axis='001', force_tol=0.025, modify_db=False):
+def gb_check_force(material='alphaFe', or_axis='001', force_tol=0.05, modify_db=False):
   """
   :method:`gb_check_force`. Recurse through directory tree, loading the structure file, json dict 
-  and the model for each subgrain. Check that the force tolerance in structure file has actually been 
+  and the model for each subgrain. Check that the force tolerance in the structure file has actually been 
   met for convergence.
   """
   analyze  = GBAnalysis()
   gb_files = []
   analyze.find_gb_json('{0}'.format(os.path.join(GRAIN_DATABASE, os.path.join(material, or_axis))), gb_files, 'gb.json')
-  start = 1
+  start     = 6
+  sub_start = 0
   no_struct_file = open('no_struct.txt','a')
   for gb_num, gb in enumerate(gb_files[start:]):
     with open(gb[1], 'r') as f:
       gb_json = json.load(f)
     GB_model = GrainBoundary.select().where(GrainBoundary.gbid==gb_json['gbid']).get()
-    for subgb_model in GB_model.subgrains:
+    for subgb_num, subgb_model in enumerate(GB_model.subgrains[sub_start:]):
       subgb_dict_path = os.path.join(subgb_model.path,'subgb.json')
       subgb_dict_path = os.path.join(GRAIN_DATABASE, subgb_dict_path)
       with open(subgb_dict_path,'r') as f:
@@ -235,33 +245,49 @@ def gb_check_force(material='alphaFe', or_axis='001', force_tol=0.025, modify_db
       struct_path = os.path.join(subgb_model.path, subgb_model.gbid+'_traj.xyz')
       struct_path = os.path.join(GRAIN_DATABASE, struct_path)
       try:
-        ats = Atoms(struct_path)
-      except:
-        print >> no_struct_file, struct_path
-      else:
-        print gb_num+start, struct_path
+        ats = AtomsReader(struct_path)[-1]
+      except RuntimeError:
+        print 'No Struct File'
+      except EOFError:
+        print 'Struct File corrupted'
+      except IOError:
+        print 'No Traj File'
+      else:  
+        print gb_num+start, subgb_num+sub_start, struct_path
         try:
           forces = [np.sqrt(x**2+y**2+z**2) for x,y,z, in zip(ats.properties['force'][0], ats.properties['force'][1], ats.properties['force'][2])]
         except KeyError:
-          print >> no_struct_file, struct_path
+          print gb_num+start, struct_path
           print 'No Force in atoms object'
-        if max(forces) <= force_tol:
-          conv_check = True
-        else:
           conv_check = False
+        else:
+          if max(forces) <= force_tol:
+            conv_check = True
+          else:
+            conv_check = False
+            subgb_dict['E_gb'] = 0.0
+
       if modify_db:
+        subgb_dict['converged'] = conv_check
         print struct_path
         print subgb_dict['converged'], conv_check
-        subgb_dict['converged'] = conv_check
         with open(subgb_dict_path, 'w') as f:
           json.dump(subgb_dict, f, indent=2)
       else:
         print struct_path
-        print subgb_dict['converged'], conv_check
+        try:
+          print 'JSON', subgb_dict['converged'], conv_check
+        except KeyError:
+          print 'no convergence key'
+          subgb_dict['converged']=conv_check
+          with open(subgb_dict_path, 'w') as f:
+            json.dump(subgb_dict, f, indent=2)
 
-def gbid_json_to_model(material='alphaFe', or_axis='001'):
-#Now load the subgb.json file. and compare old converged energy 
-#and new and old boolean:
+def change_json_key(material='alphaFe', or_axis='001'):
+  """
+  :method:`change_json_key` replaces '_traj' string in subgb_dict['gbid']
+  method could be useful if we wish to change database/subgb strings.
+  """
   analyze  = GBAnalysis()
   gb_files = []
   analyze.find_gb_json('{0}'.format(os.path.join(GRAIN_DATABASE, os.path.join(material, or_axis))), gb_files, 'gb.json')
@@ -275,7 +301,6 @@ def gbid_json_to_model(material='alphaFe', or_axis='001'):
       with open(subgb_dict_path,'r') as f:
         subgb_dict = json.load(f)
       try:
-        #print subgb_dict_path    
         assert subgb_dict['gbid'] == subgb_model.gbid
         if '_traj' in subgb_dict['gbid']:
           print subgb_dict['gbid'], subgb_model.gbid
@@ -289,6 +314,9 @@ def gbid_json_to_model(material='alphaFe', or_axis='001'):
         print subgb_model.gbid
 
 def populate_db(or_axis='001'):
+  """
+  method:`populate_db` add grains to database.
+  """
   analyze  = GBAnalysis()
   dir_str  = os.path.join('alphaFe', or_axis)
   gb_files = []
@@ -366,19 +394,21 @@ def populate_db(or_axis='001'):
         try:
           SubGrainBoundary.create(**subgb_dict)        
         except IntegrityError:
-          print 'GB already in DB'
+          logging.debug('GB already in DB')
           pass
 
 if __name__=="__main__":
   #create_tables(database)
   #populate_db(or_axis="111")
   parser = argparse.ArgumentParser()
+  parser.add_argument("-a", "--populate",    help="Recurse through directory tree add subgrains to SQLite database.", action="store_true")
   parser.add_argument("-l", "--list",        help="List converged structures in database and their energies.", action="store_true")
   parser.add_argument("-p", "--prune",       help="Remove structures from SQL database that are no longer in directory tree.", action="store_true")
   parser.add_argument("-c", "--check_conv",  help="Check that convergence status of database json files corresponds to SQL database.", action="store_true")
-  parser.add_argument("-m", "--modify",      help="Generic flag. If included database will be update, otherwise program just reports actions \
-                                                   without  modifying database", action="store_true")
+  parser.add_argument("-m", "--modify",      help="Generic flag. If included database will be updated, otherwise program just reports intended actions \
+                                                   without  modifying database.", action="store_true")
   parser.add_argument("-f", "--check_force", help="Inspect xyz structure files to determine if force convergence has been reached.",   action="store_true")
+  parser.add_argument("-o", "--or_axis",   help="orientation axis to pull from database.", default="001")
   args   = parser.parse_args()
 
   if args.list:
@@ -396,11 +426,14 @@ if __name__=="__main__":
         subgbs.sort(key = lambda x: x[0])
         print subgbs[0][1]['potential'], gb.orientation_axis, round(gb.angle*(180.0/3.14159),2), subgbs[0][0]
 
+  if args.populate:
+    populate_db(or_axis=args.or_axis)
+
   if args.prune:
-    gb_conv_json_model()
+    gb_check_dir_integrity(or_axis=args.or_axis)
 
   if args.check_conv:
-    gb_check_conv(modify_db=args.modify)
+    gb_check_conv(modify_db=args.modify, or_axis=args.or_axis)
 
   if args.check_force:
-    gb_check_force()
+    gb_check_force(or_axis=args.or_axis, modify_db=args.modify)
