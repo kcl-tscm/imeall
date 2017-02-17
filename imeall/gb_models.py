@@ -409,20 +409,21 @@ if __name__=="__main__":
                                                    without  modifying database.", action="store_true")
   parser.add_argument("-f", "--check_force", help="Inspect xyz structure files to determine if force convergence has been reached.",   action="store_true")
   parser.add_argument("-o", "--or_axis",   help="orientation axis to pull from database.", default="001")
+  parser.add_argument("-pt", "--potential", help="potential to pull from database.", default="PotBH.xml")
   args   = parser.parse_args()
 
   if args.list:
-    oraxis = '0,0,1'
+    oraxis = '1,1,0'
     pot_param     = PotentialParameters()
     ener_per_atom = pot_param.gs_ener_per_atom()
   
     for gb in GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).order_by(GrainBoundary.angle):
       subgbs = (gb.subgrains.select(GrainBoundary, SubGrainBoundary)
-                  .where(SubGrainBoundary.potential=='PotBH.xml')
+                  .where(SubGrainBoundary.potential==args.potential)
                   .join(GrainBoundary).dicts())
   
       if len(subgbs) > 0:
-        subgbs = [(16.02*(subgb['E_gb']-float(subgb['n_at']*ener_per_atom['PotBH.xml']))/(2.0*subgb['area']), subgb) for subgb in subgbs]
+        subgbs = [(16.02*(subgb['E_gb']-float(subgb['n_at']*ener_per_atom[args.potential]))/(2.0*subgb['area']), subgb) for subgb in subgbs]
         subgbs.sort(key = lambda x: x[0])
         print subgbs[0][1]['potential'], gb.orientation_axis, round(gb.angle*(180.0/3.14159),2), subgbs[0][0]
 
