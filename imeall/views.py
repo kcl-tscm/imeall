@@ -57,8 +57,8 @@ def before_request():
 @app.route('/')
 def home_page():
   """
-   Base view of imeall database. Links to material specific
-   databases and the synchronization log.
+  :method: Overview of imeall database. Links to material specific
+  databases and the synchronization log.
   """
   materials = os.listdir(g.gb_dir)
   return render_template('imeall.html', materials=materials)
@@ -66,15 +66,67 @@ def home_page():
 
 @app.route('/<material>/')
 def material(material):
+  """
+  :method: Orientation axes for a particular material.
+  """
   path         = os.path.join(app.config['GRAIN_DATABASE'], material)
   url_path     = material
   orientations = []
   files =  os.listdir(path)
+  files.sort()
   for filename in files: 
     tmp_file = os.path.join(path, filename)
     if os.path.isdir(tmp_file):
       orientations.append(filename)
   return render_template('material.html', url_path=url_path, orientations=orientations)
+
+@app.route('/orientation/<path:url_path>/<orientation>/')
+def orientations(url_path, orientation):
+  """
+  :method:`orientations` List different orientation axes in the material database.
+  """
+#Can only handle three digit or_axis atm.
+  or_axis = orientation[:3]
+  url_path = url_path+'/'+orientation
+  path     = os.path.join(g.gb_dir, url_path)
+  grains   = []
+#Only valid directories beginning with orientation axis will be shown.
+  for gb_path in os.listdir(path):
+    if gb_path[:3] == or_axis: 
+      grains.append(gb_path.strip()) 
+#Also dislocations of edge and screw fracture and plane type should be shown.
+    elif gb_path[0] in ['e', 's','p','f']:
+      grains.append(gb_path.strip())  
+  return render_template('orientation.html', url_path=url_path, grains=grains)
+
+@app.route('/grain/<path:url_path>/<gbid>/')
+def grain_boundary(url_path, gbid):
+  """
+  :method:`grain_boundary` Top view for a canonical grain boundary. CSL 
+  lattice, and list of subgrain directories, energies, etc.
+  """
+  url_path  = url_path+'/'+gbid
+  path      = os.path.join(g.gb_dir, url_path)
+  with open(os.path.join(path, 'gb.json'),'r') as json_file:
+    gb_info = json.load(json_file)
+  stuff = []
+  tree  = make_tree(path)
+  json_files = []
+  extract_json(path, json_files)
+  subgrains  = []  
+  subgrainsj = []
+  for i, gb_path in enumerate(json_files):
+    try: 
+      subgrains.append([json.load(open(gb_path,'r')), i])
+      subgrainsj.append(json.load(open(gb_path,'r')))
+    except:
+      pass
+  #Pull gamma surface
+  analyze  = GBAnalysis()
+  gam_dict = analyze.pull_gamsurf(path=path) 
+  return render_template('grain_boundary.html', gbid=gbid, url_path=url_path,
+                          gb_info=gb_info, tree=tree, subgrains=subgrains, 
+                          subgrainsj=json.dumps(subgrainsj), gam_dict=gam_dict)
 
 @app.route("/db_sync/")
 def synchronization():
@@ -128,23 +180,6 @@ def analysis():
                                     + '/' + gb.gbid})
   return render_template('analysis.html', gbdat=json.dumps(gbdat))
 
-@app.route('/orientation/<path:url_path>/<orientation>/')
-def orientations(url_path, orientation):
-  """
-  :method:`orientations` List different orientation axes in the material database.
-  """
-  url_path = url_path+'/'+orientation
-  path     = os.path.join(g.gb_dir, url_path)
-  grains    = []
-#Only valid directories beginning with orientation axis will be shown.
-  for thing in os.listdir(path):
-    if thing[:3] == orientation: 
-      grains.append(thing.strip()) 
-#Also dislocations of edge and screw fracture and plane type should be shown.
-    elif thing[0] in ['e', 's','p','f']:
-      grains.append(thing.strip())  
-  return render_template('orientation.html', url_path=url_path, grains=grains)
-
 def make_tree(path):
   """
   :method:`make_tree` recurse through subgrain directories collecting json and png files.
@@ -179,35 +214,6 @@ def extract_json(path, json_files):
       else:
         pass
 
-@app.route('/grain/<path:url_path>/<gbid>/')
-def grain_boundary(url_path, gbid):
-  """
-  :method:`grain_boundary` Top view for a canonical grain boundary. CSL 
-  lattice, and list of subgrain directories, energies, etc.
-  """
-  url_path  = url_path+'/'+gbid
-  path      = os.path.join(g.gb_dir, url_path)
-  with open(os.path.join(path, 'gb.json'),'r') as json_file:
-    gb_info = json.load(json_file)
-  stuff = []
-  tree  = make_tree(path)
-  json_files = []
-  extract_json(path, json_files)
-  subgrains  = []  
-  subgrainsj = []
-  for i, gb_path in enumerate(json_files):
-    try: 
-      subgrains.append([json.load(open(gb_path,'r')), i])
-      subgrainsj.append(json.load(open(gb_path,'r')))
-    except:
-      pass
-  #Pull gamma surface
-  analyze  = GBAnalysis()
-  gam_dict = analyze.pull_gamsurf(path=path) 
-
-  return render_template('grain_boundary.html', gbid=gbid, url_path=url_path,
-                          gb_info=gb_info, tree=tree, subgrains=subgrains, 
-                          subgrainsj=json.dumps(subgrainsj), gam_dict=gam_dict)
 
 #Check for Ovito in different paths.
 def run_ovito(filename):
