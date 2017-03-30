@@ -176,7 +176,7 @@ def analysis():
                       'min_en'     : subgbs[0][0],
                       'bp'         : ' '.join(map(str, map(int, deserialize_vector_int(subgbs[0][1]['boundary_plane'])))),
                       'url'        : 'http://137.73.5.224:5000/grain/alphaFe/'
-                                    + ''.join(map(str, deserialize_vector_int(subgbs[0][1]['orientation_axis'])))
+                                    + ''.join(map(str, deserialize_vector_int(subgbs[0][1]['orientation_axis'])))+'_Tilt'
                                     + '/' + gb.gbid})
   return render_template('analysis.html', gbdat=json.dumps(gbdat))
 

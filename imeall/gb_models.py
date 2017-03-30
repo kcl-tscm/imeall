@@ -36,10 +36,13 @@ class GrainBoundary(BaseModel):
   n_at             = IntegerField()
   coincident_sites = IntegerField()
   angle            = FloatField()
+  sigma_csl        = IntegerField(default=0)
   height           = FloatField()
   area             = FloatField()
   notes            = TextField(default="")
   path             = CharField()
+#add type field to the schema.
+#  gb_type          = CharField()
 #Placing a unique constraint on the canonical grain.
   gbid             = CharField(unique=True)
 
@@ -159,7 +162,7 @@ def gb_check_dir_integrity(material='alphaFe', or_axis='001'):
           else:
             pass
 
-def gb_check_conv(material='alphaFe', or_axis='001', modify_db=False):
+def gb_check_conv(material='alphaFe', or_axis='001_twist', modify_db=False):
   """
   :method:`gb_check_conv` scans through grainboundary directory tree,
            inspecting the json dictionary and update the SQLite model if 
@@ -313,9 +316,9 @@ def change_json_key(material='alphaFe', or_axis='001'):
         subgb_model.save()
         print subgb_model.gbid
 
-def populate_db(or_axis='001'):
+def populate_db(or_axis='001_Twist'):
   """
-  method:`populate_db` add grains to database.
+  method:`populate_db` add canonical grains to SQLite database.
   """
   analyze  = GBAnalysis()
   dir_str  = os.path.join('alphaFe', or_axis)
@@ -332,7 +335,8 @@ def populate_db(or_axis='001'):
                "boundary_plane"   : serialize_vector(map(int, gb_json['boundary_plane'])),
                "orientation_axis" : serialize_vector(map(int, gb_json['orientation_axis'])),
                "z_planes"         : serialize_vector(gb_json['zplanes']),
-               "coincident_sites" : gb_json['coincident_sites'],
+               "coincident_sites" : gb_json['sigma_csl'],
+               "sigma_csl"        : gb_json['sigma_csl'],
                "angle"            : gb_json['angle'],
                "height"           : gb_json['H'],
                "area"             : gb_json['A'],
@@ -398,8 +402,6 @@ def populate_db(or_axis='001'):
           pass
 
 if __name__=="__main__":
-  #create_tables(database)
-  #populate_db(or_axis="111")
   parser = argparse.ArgumentParser()
   parser.add_argument("-a", "--populate",    help="Recurse through directory tree add subgrains to SQLite database.", action="store_true")
   parser.add_argument("-l", "--list",        help="List converged structures in database and their energies.", action="store_true")
@@ -408,16 +410,24 @@ if __name__=="__main__":
   parser.add_argument("-m", "--modify",      help="Generic flag. If included database will be updated, otherwise program just reports intended actions \
                                                    without  modifying database.", action="store_true")
   parser.add_argument("-f", "--check_force", help="Inspect xyz structure files to determine if force convergence has been reached.",   action="store_true")
-  parser.add_argument("-o", "--or_axis",   help="orientation axis to pull from database.", default="001")
-  parser.add_argument("-pt", "--potential", help="potential to pull from database.", default="PotBH.xml")
+  parser.add_argument("-o", "--or_axis",     help="orientation axis to pull from database.", default="001_Twist")
+  parser.add_argument("-t", "--gb_type",     help="Type of Boundary to pull (symmetric, mixed, tilt, twist).", default="tilt")
+  parser.add_argument("-pt", "--potential",  help="potential to pull from database.", default="PotBH.xml")
   args   = parser.parse_args()
 
   if args.list:
-    oraxis = '1,1,0'
+    oraxis = '0,0,1'
     pot_param     = PotentialParameters()
     ener_per_atom = pot_param.gs_ener_per_atom()
-  
-    for gb in GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).order_by(GrainBoundary.angle):
+
+    if args.gb_type=='tilt':
+      selected_grains = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane != oraxis)
+    elif args.gb_type=='twist':
+      selected_grains = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane == oraxis)
+    else:
+      sys.exit('Invalid type.')
+
+    for gb in selected_grains.order_by(GrainBoundary.angle):
       subgbs = (gb.subgrains.select(GrainBoundary, SubGrainBoundary)
                   .where(SubGrainBoundary.potential==args.potential)
                   .join(GrainBoundary).dicts())
