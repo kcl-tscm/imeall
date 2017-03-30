@@ -6,10 +6,10 @@ import logging
 import argparse
 import numpy as np
 
-from   peewee   import *
-from   quippy   import Atoms, set_fortran_indexing, Potential, AtomsReader
-from   datetime import datetime, timedelta
-from   models   import GBAnalysis, PotentialParameters
+from peewee   import *
+from datetime import datetime, timedelta
+from models   import GBAnalysis, PotentialParameters
+from quippy   import Atoms, set_fortran_indexing, Potential, AtomsReader
 
 set_fortran_indexing(False)
 GRAIN_DATABASE = "/home/lambert/pymodules/imeall/imeall/grain_boundaries/"
@@ -28,35 +28,37 @@ class GrainBoundary(BaseModel):
   """
   Canonical Parent Grain Model.
   Vectors are serialized to csv.
+  Parameters:
+    path: relative to the grain boundary database root.
+    material: name for the material class (e.g. alphaFe)
   """
-  gb_type          = CharField()
-  boundary_plane   = CharField()
-  z_planes         = CharField()
+#add material
+# material         = CharField()
   orientation_axis = CharField()
+  angle            = FloatField()
+  boundary_plane   = CharField()
+  path             = CharField()
+  gb_type          = CharField()
+  z_planes         = CharField()
   n_at             = IntegerField()
   coincident_sites = IntegerField()
-  angle            = FloatField()
   sigma_csl        = IntegerField(default=0)
   height           = FloatField()
   area             = FloatField()
   notes            = TextField(default="")
-  path             = CharField()
-#add type field to the schema.
-#  gb_type          = CharField()
-#Placing a unique constraint on the canonical grain.
   gbid             = CharField(unique=True)
 
 class SubGrainBoundary(BaseModel):
   """
   SubGrainBoundary Model
-  :path: relative to the grainboundary database root.
-  :params: rbt rigid body translations.
-  :params: grain_boundary every grain is a subgrain of the GrainBoundary Class.
+  path: relative to the grainboundary database root.
+  params: rbt rigid body translations.
+  params: grain_boundary every grain is a subgrain of the GrainBoundary Class.
   """
+  path            = CharField()
   canonical_grain = ForeignKeyField(GrainBoundary, "subgrains")
   converged       = BooleanField()
   rbt             = CharField()
-  path            = CharField()
   potential       = CharField()
   rcut            = FloatField()
   area            = FloatField()
@@ -65,6 +67,7 @@ class SubGrainBoundary(BaseModel):
   E_gb_init       = FloatField(default=0.0)
   notes           = TextField(default="")
   gbid            = CharField()
+  #create integrity index so that we can't have two entries for same potential and gbid
   class Meta:
 		indexes=(
      				  (('potential', 'gbid'), True), #trailing comma is necessary
@@ -73,9 +76,9 @@ class SubGrainBoundary(BaseModel):
 class Fracture(BaseModel):
   """
   Fracture Simulation Model
-  :params:G stress energy release rate.
-  :params:strain_rate.
-  :params:sim_T simulation temperature.
+  params: G stress energy release rate.
+  params: strain_rate.
+  params: sim_T simulation temperature.
   """
   fracture_system = CharField()
   G               = FloatField()
@@ -316,12 +319,12 @@ def change_json_key(material='alphaFe', or_axis='001'):
         subgb_model.save()
         print subgb_model.gbid
 
-def populate_db(or_axis='001_Twist'):
+def populate_db(material='alphaFe', or_axis='001'):
   """
   method:`populate_db` add canonical grains to SQLite database.
   """
   analyze  = GBAnalysis()
-  dir_str  = os.path.join('alphaFe', or_axis)
+  dir_str  = os.path.join(material, or_axis)
   gb_files = []
 #grab list of gb.json files.
   analyze.find_gb_json('{0}'.format(os.path.join(GRAIN_DATABASE, dir_str)), gb_files, 'gb.json')
@@ -330,13 +333,23 @@ def populate_db(or_axis='001_Twist'):
     with open(gb[1], 'r') as f:
       gb_json = json.load(f)
     print gb_json
+
+#update key:
+    try:
+      sigma_csl = gb_json['sigma_csl']
+    except KeyError:
+      sigma_csl = int(gb_json['n_at']/(gb_json['coincident_sites']+gb_json['n_at']))
+      gb_json['sigma_csl'] = sigma_csl
+      with open(gb[1], 'w') as f:
+        json.dump(gb_json, f, indent=2)
+
     gb_dict = {"gb_type"          : gb_json['type'],
                "n_at"             : gb_json['n_at'],
                "boundary_plane"   : serialize_vector(map(int, gb_json['boundary_plane'])),
                "orientation_axis" : serialize_vector(map(int, gb_json['orientation_axis'])),
                "z_planes"         : serialize_vector(gb_json['zplanes']),
-               "coincident_sites" : gb_json['sigma_csl'],
-               "sigma_csl"        : gb_json['sigma_csl'],
+               "coincident_sites" : gb_json['coincident_sites'],
+               "sigma_csl"        : sigma_csl,
                "angle"            : gb_json['angle'],
                "height"           : gb_json['H'],
                "area"             : gb_json['A'],
@@ -398,23 +411,28 @@ def populate_db(or_axis='001_Twist'):
         try:
           SubGrainBoundary.create(**subgb_dict)        
         except IntegrityError:
-          logging.debug('GB already in DB')
+          logging.debug('GB already in DB {}'.format(subgb_dict))
           pass
 
 if __name__=="__main__":
   parser = argparse.ArgumentParser()
-  parser.add_argument("-a", "--populate",    help="Recurse through directory tree add subgrains to SQLite database.", action="store_true")
+#Specifieri
+  parser.add_argument("-m", "--material",   help="The material we wish to query.", default="alphaFe")
+  parser.add_argument("-o", "--or_axis",    help="Orientation axis to pull from database. (default: 001)", default="001")
+  parser.add_argument("-gbt", "--gb_type",    help="Type of grain boundary to pull: mixed, tilt, twist. (default: tilt)", default="tilt")
+  parser.add_argument("-pt", "--potential", help="potential to pull from database. Use --list_potential to see available potentials.", default="PotBH.xml")
+  parser.add_argument("-p", "--prune",      help="Remove structures from SQL database that are no longer in directory tree.", action="store_true")
+  parser.add_argument("-mod", "--modify",   help="Generic flag. If included database will be updated, otherwise program just reports intended actions  \
+                                                  without  modifying database. Applies to check_conv and check_force.", action="store_true")
+#Actions
   parser.add_argument("-l", "--list",        help="List converged structures in database and their energies.", action="store_true")
-  parser.add_argument("-p", "--prune",       help="Remove structures from SQL database that are no longer in directory tree.", action="store_true")
+  parser.add_argument("-a", "--populate",    help="Recurse through directory tree add subgrains to SQLite database. Choose orientation with or_axis.", action="store_true")
   parser.add_argument("-c", "--check_conv",  help="Check that convergence status of database json files corresponds to SQL database.", action="store_true")
-  parser.add_argument("-m", "--modify",      help="Generic flag. If included database will be updated, otherwise program just reports intended actions \
-                                                   without  modifying database.", action="store_true")
-  parser.add_argument("-f", "--check_force", help="Inspect xyz structure files to determine if force convergence has been reached.",   action="store_true")
-  parser.add_argument("-o", "--or_axis",     help="orientation axis to pull from database.", default="001_Twist")
-  parser.add_argument("-t", "--gb_type",     help="Type of Boundary to pull (symmetric, mixed, tilt, twist).", default="tilt")
-  parser.add_argument("-pt", "--potential",  help="potential to pull from database.", default="PotBH.xml")
-  args   = parser.parse_args()
+  parser.add_argument("-f", "--check_force", help="Inspect xyz structure files to determine if force convergence has been reached.", action="store_true")
+  parser.add_argument("-lp", "--list_potential", help="List potentials in database", action="store_true")
+  parser.add_argument("-la" , "--list_all", help="List all Grain in database along with path", action="store_true")
 
+  args   = parser.parse_args()
   if args.list:
     oraxis = '0,0,1'
     pot_param     = PotentialParameters()
@@ -425,8 +443,9 @@ if __name__=="__main__":
     elif args.gb_type=='twist':
       selected_grains = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane == oraxis)
     else:
-      sys.exit('Invalid type.')
+      sys.exit('Invalid grain boundary type.')
 
+    print 'Material: {}, Orientation Axis: {} Potential: {}'.format(args.material, ' '.join(args.or_axis.split(',')), args.potential)
     for gb in selected_grains.order_by(GrainBoundary.angle):
       subgbs = (gb.subgrains.select(GrainBoundary, SubGrainBoundary)
                   .where(SubGrainBoundary.potential==args.potential)
@@ -435,16 +454,30 @@ if __name__=="__main__":
       if len(subgbs) > 0:
         subgbs = [(16.02*(subgb['E_gb']-float(subgb['n_at']*ener_per_atom[args.potential]))/(2.0*subgb['area']), subgb) for subgb in subgbs]
         subgbs.sort(key = lambda x: x[0])
-        print subgbs[0][1]['potential'], gb.orientation_axis, round(gb.angle*(180.0/3.14159),2), subgbs[0][0]
+        print '\t {} {}'.format(round(gb.angle*(180.0/3.14159),3), round(subgbs[0][0],3))
+
+  if args.list_all:
+    for gb in GrainBoundary.select().order_by(GrainBoundary.orientation_axis).order_by(GrainBoundary.angle):
+      print gb.orientation_axis, gb.angle*(180/np.pi), gb.gb_type, gb.path
+
+    for gb in GrainBoundary.select().order_by(GrainBoundary.orientation_axis).order_by(GrainBoundary.angle):
+      for subgb in gb.subgrains:
+        print gb.orientation_axis, gb.angle*(180/np.pi), subgb.potential, subgb.path
+
+  if args.list_potential:
+    pot_param     = PotentialParameters()
+    ener_per_atom = pot_param.gs_ener_per_atom()
+    for k, v in ener_per_atom.items():
+      print 'Potential Name: {}, Per Atom Energy: {}'.format(k, v)
 
   if args.populate:
-    populate_db(or_axis=args.or_axis)
+    populate_db(material=args.material, or_axis=args.or_axis)
 
   if args.prune:
-    gb_check_dir_integrity(or_axis=args.or_axis)
+    gb_check_dir_integrity(material=args.material, or_axis=args.or_axis)
 
   if args.check_conv:
-    gb_check_conv(modify_db=args.modify, or_axis=args.or_axis)
+    gb_check_conv(material=args.material, or_axis=args.or_axis, modify_db=args.modify)
 
   if args.check_force:
-    gb_check_force(or_axis=args.or_axis, modify_db=args.modify)
+    gb_check_force(material=args.material, or_axis=args.or_axis, modify_db=args.modify)

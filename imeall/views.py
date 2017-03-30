@@ -86,17 +86,24 @@ def orientations(url_path, orientation):
   :method:`orientations` List different orientation axes in the material database.
   """
 #Can only handle three digit or_axis atm.
-  or_axis = orientation[:3]
   url_path = url_path+'/'+orientation
   path     = os.path.join(g.gb_dir, url_path)
-  grains   = []
+#load serialized grain data
+  with open(os.path.join(path, 'or_axis.json'), 'r') as json_file:
+    oraxis = json.load(json_file)
+  oraxis = oraxis['oraxis']
+  grains = []
+  gb_type = request.args.get('gb_type', 'tilt')
+  if gb_type == 'tilt':
+    gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane != oraxis)
+  elif gb_type == 'twist':
+    gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane == oraxis)
+  else:
+    gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis)
 #Only valid directories beginning with orientation axis will be shown.
-  for gb_path in os.listdir(path):
-    if gb_path[:3] == or_axis: 
-      grains.append(gb_path.strip()) 
+  for gb in gbs:
+    grains.append(gb.gbid) 
 #Also dislocations of edge and screw fracture and plane type should be shown.
-    elif gb_path[0] in ['e', 's','p','f']:
-      grains.append(gb_path.strip())  
   return render_template('orientation.html', url_path=url_path, grains=grains)
 
 @app.route('/grain/<path:url_path>/<gbid>/')
@@ -155,13 +162,20 @@ def analysis():
   pot_param     = PotentialParameters()
   ener_per_atom = pot_param.gs_ener_per_atom()
   or_axis       = request.args.get('or_axis', '001')
+  gb_type       = request.args.get('gb_type', 'tilt')
   gbdat         = []
   oraxis = ','.join([c for c in or_axis])
 # Creates list of grain boundaries ordered by angle.
   for potential in ener_per_atom.keys():
 # GrainBoundary Energies in J/m^{2}
-    gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).order_by(GrainBoundary.angle)
-    for gb in gbs:
+    if gb_type == 'tilt':
+      gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane != oraxis)
+    elif gb_type == 'twist':
+      gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane == oraxis)
+    else:
+      sys.exit('Invalid gb_type!')
+
+    for gb in gbs.order_by(GrainBoundary.angle):
       subgbs = (gb.subgrains.select(GrainBoundary, SubGrainBoundary)
                       .where(SubGrainBoundary.potential==potential)
                       .join(GrainBoundary)
@@ -176,8 +190,8 @@ def analysis():
                       'min_en'     : subgbs[0][0],
                       'bp'         : ' '.join(map(str, map(int, deserialize_vector_int(subgbs[0][1]['boundary_plane'])))),
                       'url'        : 'http://137.73.5.224:5000/grain/alphaFe/'
-                                    + ''.join(map(str, deserialize_vector_int(subgbs[0][1]['orientation_axis'])))+'_Tilt'
-                                    + '/' + gb.gbid})
+                                    +''.join(map(str, deserialize_vector_int(subgbs[0][1]['orientation_axis'])))+'_Tilt'
+                                    +'/' + gb.gbid})
   return render_template('analysis.html', gbdat=json.dumps(gbdat))
 
 def make_tree(path):

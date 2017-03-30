@@ -1,6 +1,8 @@
 {% extends "layout.html" %}
 {% block body %}
   <h2>Grain Boundaries: </h2>
+  <h3> Grainboundary type </h3>
+  <li> <a href='?gb_type=tilt'> Tilt </a>|<a href='?gb_type=twist'> Twist </a>|<a href='?gb_type=all'> All </a></li> 
   <ul class=entries>
   {% for grain in grains %}
     <li> <a href={{ url_for('grain_boundary', url_path=url_path, gbid=grain)}}>{{grain}}</a></em> 

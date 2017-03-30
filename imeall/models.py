@@ -40,7 +40,7 @@ class PotentialParameters(object):
               'Fe_Ackland.xml'  : -4.01298226805,
               'Fe_Dudarev.xml'  : -4.31608690638,
               'dft_vasp_pbe'    : -8.238035
-              }
+             }
     return eperat
 
   def eam_rscale(self): 
