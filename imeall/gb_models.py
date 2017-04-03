@@ -14,6 +14,8 @@ from quippy   import Atoms, set_fortran_indexing, Potential, AtomsReader
 set_fortran_indexing(False)
 GRAIN_DATABASE = "/home/lambert/pymodules/imeall/imeall/grain_boundaries/"
 
+logging.basicConfig(filename='example.log',level=logging.DEBUG)
+
 try: 
   DATABASE   = os.environ['GBDATABASE']
 except KeyError:
@@ -29,8 +31,8 @@ class GrainBoundary(BaseModel):
   Canonical Parent Grain Model.
   Vectors are serialized to csv.
   Parameters:
-    path: relative to the grain boundary database root.
-    material: name for the material class (e.g. alphaFe)
+  path: relative to the grain boundary database root.
+  material: name for the material class (e.g. alphaFe)
   """
 #add material
 # material         = CharField()
@@ -165,15 +167,64 @@ def gb_check_dir_integrity(material='alphaFe', or_axis='001'):
           else:
             pass
 
-def gb_check_conv(material='alphaFe', or_axis='001_twist', modify_db=False):
+def gb_check_path(material='alphaFe', or_axis='001', modify_db=False):
+  """
+  :method:`gb_check_path` compare consistency between location of subgb.json
+  paths and the paths in the closure tree.
+  """
+  analyze  = GBAnalysis()
+  gb_files = []
+  analyze.find_gb_json('{0}'.format(os.path.join(GRAIN_DATABASE, os.path.join(material, or_axis))), gb_files, 'gb.json')
+  no_struct_file = open('no_struct.txt','a')
+  for gb_num, gb in enumerate(gb_files[:]):
+    with open(gb[1], 'r') as f:
+      gb_json = json.load(f)
+    GB_model = GrainBoundary.select().where(GrainBoundary.gbid==gb_json['gbid']).get()
+    json_path = '/'.join(gb[0].split('/')[7:])
+    #check grain model has correct path!
+    try:
+      assert json_path == GB_model.path
+    except AssertionError:
+      print GB_model.path, json_path
+      q = GrainBoundary.update(path=json_path).where(GrainBoundary.gbid==gb_json['gbid'])
+      q.execute()
+    #now pull subgb.json paths 
+    subgb_files = []
+    analyze.find_gb_json('{0}'.format(gb[0]), subgb_files, 'subgb.json')
+    for subgb in subgb_files:
+      subgb_dict_path = os.path.join(subgb[0],'subgb.json')
+      subgb_dict_path = os.path.join(GRAIN_DATABASE, subgb_dict_path)
+      with open(subgb_dict_path,'r') as f:
+        subgb_dict = json.load(f)
+
+      print subgb_dict_path
+      query = (GB_model.subgrains
+                       .where((SubGrainBoundary.gbid == subgb_dict['name']) & (SubGrainBoundary.potential==subgb_dict['param_file'])))
+      subgb_model = query.get()
+      json_path  = '/'.join(subgb[0].split('/')[7:])
+      model_path  = subgb_model.path
+      try:
+        assert json_path == model_path
+      except AssertionError:
+        #print subgb_dict['name'], subgb_model.gbid
+        print json_path, model_path
+        query = (SubGrainBoundary.update(path=json_path)
+                                 .where((SubGrainBoundary.gbid == subgb_dict['name']) &
+                                        (SubGrainBoundary.potential==subgb_dict['param_file'])))
+        #print query
+        query.execute()
+    database.commit()
+  return
+
+def gb_check_conv(material='alphaFe', or_axis='001', modify_db=False):
   """
   :method:`gb_check_conv` scans through grainboundary directory tree,
            inspecting the json dictionary and update the SQLite model if 
            the grain boundary energy or convergence flag is inconsistent.
   :attributes:
-    material: Which material to do check json/database convergence consistency on.
-    or_axis: Which orientation axis to check.
-    modify_db: Boolean. If True updates gb_model in database otherwise just prints inconsistent grain json/database value.
+  material: Which material to do check json/database convergence consistency on.
+  or_axis: Which orientation axis to check.
+  modify_db: Boolean. If True updates gb_model in database otherwise just prints inconsistent grain json/database value.
   """
   analyze  = GBAnalysis()
   gb_files = []
@@ -319,22 +370,62 @@ def change_json_key(material='alphaFe', or_axis='001'):
         subgb_model.save()
         print subgb_model.gbid
 
-def populate_db(material='alphaFe', or_axis='001'):
+def insert_subgrain(material='alphaFe', or_axis='110', gbid='1108397110', json_path='/'):
+  GB_model = GrainBoundary.select().where(GrainBoundary.gbid==gbid).get()
+  with open(os.path.join(GRAIN_DATABASE, json_path)+'/subgb.json','r') as f:
+    json_dict = json.load(f)
+  model_vars = ['canonical_grain', 'converged', 'E_gb_init', 'potential', 'rbt', 'path', 'area', 'rcut', 'n_at', 'E_gb', 'notes', 'gbid']
+
+  converged = json_dict['converged']
+  E_gb_init = json_dict['E_gb_init']
+  potential = json_dict["param_file"]
+  rbt = serialize_vector(json_dict['rbt'])
+  area = json_dict["rcut"]
+  rcut = json_dict["area"]
+  n_at = json_dict['n_at']
+  E_gb = json_dict['E_gb']
+  sub_gbid  = json_dict['gbid']
+
+  subgb_dict = {"canonical_grain"  : GB_model,
+                "converged"        : converged,
+                "E_gb_init"        : E_gb_init, 
+                "potential"        : potential,
+                "rbt"              : rbt, 
+                "path"             : json_path,
+                "area"             : area,
+                "rcut"             : rcut,
+                "n_at"             : n_at,
+                "E_gb"             : E_gb,
+                "notes"            : "",
+                "gbid"             : sub_gbid
+              }
+  #try:
+  print GB_model.gbid
+  print subgb_dict 
+  print SubGrainBoundary.create(**subgb_dict)        
+  logging.info('Created entry {}'.format(subgb_dict))
+  #except IntegrityError:
+  #  logging.info('GB already in DB {}'.format(subgb_dict))
+
+def populate_db(material='alphaFe', or_axis='001', gbid='001804711130', modify=False):
   """
   method:`populate_db` add canonical grains to SQLite database.
   """
   analyze  = GBAnalysis()
-  dir_str  = os.path.join(material, or_axis)
+  if len(gbid) == 0:
+    dir_str  = os.path.join(material, or_axis)
+  else:
+    #pull specific grainboundary
+    dir_str  = os.path.join(material, or_axis)
+    dir_str  = os.path.join(dir_str, gbid)
+  logging.info('dir_str {}'.format(dir_str))
   gb_files = []
-#grab list of gb.json files.
   analyze.find_gb_json('{0}'.format(os.path.join(GRAIN_DATABASE, dir_str)), gb_files, 'gb.json')
   for gb in gb_files:
     print gb[0], gb[1]
     with open(gb[1], 'r') as f:
       gb_json = json.load(f)
     print gb_json
-
-#update key:
     try:
       sigma_csl = gb_json['sigma_csl']
     except KeyError:
@@ -343,12 +434,17 @@ def populate_db(material='alphaFe', or_axis='001'):
       with open(gb[1], 'w') as f:
         json.dump(gb_json, f, indent=2)
 
+    try:
+      coincident_sites = gb_json['coincident_sites']
+    except KeyError:
+      coincident_sites = 0
+
     gb_dict = {"gb_type"          : gb_json['type'],
                "n_at"             : gb_json['n_at'],
                "boundary_plane"   : serialize_vector(map(int, gb_json['boundary_plane'])),
                "orientation_axis" : serialize_vector(map(int, gb_json['orientation_axis'])),
                "z_planes"         : serialize_vector(gb_json['zplanes']),
-               "coincident_sites" : gb_json['coincident_sites'],
+               "coincident_sites" : coincident_sites,
                "sigma_csl"        : sigma_csl,
                "angle"            : gb_json['angle'],
                "height"           : gb_json['H'],
@@ -357,82 +453,89 @@ def populate_db(material='alphaFe', or_axis='001'):
                "path"             : os.path.relpath(gb[0], "/home/lambert/pymodules/imeall/imeall/grain_boundaries/"),
                "gbid"             : gb_json['gbid']
               }
-    print gb_dict
-    try:
-      GB_model_object = GrainBoundary.create(**gb_dict)
-    except IntegrityError:
+
+    if modify:
+      try:
+        GB_model_object = GrainBoundary.create(**gb_dict)
+      except IntegrityError:
+        GB_model_object = GrainBoundary.select().where(GrainBoundary.gbid==gb_json['gbid']).get()
+        print 'GB already in database'
+    else:
       GB_model_object = GrainBoundary.select().where(GrainBoundary.gbid==gb_json['gbid']).get()
-      print 'GB already in database'
+      print GB_model_object
+
     subgb_files = []
     analyze.find_gb_json('{0}'.format(gb[0]), subgb_files, 'subgb.json')
-    with database.atomic() as transaction:
-      for subgb in subgb_files:
-        print 'SUBGB', subgb
-        with open(subgb[1],'r') as f:
-          subgb_json = json.load(f)
-        try: 
-          converged = subgb_json['converged']
-        except KeyError:
-          converged = False
-        try:
-          E_gb = subgb_json["E_gb"]
-        except KeyError:
-          E_gb = 0.0
-        try:
-          E_gb_init=subgb_json["E_gb_init"]
-        except KeyError:
-          E_gb_init = 0.0
-        try:
-          gbid = subgb_json["gbid"]
-        except KeyError:
-          gbid = subgb_json["name"]
-        try:
-          area = subgb_json['A']
-        except KeyError:
-          structs = glob.glob(os.path.join(subgb[0], '*.xyz'))
-          struct  = Atoms(structs[-1])
-          cell    = struct.get_cell()
-          area    = cell[0][0]*cell[1][1]
-          subgb_json['n_at'] = len(struct)
-          
-        subgb_dict = {"canonical_grain"  : GB_model_object,
-                      "converged"        : converged,
-                      "E_gb_init"        : E_gb_init, 
-                      "potential"        : subgb_json["param_file"],
-                      "rbt"              : serialize_vector(subgb_json['rbt']),
-                      "path"             : os.path.relpath(subgb[0], "/home/lambert/pymodules/imeall/imeall/grain_boundaries/"),
-                      "area"             : area,
-                      "rcut"             : subgb_json["rcut"],
-                      "n_at"             : subgb_json['n_at'],
-                      "E_gb"             : E_gb,
-                      "notes"            : "",
-                      "gbid"             : gbid
-                    }
-        try:
-          SubGrainBoundary.create(**subgb_dict)        
-        except IntegrityError:
-          logging.debug('GB already in DB {}'.format(subgb_dict))
-          pass
+    for subgb in subgb_files:
+      with open(subgb[1],'r') as f:
+        subgb_json = json.load(f)
+      try: 
+        converged = subgb_json['converged']
+      except KeyError:
+        converged = False
+      try:
+        E_gb = subgb_json["E_gb"]
+      except KeyError:
+        E_gb = 0.0
+      try:
+        E_gb_init=subgb_json["E_gb_init"]
+      except KeyError:
+        E_gb_init = 0.0
+      try:
+        gbid = subgb_json["gbid"]
+      except KeyError:
+        gbid = subgb_json["name"]
+      try:
+        area = subgb_json['A']
+      except KeyError:
+        structs = glob.glob(os.path.join(subgb[0], '*.xyz'))
+        struct  = Atoms(structs[-1])
+        cell    = struct.get_cell()
+        area    = cell[0][0]*cell[1][1]
+        subgb_json['n_at'] = len(struct)
+        
+      subgb_dict = {"canonical_grain" : GB_model_object,
+                    "converged"       : converged,
+                    "E_gb_init"       : E_gb_init, 
+                    "potential"       : subgb_json["param_file"],
+                    "rbt"             : serialize_vector(subgb_json['rbt']),
+                    "path"            : os.path.relpath(subgb[0], "/home/lambert/pymodules/imeall/imeall/grain_boundaries/"),
+                    "area"            : area,
+                    "rcut"            : subgb_json["rcut"],
+                    "n_at"            : subgb_json['n_at'],
+                    "E_gb"            : E_gb,
+                    "notes"           : "",
+                    "gbid"            : gbid}
+      try:
+        SubGrainBoundary.create(**subgb_dict)        
+        logging.info('Created entry {}'.format(subgb_dict))
+      except IntegrityError:
+        logging.info('GB already in DB {}'.format(subgb_dict))
 
 if __name__=="__main__":
   parser = argparse.ArgumentParser()
 #Specifieri
-  parser.add_argument("-m", "--material",   help="The material we wish to query.", default="alphaFe")
-  parser.add_argument("-o", "--or_axis",    help="Orientation axis to pull from database. (default: 001)", default="001")
-  parser.add_argument("-gbt", "--gb_type",    help="Type of grain boundary to pull: mixed, tilt, twist. (default: tilt)", default="tilt")
-  parser.add_argument("-pt", "--potential", help="potential to pull from database. Use --list_potential to see available potentials.", default="PotBH.xml")
-  parser.add_argument("-p", "--prune",      help="Remove structures from SQL database that are no longer in directory tree.", action="store_true")
-  parser.add_argument("-mod", "--modify",   help="Generic flag. If included database will be updated, otherwise program just reports intended actions  \
+  parser.add_argument("-m","--material", help="The material we wish to query.", default="alphaFe")
+  parser.add_argument("-o","--or_axis", help="Orientation axis to pull from database. (default: 001)", default="001")
+  parser.add_argument("-gbt","--gb_type", help="Type of grain boundary to pull: mixed, tilt, twist. (default: tilt)", default="tilt")
+  parser.add_argument("-pt","--potential", help="potential to pull from database. Use --list_potential to see available potentials.", default="PotBH.xml")
+  parser.add_argument("-gbid","--gbid", help="grain boundary id if present only perform action on specific boundary. applies to populate.", default="")
+  parser.add_argument("-j","--json_path", help="Path (relative to Database root of subgrain to be added to database).", default="")
+  parser.add_argument("-mod","--modify", help="Generic flag. If included database will be updated, otherwise program just reports intended actions  \
                                                   without  modifying database. Applies to check_conv and check_force.", action="store_true")
 #Actions
-  parser.add_argument("-l", "--list",        help="List converged structures in database and their energies.", action="store_true")
-  parser.add_argument("-a", "--populate",    help="Recurse through directory tree add subgrains to SQLite database. Choose orientation with or_axis.", action="store_true")
-  parser.add_argument("-c", "--check_conv",  help="Check that convergence status of database json files corresponds to SQL database.", action="store_true")
-  parser.add_argument("-f", "--check_force", help="Inspect xyz structure files to determine if force convergence has been reached.", action="store_true")
-  parser.add_argument("-lp", "--list_potential", help="List potentials in database", action="store_true")
-  parser.add_argument("-la" , "--list_all", help="List all Grain in database along with path", action="store_true")
+  parser.add_argument("-l","--list", help="List converged structures in database and their energies.", action="store_true")
+  parser.add_argument("-a","--populate", help="Recurse through directory tree add subgrains to SQLite database. Choose orientation with or_axis.", action="store_true")
+  parser.add_argument("-i","--insert", help="Add SubGrainboundary to database: requires gbid, or_axis, relative path to json_file.", action="store_true")
+  parser.add_argument("-p","--prune", help="Remove structures from SQL database that are no longer in directory tree.", action="store_true")
+  parser.add_argument("-cc","--check_conv", help="Check that convergence status of database json files corresponds to SQL database.", action="store_true")
+  parser.add_argument("-cp","--check_path", help="Check that path of database json files corresponds to SQL database.", action="store_true")
+  parser.add_argument("-cf","--check_force", help="Inspect xyz structure files to determine if force convergence has been reached.", action="store_true")
+  parser.add_argument("-lp","--list_potential", help="List potentials in database", action="store_true")
+  parser.add_argument("-la","--list_all", help="List all Grain in database along with path", action="store_true")
 
   args   = parser.parse_args()
+  database.connect()
   if args.list:
     oraxis = '0,0,1'
     pot_param     = PotentialParameters()
@@ -454,7 +557,7 @@ if __name__=="__main__":
       if len(subgbs) > 0:
         subgbs = [(16.02*(subgb['E_gb']-float(subgb['n_at']*ener_per_atom[args.potential]))/(2.0*subgb['area']), subgb) for subgb in subgbs]
         subgbs.sort(key = lambda x: x[0])
-        print '\t {} {}'.format(round(gb.angle*(180.0/3.14159),3), round(subgbs[0][0],3))
+        print '\t {} {} {}'.format(round(gb.angle*(180.0/3.14159),3), round(subgbs[0][0],3), subgbs[0][1]['path'])
 
   if args.list_all:
     for gb in GrainBoundary.select().order_by(GrainBoundary.orientation_axis).order_by(GrainBoundary.angle):
@@ -471,7 +574,7 @@ if __name__=="__main__":
       print 'Potential Name: {}, Per Atom Energy: {}'.format(k, v)
 
   if args.populate:
-    populate_db(material=args.material, or_axis=args.or_axis)
+    populate_db(material=args.material, or_axis=args.or_axis, modify=args.modify, gbid=args.gbid)
 
   if args.prune:
     gb_check_dir_integrity(material=args.material, or_axis=args.or_axis)
@@ -481,3 +584,12 @@ if __name__=="__main__":
 
   if args.check_force:
     gb_check_force(material=args.material, or_axis=args.or_axis, modify_db=args.modify)
+
+  if args.insert:
+    assert args.gbid != ''
+    assert args.json_path != ''
+    insert_subgrain(material=args.material, or_axis=args.or_axis, gbid=args.gbid, json_path=args.json_path)
+
+  if args.check_path:
+    gb_check_path(material=args.material, or_axis=args.or_axis, modify_db=args.modify)
+  database.close()

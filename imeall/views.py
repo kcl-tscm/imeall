@@ -181,6 +181,7 @@ def analysis():
                       .join(GrainBoundary)
                       .order_by(SubGrainBoundary.E_gb)
                       .dicts())
+      logging.debug(gb.gbid)
       subgbs = [(16.02*(subgb['E_gb']-float(subgb['n_at']*ener_per_atom[potential]))/(2.0*subgb['area']), subgb) for subgb in subgbs]
       subgbs.sort(key = lambda x: x[0])
       if (len(subgbs) > 0) and subgbs[0][0] < 3.0:
