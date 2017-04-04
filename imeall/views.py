@@ -4,7 +4,6 @@ import re
 import json
 import logging
 import subprocess
-
 from   imeall  import app
 from   flask   import Flask, request, session, g, redirect, url_for, abort,\
                       render_template, flash, send_file, jsonify, make_response
@@ -171,9 +170,9 @@ def analysis():
   for potential in ener_per_atom.keys():
 # GrainBoundary Energies in J/m^{2}
     if gb_type == 'tilt':
-      gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane != oraxis)
+      gbs = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane != oraxis)
     elif gb_type == 'twist':
-      gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane == oraxis)
+      gbs = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane == oraxis)
     else:
       sys.exit('Invalid gb_type!')
 
@@ -193,7 +192,7 @@ def analysis():
                       'min_en'     : subgbs[0][0],
                       'bp'         : ' '.join(map(str, map(int, deserialize_vector_int(subgbs[0][1]['boundary_plane'])))),
                       'url'        : 'http://137.73.5.224:5000/grain/alphaFe/'
-                                    +''.join(map(str, deserialize_vector_int(subgbs[0][1]['orientation_axis'])))+'_Tilt'
+                                    +''.join(map(str, deserialize_vector_int(subgbs[0][1]['orientation_axis'])))
                                     +'/' + gb.gbid})
   return render_template('analysis.html', gbdat=json.dumps(gbdat))
 
