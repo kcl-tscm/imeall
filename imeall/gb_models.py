@@ -241,8 +241,9 @@ def gb_check_conv(material='alphaFe', or_axis='001', modify_db=False):
         subgb_dict = json.load(f)
       struct_path = os.path.join(subgb_model.path, subgb_model.gbid+'_traj.xyz')
       struct_path = os.path.join(GRAIN_DATABASE, struct_path)
+      #print struct_path
+      logging.debug(struct_path)
       try:
-        logging.debug(struct_path)
         assert subgb_model.converged==subgb_dict['converged']
       except AssertionError:
         if not modify_db:

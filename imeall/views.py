@@ -2,7 +2,9 @@
 import os
 import re
 import json
+import logging
 import subprocess
+
 from   imeall  import app
 from   flask   import Flask, request, session, g, redirect, url_for, abort,\
                       render_template, flash, send_file, jsonify, make_response
