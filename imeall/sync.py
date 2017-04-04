@@ -41,6 +41,7 @@ if __name__=='__main__':
   parser.add_argument("-m", "--mira",   help="sync with mira.", action="store_true")
   parser.add_argument("-r", "--rosa",   help="sync with rosalind.", action="store_true")
   parser.add_argument("-f", "--fracrosa",   help="sync only fracture files from rosalind.", action="store_true")
+  parser.add_argument("-e", "--exclude", help="exclude the following file.")
   args = parser.parse_args()
 
   rsync_args = "-auv"
@@ -58,7 +59,7 @@ if __name__=='__main__':
                      src="k1511981@login.rosalind.compute.estate:/users/k1511981/sharedscratch/grain_boundaries", target="./")
 
   frac_params = dict(sync_log="db_synclog", exclude="'*/Fracture/*'", exclude_from="rsync_exclude.txt", rsync_args="-auv",
-                     src="k1511981@login.rosalind.compute.estate:/users/k1511981/sharedscratch/grain_boundaries/alphaFe/f111110",
+                     src="k1511981@login.rosalind.compute.estate:/users/k1511981/sharedscratch/grain_boundaries/alphaFe/f*",
                      target="./grain_boundaries/alphaFe/000/")
 
 #To sync the directory structure of the grainboundary

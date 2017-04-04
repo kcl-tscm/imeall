@@ -9,12 +9,12 @@ import json
 from imeall.models import GBAnalysis
 
 class TestDB (object):
-  '''
+  """
   Logic and consistency tests for the Grainboundary database.
   in particular routines to test all grain and subgrain json files
   are well formed (i.e.) contain logical keys, sigma indices are all
   integers, standard naming patterns for suffices.
-  '''
+  """
   def __init(self):
     pass
 
