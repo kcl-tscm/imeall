@@ -83,8 +83,8 @@ def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200):
     out       = AtomsWriter('{0}'.format('{0}_traj.xyz'.format(traj_file)))
   strain_mask = [0,0,1,0,0,0]
   ucf         = UnitCellFilter(grain, strain_mask)
-  #opt         = FIRE(ucf)
-  opt         = LBFGS(ucf)
+  opt         = FIRE(ucf)
+  #opt         = LBFGS(ucf)
   cell = grain.get_cell()
   A    = cell[0][0]*cell[1][1]
   H    = cell[2][2]
@@ -122,6 +122,7 @@ def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200):
   E_gb    = grain.get_potential_energy()
   gb_dict['E_gb']      = E_gb
   gb_dict['E_gb_init'] = E_gb_init 
+  gb_dict['area'] = A 
   with open('subgb.json', 'w') as outfile:
     for key, value in gb_dict.items():
       j_dict[key] = value

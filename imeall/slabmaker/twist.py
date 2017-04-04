@@ -103,11 +103,11 @@ def build_twist_sym_gb(gbid='', bp =[0,0,1], v=[3,5,0],
     n += 1
   v2      = v.copy()
 
-  if np.allclose(orientation_axis, [0,0,1]):
+  if np.allclose(bp, [0,0,1]):
     v2[0]   = -v2[0]
-  elif np.allclose(orientation_axis, [1,1,0]):
+  elif np.allclose(bp, [1,1,0]):
     v2[2]   = -v2[2]
-  elif np.allclose(orientation_axis, [1,1,1]):
+  elif np.allclose(bp, [1,1,1]):
     v2[1]   = -v2[1]
     v2[2]   = -v2[2]
 
@@ -165,9 +165,9 @@ def build_twist_sym_gb(gbid='', bp =[0,0,1], v=[3,5,0],
   sigma_csl = float(len(grain_a))/float(len(shared_atoms_csl)+len(shared_atoms))
   dups = get_duplicate_atoms(grain_c, delete=True)
 #Space bicrystal properly.
-  if np.allclose(orientation_axis, [0,0,1]):
+  if np.allclose(bp, [0,0,1]):
     c_space = np.array(2.83)
-  elif np.allclose(orientation_axis, [1,1,0]):
+  elif np.allclose(bp, [1,1,0]):
     c_space = np.array(2.001)
 
   if sum([int(n)%2 for n in bp])%2 == 0 :
