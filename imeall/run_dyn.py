@@ -3,6 +3,7 @@ import sys
 import json
 import shutil
 import ase.io        
+import glob
 from   ase.constraints import UnitCellFilter
 from   ase.optimize    import BFGS, FIRE
 from   quippy          import Atoms, Potential
@@ -420,8 +421,14 @@ if __name__=='__main__':
       print '\n'
       gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type=calc_type,
                         potential='IP EAM_ErcolAd', param_file=param_file)
-      sup_v   = 6
-      sup_bxv = 2
+
+      if args.gb_type=="twist":
+        sup_v   = 3
+        sup_bxv = 3
+      elif args.gb_type=="tilt":
+        sup_v   = 6
+        sup_bxv = 2
+
       with open(os.path.join(job_dir,'gb.json')) as f:
         grain_dict = json.load(f)
       bp = grain_dict['boundary_plane']
@@ -440,8 +447,12 @@ if __name__=='__main__':
     v    = grain_dict['orientation_axis']
     gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type=calc_type,
                       potential = 'IP EAM_ErcolAd', param_file=param_file)
-    sup_v   = 3
-    sup_bxv = 3
+    if args.gb_type=="twist":
+      sup_v   = 3
+      sup_bxv = 3
+    elif args.gb_type=="tilt":
+      sup_v   = 6
+      sup_bxv = 2
     print "Boundary Plane", bp, "Orientation Axis", v
     i_v   = float(args.i_v) 
     i_bxv = float(args.i_bxv)
@@ -451,12 +462,3 @@ if __name__=='__main__':
     os.chdir(gbrelax.subgrain_dir)
 # Call the relax function from this directory, reads in the initial struct_file,
     relax_gb(gb_file = gbrelax.name)
-#########################################################################
-## COPY Directories across im_io.copy_struct(dir, sub_dir, dir, sub_dir)#
-#########################################################################
-#########################################################################
-##  im_io = ImeallIO()
-##  for job_dir in jobdirs:
-##    print job_dir
-##    im_io.copy_struct(job_dir, job_dir, 'EAM', 'DFT')
-#########################################################################

@@ -2,7 +2,9 @@
 import os
 import re
 import json
+import logging
 import subprocess
+
 from   imeall  import app
 from   flask   import Flask, request, session, g, redirect, url_for, abort,\
                       render_template, flash, send_file, jsonify, make_response
@@ -57,8 +59,8 @@ def before_request():
 @app.route('/')
 def home_page():
   """
-   Base view of imeall database. Links to material specific
-   databases and the synchronization log.
+  :method: Overview of imeall database. Links to material specific
+  databases and the synchronization log.
   """
   materials = os.listdir(g.gb_dir)
   return render_template('imeall.html', materials=materials)
@@ -66,15 +68,74 @@ def home_page():
 
 @app.route('/<material>/')
 def material(material):
+  """
+  :method: Orientation axes for a particular material.
+  """
   path         = os.path.join(app.config['GRAIN_DATABASE'], material)
   url_path     = material
   orientations = []
   files =  os.listdir(path)
+  files.sort()
   for filename in files: 
     tmp_file = os.path.join(path, filename)
     if os.path.isdir(tmp_file):
       orientations.append(filename)
   return render_template('material.html', url_path=url_path, orientations=orientations)
+
+@app.route('/orientation/<path:url_path>/<orientation>/')
+def orientations(url_path, orientation):
+  """
+  :method:`orientations` List different orientation axes in the material database.
+  """
+#Can only handle three digit or_axis atm.
+  url_path = url_path+'/'+orientation
+  path     = os.path.join(g.gb_dir, url_path)
+#load serialized grain data
+  with open(os.path.join(path, 'or_axis.json'), 'r') as json_file:
+    oraxis = json.load(json_file)
+  oraxis = oraxis['oraxis']
+  grains = []
+  gb_type = request.args.get('gb_type', 'tilt')
+  if gb_type == 'tilt':
+    gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane != oraxis)
+  elif gb_type == 'twist':
+    gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane == oraxis)
+  else:
+    gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis)
+#Only valid directories beginning with orientation axis will be shown.
+  for gb in gbs:
+    grains.append(gb.gbid) 
+#Also dislocations of edge and screw fracture and plane type should be shown.
+  return render_template('orientation.html', url_path=url_path, grains=grains)
+
+@app.route('/grain/<path:url_path>/<gbid>/')
+def grain_boundary(url_path, gbid):
+  """
+  :method:`grain_boundary` Top view for a canonical grain boundary. CSL 
+  lattice, and list of subgrain directories, energies, etc.
+  """
+  url_path  = url_path+'/'+gbid
+  path      = os.path.join(g.gb_dir, url_path)
+  with open(os.path.join(path, 'gb.json'),'r') as json_file:
+    gb_info = json.load(json_file)
+  stuff = []
+  tree  = make_tree(path)
+  json_files = []
+  extract_json(path, json_files)
+  subgrains  = []  
+  subgrainsj = []
+  for i, gb_path in enumerate(json_files):
+    try: 
+      subgrains.append([json.load(open(gb_path,'r')), i])
+      subgrainsj.append(json.load(open(gb_path,'r')))
+    except:
+      pass
+  #Pull gamma surface
+  analyze  = GBAnalysis()
+  gam_dict = analyze.pull_gamsurf(path=path) 
+  return render_template('grain_boundary.html', gbid=gbid, url_path=url_path,
+                          gb_info=gb_info, tree=tree, subgrains=subgrains, 
+                          subgrainsj=json.dumps(subgrainsj), gam_dict=gam_dict)
 
 @app.route("/db_sync/")
 def synchronization():
@@ -103,18 +164,26 @@ def analysis():
   pot_param     = PotentialParameters()
   ener_per_atom = pot_param.gs_ener_per_atom()
   or_axis       = request.args.get('or_axis', '001')
+  gb_type       = request.args.get('gb_type', 'tilt')
   gbdat         = []
   oraxis = ','.join([c for c in or_axis])
 # Creates list of grain boundaries ordered by angle.
   for potential in ener_per_atom.keys():
 # GrainBoundary Energies in J/m^{2}
-    gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).order_by(GrainBoundary.angle)
-    for gb in gbs:
+    if gb_type == 'tilt':
+      gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane != oraxis)
+    elif gb_type == 'twist':
+      gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane == oraxis)
+    else:
+      sys.exit('Invalid gb_type!')
+
+    for gb in gbs.order_by(GrainBoundary.angle):
       subgbs = (gb.subgrains.select(GrainBoundary, SubGrainBoundary)
                       .where(SubGrainBoundary.potential==potential)
                       .join(GrainBoundary)
                       .order_by(SubGrainBoundary.E_gb)
                       .dicts())
+      logging.debug(gb.gbid)
       subgbs = [(16.02*(subgb['E_gb']-float(subgb['n_at']*ener_per_atom[potential]))/(2.0*subgb['area']), subgb) for subgb in subgbs]
       subgbs.sort(key = lambda x: x[0])
       if (len(subgbs) > 0) and subgbs[0][0] < 3.0:
@@ -124,26 +193,9 @@ def analysis():
                       'min_en'     : subgbs[0][0],
                       'bp'         : ' '.join(map(str, map(int, deserialize_vector_int(subgbs[0][1]['boundary_plane'])))),
                       'url'        : 'http://137.73.5.224:5000/grain/alphaFe/'
-                                    + ''.join(map(str, deserialize_vector_int(subgbs[0][1]['orientation_axis'])))
-                                    + '/' + gb.gbid})
+                                    +''.join(map(str, deserialize_vector_int(subgbs[0][1]['orientation_axis'])))+'_Tilt'
+                                    +'/' + gb.gbid})
   return render_template('analysis.html', gbdat=json.dumps(gbdat))
-
-@app.route('/orientation/<path:url_path>/<orientation>/')
-def orientations(url_path, orientation):
-  """
-  :method:`orientations` List different orientation axes in the material database.
-  """
-  url_path = url_path+'/'+orientation
-  path     = os.path.join(g.gb_dir, url_path)
-  grains    = []
-#Only valid directories beginning with orientation axis will be shown.
-  for thing in os.listdir(path):
-    if thing[:3] == orientation: 
-      grains.append(thing.strip()) 
-#Also dislocations of edge and screw fracture and plane type should be shown.
-    elif thing[0] in ['e', 's','p','f']:
-      grains.append(thing.strip())  
-  return render_template('orientation.html', url_path=url_path, grains=grains)
 
 def make_tree(path):
   """
@@ -179,35 +231,6 @@ def extract_json(path, json_files):
       else:
         pass
 
-@app.route('/grain/<path:url_path>/<gbid>/')
-def grain_boundary(url_path, gbid):
-  """
-  :method:`grain_boundary` Top view for a canonical grain boundary. CSL 
-  lattice, and list of subgrain directories, energies, etc.
-  """
-  url_path  = url_path+'/'+gbid
-  path      = os.path.join(g.gb_dir, url_path)
-  with open(os.path.join(path, 'gb.json'),'r') as json_file:
-    gb_info = json.load(json_file)
-  stuff = []
-  tree  = make_tree(path)
-  json_files = []
-  extract_json(path, json_files)
-  subgrains  = []  
-  subgrainsj = []
-  for i, gb_path in enumerate(json_files):
-    try: 
-      subgrains.append([json.load(open(gb_path,'r')), i])
-      subgrainsj.append(json.load(open(gb_path,'r')))
-    except:
-      pass
-  #Pull gamma surface
-  analyze  = GBAnalysis()
-  gam_dict = analyze.pull_gamsurf(path=path) 
-
-  return render_template('grain_boundary.html', gbid=gbid, url_path=url_path,
-                          gb_info=gb_info, tree=tree, subgrains=subgrains, 
-                          subgrainsj=json.dumps(subgrainsj), gam_dict=gam_dict)
 
 #Check for Ovito in different paths.
 def run_ovito(filename):
