@@ -36,18 +36,25 @@ XYZ](https://libatoms.github.io/QUIP/io.html#module-ase.io.extxyz) files.
   - [Flask](http://flask.pocoo.org/)
   - [ASE](https://wiki.fysik.dtu.dk/ase/)
   - [QUIP](https://libatoms.github.io/QUIP/quippy.html)
+  - [OVITO](https://www.ovito.org)
 
 ## Using Imeall
-
-(0) To get the development branch of Imeall:
+0. To get the development branch of Imeall:
 ```
   git clone https://github.com/Montmorency/imeall.git
 ```
 
-1. Initialize the imeall app:
-
+Set the environment variable (preferably in your .bashrc or .bash_profile)
+for your ovito executable and the directory containing any .xml files required
+for QUIP potential calculators.
 ```
-    python runserver.py
+  export POTDIR=~/imeall/imeall/potentials
+  export OVITO=/Applications/ovito
+```
+
+1. Initialize the imeall app:
+```
+  python runserver.py
 ```
 This will launch the web app hosted locally and can be accessed through
 your browser at http://127.0.0.1:5000/.
