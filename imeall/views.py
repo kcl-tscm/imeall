@@ -131,7 +131,13 @@ def grain_boundary(url_path, gbid):
       pass
   #Pull gamma surface
   analyze  = GBAnalysis()
-  gam_dict = analyze.pull_gamsurf(path=path) 
+
+  potparams = PotentialParameters()
+  paramfile_dict = potparams.paramfile_dict()
+  gam_dict = {}
+  for potdir in paramfile_dict.keys():
+    gam_dict[potdir] = analyze.pull_gamsurf(path=path, potential=potdir) 
+
   return render_template('grain_boundary.html', gbid=gbid, url_path=url_path,
                           gb_info=gb_info, tree=tree, subgrains=subgrains, 
                           subgrainsj=json.dumps(subgrainsj), gam_dict=gam_dict)

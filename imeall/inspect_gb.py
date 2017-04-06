@@ -91,7 +91,6 @@ class Inspector(object):
     for subgb in no_subgb_list:
       print subgb
 
-
 if __name__=="__main__":
   parser    = argparse.ArgumentParser()
   parser.add_argument("-p", "--potential", help="potential to pull from database.", default="PotBH.xml")
@@ -102,9 +101,10 @@ if __name__=="__main__":
   args      = parser.parse_args()
 
   inspector = Inspector()
+  if args.list_pot_dir:
+    inspector.list_pot_dir(potential=args.directory)
+
   if args.converged:
     inspector.list_gb(potential=args.potential, or_axis=args.or_axis, print_unconverged=args.converged)
 
-  if args.list_pot_dir:
-    inspector.list_pot_dir(potential=args.directory)
 
