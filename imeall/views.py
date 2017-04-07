@@ -4,7 +4,6 @@ import re
 import json
 import logging
 import subprocess
-
 from   imeall  import app
 from   flask   import Flask, request, session, g, redirect, url_for, abort,\
                       render_template, flash, send_file, jsonify, make_response
@@ -132,7 +131,13 @@ def grain_boundary(url_path, gbid):
       pass
   #Pull gamma surface
   analyze  = GBAnalysis()
-  gam_dict = analyze.pull_gamsurf(path=path) 
+
+  potparams = PotentialParameters()
+  paramfile_dict = potparams.paramfile_dict()
+  gam_dict = {}
+  for potdir in paramfile_dict.keys():
+    gam_dict[potdir] = analyze.pull_gamsurf(path=path, potential=potdir) 
+
   return render_template('grain_boundary.html', gbid=gbid, url_path=url_path,
                           gb_info=gb_info, tree=tree, subgrains=subgrains, 
                           subgrainsj=json.dumps(subgrainsj), gam_dict=gam_dict)
@@ -171,9 +176,9 @@ def analysis():
   for potential in ener_per_atom.keys():
 # GrainBoundary Energies in J/m^{2}
     if gb_type == 'tilt':
-      gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane != oraxis)
+      gbs = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane != oraxis)
     elif gb_type == 'twist':
-      gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane == oraxis)
+      gbs = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane == oraxis)
     else:
       sys.exit('Invalid gb_type!')
 
@@ -193,7 +198,7 @@ def analysis():
                       'min_en'     : subgbs[0][0],
                       'bp'         : ' '.join(map(str, map(int, deserialize_vector_int(subgbs[0][1]['boundary_plane'])))),
                       'url'        : 'http://137.73.5.224:5000/grain/alphaFe/'
-                                    +''.join(map(str, deserialize_vector_int(subgbs[0][1]['orientation_axis'])))+'_Tilt'
+                                    +''.join(map(str, deserialize_vector_int(subgbs[0][1]['orientation_axis'])))
                                     +'/' + gb.gbid})
   return render_template('analysis.html', gbdat=json.dumps(gbdat))
 
