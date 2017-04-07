@@ -55,8 +55,8 @@ def before_request():
 @app.route('/')
 def home_page():
   """
-   Base view of imeall database. Links to material specific
-   databases and the synchronization log.
+  Base view of imeall database. Links to material specific
+  databases and the synchronization log.
   """
   materials = os.listdir(g.gb_dir)
   return render_template('imeall.html', materials=materials)
