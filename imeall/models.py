@@ -58,13 +58,23 @@ class PotentialParameters(object):
     return rscale
 
   def paramfile_dict(self):
-    paramfile_dict = {'DFT':'dft_vasp_pbe',
+    paramfile      = {'DFT':'dft_vasp_pbe',
                       'PotBH':'PotBH.xml',
                       'EAM_Ack':'Fe_Ackland.xml',
                       'EAM_Men':'Fe_Mendelev.xml',
                       'EAM_Mish':'iron_mish.xml',
                       'EAM_Dud':'Fe_Dudarev.xml'}
-    return paramfile_dict
+    return paramfile
+
+  def potdir_dict(self):
+    """
+    invert keys from paramfile_dict
+    """
+    paramfile_dict = self.paramfile_dict()
+    potdir = {}
+    for k,v in paramfile_dict.items():
+      potdir[v] = k
+    return potdir
 
 class Job(object):
   """
