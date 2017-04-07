@@ -56,7 +56,7 @@ class Inspector(object):
         print "No Subgrains."
     print "{} unconverged subgrains".format(len(unconverged))
     if print_unconverged:
-      with open('unconv_list_{or_axis}.txt'.format(or_axis=or_axis), 'w') as f:
+      with open('unconv_list_{or_axis}_{pot}.txt'.format(or_axis=or_axis, pot=potential.split('.')[0]), 'w') as f:
         for unconv in unconverged:
           print >>f,  unconv[1]
 
