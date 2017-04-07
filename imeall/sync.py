@@ -4,9 +4,9 @@ import subprocess
 
 class SyncDB(object):
   """
-    Class for synchronizing the local database with remote servers e.g. ADA, Rosalind, Archer, MIRA etc.
-    Needs to be updated so that subprocess can handle log in credentials via the browser.
-    Database information is stored in db_synclog.
+  Class for synchronizing the local database with remote servers e.g. ADA, Rosalind, Archer, MIRA etc.
+  Needs to be updated so that subprocess can handle log in credentials via the browser.
+  Database information is stored in db_synclog.
   """
   def __init__(self, sync_log="db_synclog",exclude="'*/Fracture/*'", exclude_from="rsync_exclude.txt",
                src="lambert@mira.alcf.anl.gov:/home/lambert/iron/grain_boundaries",

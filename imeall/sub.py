@@ -5,7 +5,6 @@ import time
 from collections import deque
 import argparse
 
-
 class Job(object):
   def __init__(self, job_que=deque()):
     self.pbs_file = ''

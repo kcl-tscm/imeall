@@ -12,11 +12,9 @@ from   ase.constraints    import UnitCellFilter, StrainFilter
 from   quippy import Atoms, Potential, AtomsReader
 from   fracture.hydrify_cracktips import Hydrify
 
-E_H2   = -4.73831215118
-E_diss =  0.291385500301
-#j_file = '00195301120_v6bxv2_tv0.4bxv0.3_d1.9z_traj.xyz'
-#j_file = '0011268190_v6bxv2_tv0.1bxv0.1_d2.0z_traj.xyz'
-j_file = '00121243160_v6bxv2_tv0.3bxv0.1_d1.7z_traj.xyz'
+E_H2    = -4.73831215118
+E_diss  =  0.291385500301
+j_file  = '00121243160_v6bxv2_tv0.3bxv0.1_d1.7z_traj.xyz'
 
 hydrify = Hydrify()
 parser = argparse.ArgumentParser()
@@ -25,30 +23,28 @@ parser.add_argument("-s","--strain",  type=float, help="strain parameter", defau
 parser.add_argument("-d","--dirname", help="Directory for calculation")
 parser.add_argument("-b","--bulk",    help="Deposit H in bulk positions or at grainboundary.", action="store_true")
 
-
 args    = parser.parse_args()
 bulk    = args.bulk
 strain  = args.strain
 dirname = args.dirname
 
 gb = AtomsReader(j_file)[-1]
+#gb = AtomsReader(args.filename)[-1]
 #gb = BodyCenteredCubic(directions = [[1,0,0], [0,1,0], [0,0,1]],
 #                            size = (8,8,16), symbol='Fe', pbc=(1,1,1),
 #                            latticeconstant = 2.83)
 try:
-  #POT_DIR = '/users/k1511981/pymodules/imeall/imeall/potentials' 
   POT_DIR     = os.environ['POTDIR']
 except:
   sys.exit("PLEASE SET export POTDIR='path/to/potfiles/'")
 
 eam_pot = os.path.join(POT_DIR, 'PotBH.xml')
 r_scale = 1.00894848312
-pot         = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=eam_pot)
-cell = gb.get_cell()
-A    = cell[0][0]*cell[1][1]
-Height    = cell[2][2]
+pot     = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=eam_pot)
+cell    = gb.get_cell()
+A       = cell[0][0]*cell[1][1]
+Height  = cell[2][2]
 print 'A', A, 'H', Height
-
 
 scratch = os.getcwd()
 try:

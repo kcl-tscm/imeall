@@ -4,12 +4,19 @@
 <link rel="shortcut icon" href="{{ url_for('static', filename='imeall111icon.ico') }}">
 <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
 <div class=page>
-<img id="banner" src="{{ url_for('static', filename='cpattern.jpg') }}" width=1025em height=80em alt="Booster Juice Banner"> 
+<img id="banner" src="{{ url_for('static', filename='cpattern.jpg') }}" height=80em alt="Celtic Braid"> 
   <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
   <script src="http://d3js.org/d3.v3.min.js"></script>
   <h1>Imeall</h1>
   {% for message in get_flashed_messages() %}
     <div class=flash>{{ message }} </div>
   {% endfor %}
+  <div class=navigation>
+    <li> 
+			<a href="{{url_for('home_page')}}">Home</a>
+			<a href="{{url_for('material', material='alphaFe')}}">alpha-Fe</a>
+			<a href="{{url_for('analysis')}}">Analysis</a>
+		</li>
+  </div>
   {% block body %}{% endblock %}
 </div>

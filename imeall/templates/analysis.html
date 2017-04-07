@@ -28,7 +28,6 @@ path {
   padding: 2px;
   background: lightsteelblue;
 }
-
 </style>
 
 <h2> Grain Boundary Analysis </h2>
@@ -36,6 +35,9 @@ path {
 <h3> <a href='?or_axis=001'> 001 </a> </h3> 
 <h3> <a href='?or_axis=110'> 110 </a> </h3> 
 <h3> <a href='?or_axis=111'> 111 </a> </h3>
+<h3> Grainboundary type </h3>
+<h3> <a href='?gb_type=tilt'> Tilt </a> </h3> 
+<h3> <a href='?gb_type=twist'> Twist </a> </h3> 
 
 <script>
 // http://bl.ocks.org/d3noob/b3ff6ae1c120eea654b5
@@ -80,6 +82,7 @@ $( document ).ready(function() {
 //  y.domain(d3.extent(data, function(d) { return d.min_en; }));
   x.domain([0.0, d3.max(data, function(d) { return d.angle;  })]);
   y.domain([0.0, d3.max(data, function(d) { return d.min_en;  })]);
+//  y.domain([0.0, 2.5]);
 
   svg.append("text")
     .attr("x", width/2)
@@ -183,25 +186,13 @@ $( document ).ready(function() {
   var sortedAngles = [];
   dataByAngle.forEach(function(d)
                      {return sortedAngles.push({"angle":parseFloat(d.key), "mean":d.values.mean, 
-                                                 "dev":isdefined(d.values.dev)});}) 
+                                                "dev":isdefined(d.values.dev)});}) 
   sortedAngles.sort(function(a,b){return parseFloat(a.angle)-parseFloat(b.angle);})
-//  console.log(sortedAngles)
-
-{#  svg.append("path")
-    .attr("class", "line")
-    .attr("d", valuelinedev(sortedAngles))
-    .style("stroke", "grey");              #}
 
   var area = d3.svg.area()
     .x(function(d)  {return x(d.angle); })
     .y0(function(d) {return y(d.mean + d.dev/2.0)})
     .y1(function(d) {return y(d.mean - d.dev/2.0)});
-
-{#  svg.append("path")
-    .attr("class","area")
-    .attr("d", function(d){return area(sortedAngles)})
-    .style("fill-opacity", 0.25)
-    .style("fill", "grey" );                          #}
 
   svg.append("g")
     .attr("class", "x axis")
@@ -308,16 +299,5 @@ $( document ).ready(function(){
 <style>
 #potentials {display: none;}
 </style>
-{#DEPRECATED BECAUSE OF MATPLOTLIB Dependenc
-<div id="potentials">
-  <h3> Mendelev Potential </h3>
-  <p> <img src = "{{url_for('eam_pot', filename='Fe_Mendelev.xml')}}" alt="EAM Potential" width=500 ></p>
-  <h3> Ackland Potential </h3>
-  <p> <img src = "{{url_for('eam_pot', filename='Fe_Ackland.xml')}}" alt="EAM Potential" width=500 ></p>
-  <h3> Dudarev Potential </h3>
-  <p> <img src = "{{url_for('eam_pot', filename='Fe_Dudarev.xml')}}" alt="EAM Potential" width=500 ></p>
-  <h3> Mishin Potential </h3>
-  <p> <img src = "{{url_for('eam_pot', filename='iron_mish.xml')}}" alt="EAM Potential" width=500 ></p>
-</div>
-#}
+
 {% endblock body %}

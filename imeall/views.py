@@ -2,11 +2,16 @@
 import os
 import re
 import json
+import logging
 import subprocess
 from   imeall  import app
 from   flask   import Flask, request, session, g, redirect, url_for, abort,\
                       render_template, flash, send_file, jsonify, make_response
 from   imeall.models import GBAnalysis
+from   gb_models     import serialize_vector, GRAIN_DATABASE, DATABASE, GrainBoundary, SubGrainBoundary,\
+                            deserialize_vector_int
+from   models        import PotentialParameters
+from   peewee        import fn
 # Unique key is BBBAAAACCC
 # Common axis=[BBB], misorientation angle=AAAA, and GB plane = (CCC).
 # temporary table should be replaced by database.
@@ -30,8 +35,6 @@ valid_extensions = ['xyz', 'json', 'mp4', 'png','day']
 vasp_files       = ['IBZKPT', 'INCAR', 'CHG', 'CHGCAR', 'DOSCAR', 'EIGENVAL', 
                     'KPOINTS', 'OSZICAR', 'OUTCAR', 'PCDAT', 'POSCAR',
                     'POTCAR', 'WAVECAR', 'XDATCAR']
-
-#
 # Currently the database connection is just a path name to our grain boundary
 # database stored as a file tree. I don't necessarily see any reason not to exploit
 # the existing filesystem and tools associated for searching. Why?
@@ -46,8 +49,8 @@ vasp_files       = ['IBZKPT', 'INCAR', 'CHG', 'CHGCAR', 'DOSCAR', 'EIGENVAL',
 #      visible we still preserve a hierarchical relationship for all the grain
 #      boundaries within a class of materials and for different classes of
 #      materials. This tree structure would resemble a collection of documents and
-#      could be mapped onto a NoSQL type of database fairly easily. 
-#
+#      could be mapped onto a NoSQL type of database or serialized and normalized 
+#      in a closure tree.
 @app.before_request
 def before_request():
   g.gb_dir = app.config['GRAIN_DATABASE']
@@ -55,7 +58,7 @@ def before_request():
 @app.route('/')
 def home_page():
   """
-  Base view of imeall database. Links to material specific
+  :method: Overview of imeall database. Links to material specific
   databases and the synchronization log.
   """
   materials = os.listdir(g.gb_dir)
@@ -64,16 +67,80 @@ def home_page():
 
 @app.route('/<material>/')
 def material(material):
-  path     = os.path.join(g.gb_dir, material)
-  url_path = material
+  """
+  :method: Orientation axes for a particular material.
+  """
+  path         = os.path.join(app.config['GRAIN_DATABASE'], material)
+  url_path     = material
   orientations = []
   files =  os.listdir(path)
+  files.sort()
   for filename in files: 
     tmp_file = os.path.join(path, filename)
     if os.path.isdir(tmp_file):
       orientations.append(filename)
   return render_template('material.html', url_path=url_path, orientations=orientations)
 
+@app.route('/orientation/<path:url_path>/<orientation>/')
+def orientations(url_path, orientation):
+  """
+  :method:`orientations` List different orientation axes in the material database.
+  """
+#Can only handle three digit or_axis atm.
+  url_path = url_path+'/'+orientation
+  path     = os.path.join(g.gb_dir, url_path)
+#load serialized grain data
+  with open(os.path.join(path, 'or_axis.json'), 'r') as json_file:
+    oraxis = json.load(json_file)
+  oraxis = oraxis['oraxis']
+  grains = []
+  gb_type = request.args.get('gb_type', 'tilt')
+  if gb_type == 'tilt':
+    gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane != oraxis)
+  elif gb_type == 'twist':
+    gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane == oraxis)
+  else:
+    gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis)
+#Only valid directories beginning with orientation axis will be shown.
+  for gb in gbs:
+    grains.append(gb.gbid) 
+#Also dislocations of edge and screw fracture and plane type should be shown.
+  return render_template('orientation.html', url_path=url_path, grains=grains)
+
+@app.route('/grain/<path:url_path>/<gbid>/')
+def grain_boundary(url_path, gbid):
+  """
+  :method:`grain_boundary` Top view for a canonical grain boundary. CSL 
+  lattice, and list of subgrain directories, energies, etc.
+  """
+  url_path  = url_path+'/'+gbid
+  path      = os.path.join(g.gb_dir, url_path)
+  with open(os.path.join(path, 'gb.json'),'r') as json_file:
+    gb_info = json.load(json_file)
+  stuff = []
+  tree  = make_tree(path)
+  json_files = []
+  extract_json(path, json_files)
+  subgrains  = []  
+  subgrainsj = []
+  for i, gb_path in enumerate(json_files):
+    try: 
+      subgrains.append([json.load(open(gb_path,'r')), i])
+      subgrainsj.append(json.load(open(gb_path,'r')))
+    except:
+      pass
+  #Pull gamma surface
+  analyze  = GBAnalysis()
+
+  potparams = PotentialParameters()
+  paramfile_dict = potparams.paramfile_dict()
+  gam_dict = {}
+  for potdir in paramfile_dict.keys():
+    gam_dict[potdir] = analyze.pull_gamsurf(path=path, potential=potdir) 
+
+  return render_template('grain_boundary.html', gbid=gbid, url_path=url_path,
+                          gb_info=gb_info, tree=tree, subgrains=subgrains, 
+                          subgrainsj=json.dumps(subgrainsj), gam_dict=gam_dict)
 
 @app.route("/db_sync/")
 def synchronization():
@@ -81,10 +148,6 @@ def synchronization():
     db_log = f.read().split('\n\n')
   db_log.reverse()
   return render_template('synchronization.html', db_log=db_log)
-
-  #date_re  = re.compile("([0-9]{2}:[0-9]{2}:[0-9]{2}\s+[0-9-]+)", re.S)
-  #db_log   = re.split(date_re, db_log)
-  #return render_template('synchronization.html', db_log='\n'.join(db_log))
 
 @app.route("/log/")
 def _log_in():
@@ -97,57 +160,51 @@ def _log_in():
 @app.route('/analysis/')
 def analysis():
   """
-    This view collates data from the grainboundary database.
+  :method:`analysis` 
+  This view collates data from the grainboundary database
+  and forwards it to d3 database.
   """
 # User chooses what orientation angle to look at via a GET argument:
-  or_axis = request.args.get('or_axis', '001')
-  analyze = GBAnalysis()
-  gb_list = analyze.extract_energies(or_axis=or_axis)
-  gbdat   = []
+# This should be a separate Table.
+  pot_param     = PotentialParameters()
+  ener_per_atom = pot_param.gs_ener_per_atom()
+  or_axis       = request.args.get('or_axis', '001')
+  gb_type       = request.args.get('gb_type', 'tilt')
+  gbdat         = []
+  oraxis = ','.join([c for c in or_axis])
 # Creates list of grain boundaries ordered by angle.
-  for gb in sorted(gb_list, key = lambda x: x['angle']):
-    try:
-      min_en = min([x for x in gb['energies'] if x > 0.])
-      max_en = max(gb['energies'])
-      try:
-        gbdat.append({'param_file': gb['param_file'],
-                      'or_axis':' '.join(map(str, gb['orientation_axis'])),
-                      'angle': gb['angle'],
-                      'min_en':min_en, 
-                      'max_en':max_en,
-                      'bp':' '.join(map(str, map(int, gb['boundary_plane']))),
-                      'url':   'http://127.0.0.1:5000/grain/alphaFe/'
-                             + ''.join(map(str,gb['orientation_axis']))
-                             +'/'
-                             + gb['gbid']
-                      })
-      except KeyError:
-        pass
-    except ValueError:
-      pass
-  gbdat = sorted(gbdat, key=lambda x: x['angle'])
-  return render_template('analysis.html', gbdat=json.dumps(gbdat))
+  for potential in ener_per_atom.keys():
+# GrainBoundary Energies in J/m^{2}
+    if gb_type == 'tilt':
+      gbs = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane != oraxis)
+    elif gb_type == 'twist':
+      gbs = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane == oraxis)
+    else:
+      sys.exit('Invalid gb_type!')
 
-@app.route('/orientation/<path:url_path>/<orientation>/')
-def orientations(url_path, orientation):
-  """
-    List different orientation axis in the material database.
-  """
-  url_path = url_path+'/'+orientation
-  path     = os.path.join(g.gb_dir, url_path)
-  grains    = []
-#Only valid directories beginning with orientation axis will be shown.
-  for thing in os.listdir(path):
-    if thing[:3] == orientation: 
-      grains.append(thing.strip()) 
-#Also dislocations of edge and screw fracture and plane type should be shown.
-    elif thing[0] in ['e', 's','p','f']:
-      grains.append(thing.strip())  
-  return render_template('orientation.html', url_path=url_path, grains=grains)
+    for gb in gbs.order_by(GrainBoundary.angle):
+      subgbs = (gb.subgrains.select(GrainBoundary, SubGrainBoundary)
+                      .where(SubGrainBoundary.potential==potential)
+                      .join(GrainBoundary)
+                      .order_by(SubGrainBoundary.E_gb)
+                      .dicts())
+      logging.debug(gb.gbid)
+      subgbs = [(16.02*(subgb['E_gb']-float(subgb['n_at']*ener_per_atom[potential]))/(2.0*subgb['area']), subgb) for subgb in subgbs]
+      subgbs.sort(key = lambda x: x[0])
+      if (len(subgbs) > 0) and subgbs[0][0] < 3.0:
+        gbdat.append({'param_file' : potential,
+                      'or_axis'    : ' '.join(map(str, subgbs[0][1]['orientation_axis'].split(','))),
+                      'angle'      : subgbs[0][1]['angle']*(180./(3.14159)),
+                      'min_en'     : subgbs[0][0],
+                      'bp'         : ' '.join(map(str, map(int, deserialize_vector_int(subgbs[0][1]['boundary_plane'])))),
+                      'url'        : 'http://137.73.5.224:5000/grain/alphaFe/'
+                                    +''.join(map(str, deserialize_vector_int(subgbs[0][1]['orientation_axis'])))
+                                    +'/' + gb.gbid})
+  return render_template('analysis.html', gbdat=json.dumps(gbdat))
 
 def make_tree(path):
   """
-    Recurse through subgrain directories collecting json and png files.
+  :method:`make_tree` recurse through subgrain directories collecting json and png files.
   """
   tree = dict(name=os.path.basename(path), children=[], fullpath='')
   try: 
@@ -179,42 +236,11 @@ def extract_json(path, json_files):
       else:
         pass
 
-@app.route('/grain/<path:url_path>/<gbid>/')
-def grain_boundary(url_path, gbid):
-  """
-  :method:grain_boundary Top view for a canonical grain boundary. CSL 
-  lattice, and list of subgrain directories, 
-  energies, etc.
-  """
-  url_path  = url_path+'/'+gbid
-  path      = os.path.join(g.gb_dir, url_path)
-  with open(os.path.join(path, 'gb.json'),'r') as json_file:
-    gb_info = json.load(json_file)
-  stuff = []
-  tree  = make_tree(path)
-  json_files = []
-  extract_json(path, json_files)
-  subgrains = []
-  subgrainsj = []
-  for i, gb_path in enumerate(json_files):
-    try: 
-      subgrains.append([json.load(open(gb_path,'r')), i])
-      subgrainsj.append(json.load(open(gb_path,'r')))
-    except:
-      pass
-  #Pull gamma surface
-  analyze  = GBAnalysis()
-  gam_dict = analyze.pull_gamsurf(path=path) 
-  print gam_dict
-
-  return render_template('grain_boundary.html', gbid=gbid, url_path=url_path,
-                          gb_info=gb_info, tree=tree, subgrains=subgrains, 
-                          subgrainsj=json.dumps(subgrainsj), gam_dict=gam_dict)
 
 #Check for Ovito in different paths.
 def run_ovito(filename):
   """ 
-  run_ovito launches the Ovito application with the
+  :method:`run_ovito` launches the Ovito application with the
   associated grain boundary trajectory file loaded, the os command should
   ensure we are in the working directory so that any modifications, or
   videos generated will be saved in the correct place. ovito must be set
@@ -235,7 +261,7 @@ def run_ovito(filename):
 @app.route('/img/<path:filename>/<gbid>/<img_type>')
 def serve_img(filename, gbid, img_type):
   """
-  Serve the different images to the browser.
+  :method:`serve_img` serve image_file to the browser.
   """
   print 'Calling serve img', gbid, img_type, filename
   img = os.path.join(filename,'{0}.png'.format(gbid))
@@ -255,7 +281,7 @@ def serve_img(filename, gbid, img_type):
 @app.route('/textfile/<gbid>/<path:filename>')
 def serve_file(gbid, filename):
   """
-    Serve different common file types to the browser.
+  :method:`serve_file` serve different common file types to the browser.
   """
   textpath = request.args.get('textpath')
   with open('{0}'.format(textpath),'r') as text_file:
@@ -297,8 +323,8 @@ def serve_file(gbid, filename):
 @app.route('/eam_pot/<path:filename>')
 def eam_pot(filename):
   """
-    Matplotlib to inspect xml potential files in the database.
-    Based on gist at https://gist.github.com/wilsaj/862153.
+  :method:`eam_pot` Matplotlib to inspect xml potential files in the database.
+  Based on gist at https://gist.github.com/wilsaj/862153.
   """
   import random
   import datetime
