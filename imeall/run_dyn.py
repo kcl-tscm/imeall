@@ -261,12 +261,15 @@ class GBRelax(object):
     cell_area      = cell[0,0]*cell[1,1]
     cell_height    = cell[2,2]
     j_dict['param_file'] = self.param_file
+    j_dict['potential']  = self.param_file
     j_dict['name'] = self.name
     j_dict['rbt']  = rbt
     j_dict['rcut'] = rcut
     j_dict['H']    = cell_height
     j_dict['A']    = cell_area
-    j_dict['n_at'] = len(grain)
+    j_dict['converged'] = False
+    j_dict['area']      = cell_area
+    j_dict['n_at']      = len(grain)
     f = open('{0}/subgb.json'.format(self.subgrain_dir), 'w')
     json.dump(j_dict, f, indent=2)
     f.close()
@@ -423,8 +426,8 @@ if __name__=='__main__':
                         potential='IP EAM_ErcolAd', param_file=param_file)
 
       if args.gb_type=="twist":
-        sup_v   = 3
-        sup_bxv = 3
+        sup_v   = 4
+        sup_bxv = 4
       elif args.gb_type=="tilt":
         sup_v   = 6
         sup_bxv = 2
@@ -448,8 +451,8 @@ if __name__=='__main__':
     gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type=calc_type,
                       potential = 'IP EAM_ErcolAd', param_file=param_file)
     if args.gb_type=="twist":
-      sup_v   = 3
-      sup_bxv = 3
+      sup_v   = 4
+      sup_bxv = 4
     elif args.gb_type=="tilt":
       sup_v   = 6
       sup_bxv = 2

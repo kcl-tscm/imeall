@@ -144,21 +144,25 @@ class GBMaintenance(object):
     elif var =='n':
       pass
 
-  def remove_eo_files(self, path):
+  def remove_eo_files(self, path, num_deleted_files, dryrun=False):
     """
-    Remove files with pattern matching jobname.[eo][0-9]+.
+    Remove files with pattern matching jobname.[eo][0-9]+. 
+    Returns: number of deleted files.
     """
     eo_regex = re.compile(r'[eo][0-9]+')
     lst = os.listdir(path)
     for filename in lst:
       filename = os.path.join(path, filename)
       if os.path.isdir(filename):
-        self.remove_eo_files(filename)
+        rec_deleted_files = self.remove_eo_files(filename, 0)
+        num_deleted_files += rec_deleted_files
       elif eo_regex.match(filename.split('.')[-1]):
         print filename
         os.remove(filename)
+        num_deleted_files += 1
       else:
         pass
+    return num_deleted_files
 
   def add_key_to_dict(self, dirname):
     os.path.join(dirname, 'subgb.json')
