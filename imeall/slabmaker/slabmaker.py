@@ -84,13 +84,14 @@ def build_tilt_sym_gb(gbid='', bp = [3,3,2], v=[1,1,0],
   print '\t', '{0} {1} {2}'.format(bpxv[0],bpxv[1],bpxv[2])
   print '\t', '{0} {1} {2}'.format(bp[0], bp[1], bp[2])
   if c_space==None:
-    s1 = surface('Fe', (map(int, bp)), n)
-    c_space = s1.get_cell()[2,2]/float(n) #-s1.positions[:,2].max()
+    s1 = surface('Fe', (map(int, bp)), 1)
+    c_space = 2.83/np.sqrt(float(bp[0]**2+bp[1]**2 + bp[2]**2)) #-s1.positions[:,2].max()
+    print s1.get_cell()
     s2 = surface('Fe', (map(int, v)), 1)
     x_space = s2.get_cell()[0,0] #-s1.positions[:,2].max()
     s3 = surface('Fe', (map(int, bpxv)), 1)
     y_space = s3.get_cell()[1,1] #-s1.positions[:,2].max()
-  print '\t Interplanar spacing: ', x_space.round(2), y_space.round(2), c_space.round(2), 'A'
+  print '\t Interplanar spacing: ', n, x_space.round(2), y_space.round(2), c_space.round(2), 'A'
 # Reflect grain b in z-axis (across mirror plane):
   print grain_a.get_cell()[2,2]-grain_a.positions[:,2].max()
   grain_b.positions[:,2]  = -1.0*grain_b.positions[:,2]

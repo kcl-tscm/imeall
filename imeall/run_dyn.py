@@ -222,7 +222,7 @@ class GBRelax(object):
     print 'Generate Job in:'
     print '\t', self.calc_dir
 
-  def gen_super_rbt(self, bp=[],v=[], rbt=[0.0, 0.0], sup_v=6, sup_bxv=4, rcut=2.0, gb_type="tilt"):
+  def gen_super_rbt(self, bp=[],v=[], rbt=[0.0, 0.0], sup_v=6, sup_bxv=2, rcut=2.0, gb_type="tilt"):
     """
     Create a grain boundary with rigid body translations.
     """
@@ -232,12 +232,7 @@ class GBRelax(object):
       logging.debug('bp: {} v: {} rbt: {}'.format(bp, v, rbt))
     elif gb_type=="twist":
       grain = build_twist_sym_gb(bp=[0,0,1], v=v, rbt=rbt)
-# For RBT we build a top level dir with just the translated supercell and no
-# deleted atoms then we create subdirectories with particular deletion criteria
-# to them. This means we don't have to duplicate the structure files.
-# Restoring the write to file
-# Check if this initial grain with the atom deletion criterion and the rigid body translations
-# is present if not generate it:
+    #For RBT we build a top level dir with just the translated supercell and no deletion criterion
     m, n, grain  = self.gen_super(grain=grain, rbt=rbt, sup_v=sup_v, sup_bxv=sup_bxv,  rcut=0.0)
     self.name    = '{0}_v{1}bxv{2}_tv{3}bxv{4}'.format(self.gbid,
     str(m), str(n), str(round(rbt[0],2)), str(round(rbt[1],2)))
@@ -248,9 +243,8 @@ class GBRelax(object):
     self.subgrain_dir = io.make_dir(self.subgrain_dir, self.name)
     print "delete atoms"
     grain = self.delete_atoms(grain=grain, rcut=rcut)
-#Deposit all initial structures in the struct dir:
     grain.write('{0}.xyz'.format(os.path.join(self.subgrain_dir, self.name)))
-# Finally deposit json and grain file with translation information.
+    #write json file with subgb information.
     try:
       f = open('{0}/subgb.json'.format(self.subgrain_dir), 'r')
       j_dict = json.load(f)
@@ -258,7 +252,7 @@ class GBRelax(object):
     except IOError:
       f = open('{0}/subgb.json'.format(self.subgrain_dir), 'w')
       j_dict = {}
-# Terms to append to subgrain dictionary:
+    #Terms to append to subgrain dictionary:
     cell           = grain.get_cell()
     cell_area      = cell[0,0]*cell[1,1]
     cell_height    = cell[2,2]
@@ -343,7 +337,7 @@ class GBRelax(object):
     x.calc_connect()
     x.calc_dists()
     rem=[]
-    u = fzeros(3)
+    u=fzeros(3)
     for i in frange(x.n):
       for n in frange(x.n_neighbours(i)):
         j = x.neighbour(i, n, distance=3.0, diff=u)
