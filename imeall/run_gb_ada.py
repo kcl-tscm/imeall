@@ -78,7 +78,7 @@ for job_tract in chunker(jobdirs, 72):
     print 'Current Working Directory', os.getcwd()
     if parallel:
       pbs_str = open('/users/k1511981/pymodules/templates/calc_rundyn.pbs', 'r').read()
-      gb_args = '-ct {calc_type} -rc {rc} -i_v {i_v} -i_bxv {i_bxv} -gbt {gb_type}'.format(rc=job[1], i_v=job[2], i_bxv=job[3], 
+                gb_args = '-ct {calc_type} -rc {rc} -i_v {i_v} -i_bxv {i_bxv} -gbt {gb_type}'.format(rc=job[1], i_v=job[2], i_bxv=job[3], 
       calc_type = args.calc_type, gb_type=args.gb_type)
       pbs_str = pbs_str.format(jname='fe'+job[0][:8], time=jtime, queue=args.queue, gb_args=gb_args)
       with open('gb.pbs', 'w') as pbs_file:
@@ -88,7 +88,8 @@ for job_tract in chunker(jobdirs, 72):
       job     = subprocess.Popen(qsub_args.split())
       job.wait()
     else:
-      gb_args = '-rc {rc} -i_v {i_v} -i_bxv {i_bxv} -gbt {gb_type}'.format(rc=job[1], i_v=job[2], i_bxv=job[3], gb_type=args.gb_type)
+      gb_args = '-ct {calc_type} -rc {rc} -i_v {i_v} -i_bxv {i_bxv} -gbt {gb_type}'.format(rc=job[1], i_v=job[2], i_bxv=job[3],
+                gb_type=args.gb_type, calc_type=args.calc_type)
       gb_args = "python /Users/lambert/pymodules/imeall/imeall/run_dyn.py {}".format(gb_args)
       print job, gb_args
       job = subprocess.Popen(gb_args.split())
