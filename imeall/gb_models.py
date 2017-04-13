@@ -408,7 +408,7 @@ def insert_subgrain(material='alphaFe', or_axis='110', gbid='1108397110', json_p
   #except IntegrityError:
   #  logging.info('GB already in DB {}'.format(subgb_dict))
 
-def populate_db(material='alphaFe', or_axis='001', gbid='001804711130', modify=False):
+def populate_db(material='alphaFe', or_axis='001', gbid='', modify=False):
   """
   method:`populate_db` add canonical grains to SQLite database.
   """
@@ -426,7 +426,6 @@ def populate_db(material='alphaFe', or_axis='001', gbid='001804711130', modify=F
     print gb[0], gb[1]
     with open(gb[1], 'r') as f:
       gb_json = json.load(f)
-    print gb_json
     try:
       sigma_csl = gb_json['sigma_csl']
     except KeyError:
@@ -461,6 +460,7 @@ def populate_db(material='alphaFe', or_axis='001', gbid='001804711130', modify=F
       except IntegrityError:
         GB_model_object = GrainBoundary.select().where(GrainBoundary.gbid==gb_json['gbid']).get()
         print 'GB already in database'
+        print gb_json['gbid']
     else:
       GB_model_object = GrainBoundary.select().where(GrainBoundary.gbid==gb_json['gbid']).get()
       print GB_model_object
@@ -510,7 +510,9 @@ def populate_db(material='alphaFe', or_axis='001', gbid='001804711130', modify=F
       try:
         SubGrainBoundary.create(**subgb_dict)        
         logging.info('Created entry {}'.format(subgb_dict))
+        print 'created entry', subgb_dict["potential"], subgb_dict["gbid"], subgb_dict["converged"]
       except IntegrityError:
+        print 'dict exists', subgb_dict["potential"], subgb_dict["gbid"], subgb_dict["converged"]
         logging.info('GB already in DB {}'.format(subgb_dict))
 
 if __name__=="__main__":

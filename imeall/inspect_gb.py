@@ -56,18 +56,55 @@ class Inspector(object):
         print "No Subgrains."
     print "{} unconverged subgrains".format(len(unconverged))
     if print_unconverged:
-      with open('unconv_list_{or_axis}.txt'.format(or_axis=or_axis), 'w') as f:
+      with open('unconv_list_{or_axis}_{pot}.txt'.format(or_axis=or_axis, pot=potential.split('.')[0]), 'w') as f:
         for unconv in unconverged:
           print >>f,  unconv[1]
+
+  def list_pot_dir(self, potential="EAM_Dud", or_axis="001", material="alphaFe"):
+    target_dir = os.path.join(GRAIN_DATABASE, material)
+    target_dir = os.path.join(target_dir, or_axis)
+    jobdirs    =  os.listdir(target_dir)
+    no_pot_list = []
+    no_subgb_list = []
+    for job in jobdirs:
+      pot_dir = os.path.join(target_dir, job)
+      if os.path.isdir(pot_dir): 
+        pass
+      else:
+        continue
+      pot_dir = os.path.join(pot_dir, potential)
+      try:
+        assert os.path.isdir(pot_dir)
+      except AssertionError:
+        print pot_dir, 'Does not exist'
+        no_pot_list.append(pot_dir.split('/')[-2])
+      else:
+        if len(os.listdir(pot_dir)) < 5:
+          no_subgb_list.append(pot_dir.split('/')[-2])
+          print pot_dir, 'Short'
+        for subgb in os.listdir(pot_dir):
+          print subgb
+    print 'No potential files:'
+    for gb in no_pot_list:
+      print gb
+    print 'Too few subgrains:'
+    for subgb in no_subgb_list:
+      print subgb
 
 if __name__=="__main__":
   parser    = argparse.ArgumentParser()
   parser.add_argument("-p", "--potential", help="potential to pull from database.", default="PotBH.xml")
+  parser.add_argument("-d", "--directory", help="name of potential directory.", default="EAM_Dud")
   parser.add_argument("-o", "--or_axis",   help="orientation axis to pull from database.", default="001")
   parser.add_argument("-c", "--converged", help="print list of unconverged grains.", action="store_true")
+  parser.add_argument("-l", "--list_pot_dir", help="print subgrains in the PotDir.", action="store_true")
   args      = parser.parse_args()
 
   inspector = Inspector()
-  inspector.list_gb(potential=args.potential, or_axis=args.or_axis, print_unconverged=args.converged)
+  if args.list_pot_dir:
+    inspector.list_pot_dir(potential=args.directory)
+
+  if args.converged:
+    inspector.list_gb(potential=args.potential, or_axis=args.or_axis, print_unconverged=args.converged)
 
 

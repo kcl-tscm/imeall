@@ -57,6 +57,7 @@ class PotentialParameters(object):
               }
     return rscale
 
+<<<<<<< HEAD
   def return_pot(self, potential='PotBH.xml'):
 		try:
 			POT_DIR     = os.environ['POTDIR']
@@ -65,6 +66,26 @@ class PotentialParameters(object):
 		r_scale = self.eam_rscale()[potential]
 		pot    = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=os.path.join(POT_DIR, potential))
 		return pot
+=======
+  def paramfile_dict(self):
+    paramfile      = {'DFT':'dft_vasp_pbe',
+                      'PotBH':'PotBH.xml',
+                      'EAM_Ack':'Fe_Ackland.xml',
+                      'EAM_Men':'Fe_Mendelev.xml',
+                      'EAM_Mish':'iron_mish.xml',
+                      'EAM_Dud':'Fe_Dudarev.xml'}
+    return paramfile
+
+  def potdir_dict(self):
+    """
+    invert keys from paramfile_dict
+    """
+    paramfile_dict = self.paramfile_dict()
+    potdir = {}
+    for k,v in paramfile_dict.items():
+      potdir[v] = k
+    return potdir
+>>>>>>> 1c9ba382833ce81be8c020f2399fecccb1fe1113
 
 class Job(object):
   """
@@ -291,7 +312,7 @@ class GBAnalysis(object):
       else:
         pass
 
-  def extract_energies(self, material='alphaFe', or_axis='001'):
+  def extract_energies(self, material='alphaFe', or_axis='001', gb_type='tilt'):
     """
     :method:`extract_energies` pull GB formation energies using recursion.
     Go into a grain boundary directory, recurse through directory
@@ -390,6 +411,8 @@ class GBAnalysis(object):
     to find the minimum and maximum energies for the canonical grain, return
     a dictionary, with information about the lowest and highest energy structures.
     """
+    potparams = PotentialParameters()
+    paramfile_dict = potparams.paramfile_dict()
     subgb_files = []
     if os.path.isdir(os.path.join(path,potential)):
       self.find_gb_json(os.path.join(path,potential), subgb_files, 'subgb.json')
@@ -399,7 +422,7 @@ class GBAnalysis(object):
       for gb in subgb_files:
         with open(gb[1],'r') as f:
           gb_json = json.load(f)
-        ener = self.calc_energy(gb_json)
+        ener = self.calc_energy(gb_json, paramfile=paramfile_dict[potential])
         if ener != None:
           gam_surfs.append((gb_json['rcut'], gb_json['rbt'][0], gb_json['rbt'][1], ener))
         else:
@@ -534,16 +557,17 @@ class GBAnalysis(object):
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser()
-  parser.add_argument("-t", "--toplevelen", action="store_true", help="Pull all energies for an orientation axis \
+  parser.add_argument("-e", "--extracten", action="store_true", help="Pull all energies for an orientation axis \
                                                     print lowest energies to terminal. List is ordered by angle.")
-  parser.add_argument("-g", "--gam_min",     action="store_true", help="Pull gamma surface for specified potential directory.")
-  parser.add_argument("-d", "--directory",   default="PotBH", help="Directory to search for min_en structure. Default PotBH.")
-  parser.add_argument("-o", "--orientation", help="Orientation axis.", default ="001_Tilt")
-  parser.add_argument("-p", "--potential",   help="Potential file.", default ="PotBH.xml")
+  parser.add_argument("-g", "--gam_min", action="store_true", help="Pull gamma surface for specified potential directory.")
+  parser.add_argument("-d", "--directory", default="PotBH", help="Directory to search for min_en structure. Default PotBH.")
+  parser.add_argument("-m", "--material", help="material", default="alphaFe")
+  parser.add_argument("-o", "--orientation", help="Orientation axis.", default="001_Tilt")
+  parser.add_argument("-p", "--potential", help="Potential file.", default ="PotBH.xml")
   args = parser.parse_args()
   analyze =  GBAnalysis()
 
-  if args.toplevelen:
+  if args.extracten:
     or_axis = args.orientation
     gb_list = analyze.extract_energies(or_axis=or_axis)
     for gb in sorted(gb_list, key = lambda x: x['angle']):
