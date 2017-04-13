@@ -4,6 +4,7 @@ import json
 import shutil
 import ase.io        
 import glob
+import logging
 from   ase.constraints import UnitCellFilter
 from   ase.optimize    import BFGS, FIRE
 from   quippy          import Atoms, Potential
@@ -228,8 +229,9 @@ class GBRelax(object):
     io = ImeallIO()
     if gb_type=="tilt":
       grain = build_tilt_sym_gb(bp=bp, v=v, rbt=rbt)
+      logging.debug('bp: {} v: {} rbt: {}'.format(bp, v, rbt))
     elif gb_type=="twist":
-      grain = build_twist_sym_gb(bp=[0,0,1], v=np.array([3,5,0]), rbt=rbt)
+      grain = build_twist_sym_gb(bp=[0,0,1], v=v, rbt=rbt)
 # For RBT we build a top level dir with just the translated supercell and no
 # deleted atoms then we create subdirectories with particular deletion criteria
 # to them. This means we don't have to duplicate the structure files.
@@ -261,12 +263,15 @@ class GBRelax(object):
     cell_area      = cell[0,0]*cell[1,1]
     cell_height    = cell[2,2]
     j_dict['param_file'] = self.param_file
+    j_dict['potential']  = self.param_file
     j_dict['name'] = self.name
     j_dict['rbt']  = rbt
     j_dict['rcut'] = rcut
     j_dict['H']    = cell_height
     j_dict['A']    = cell_area
-    j_dict['n_at'] = len(grain)
+    j_dict['converged'] = False
+    j_dict['area']      = cell_area
+    j_dict['n_at']      = len(grain)
     f = open('{0}/subgb.json'.format(self.subgrain_dir), 'w')
     json.dump(j_dict, f, indent=2)
     f.close()
@@ -423,8 +428,8 @@ if __name__=='__main__':
                         potential='IP EAM_ErcolAd', param_file=param_file)
 
       if args.gb_type=="twist":
-        sup_v   = 3
-        sup_bxv = 3
+        sup_v   = 4
+        sup_bxv = 4
       elif args.gb_type=="tilt":
         sup_v   = 6
         sup_bxv = 2
@@ -448,8 +453,8 @@ if __name__=='__main__':
     gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type=calc_type,
                       potential = 'IP EAM_ErcolAd', param_file=param_file)
     if args.gb_type=="twist":
-      sup_v   = 3
-      sup_bxv = 3
+      sup_v   = 4
+      sup_bxv = 4
     elif args.gb_type=="tilt":
       sup_v   = 6
       sup_bxv = 2

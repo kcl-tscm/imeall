@@ -23,7 +23,7 @@ class Job(object):
     self.job_id   = ''
 
   def sub_pbs(self, job_dir, exclude='DFT', suffix='v6bxv2z', regex=None):
-    ''' 
+    """ 
     Given an explicit suffix, or a regex this routine recurses through
     the directory structure and submits any pbs files that 
     match the suffix or regex pattern. Exclude keeps track of 
@@ -44,7 +44,7 @@ class Job(object):
     SUFFIX:
       submit all super cells: 
         v6bxv2z
-    '''
+    """
     lst = os.listdir(job_dir)
     for dir in lst:
       dir = os.path.join(job_dir, dir)
@@ -71,23 +71,23 @@ class Job(object):
           pass
 
 class GBMaintenance(object):
-  '''
-   Collection of maintenance routines for the GB database.
-   Possible usages: regenerate all the csl lattices in the database
-   or a subdirectory of the database, take a new grain boundary profile 
-   picture for multiple directories, update the gb json information if a
-   new grain boundary property is desired. This really is 
-   turning into facebook for grain boundaries!
-  '''
+  """
+  Collection of maintenance routines for the GB database.
+  Possible usages: regenerate all the csl lattices in the database
+  or a subdirectory of the database, take a new grain boundary profile 
+  picture for multiple directories, update the gb json information if a
+  new grain boundary property is desired. This really is 
+  turning into facebook for grain boundaries!
+  """
   def __init__(self):
     self.materials = ['alphaFe']
 
   def retake_pic(self,fname, translate=False,toggle=False, confirm=True):
-    ''' 
-      Take grain boundary profile pic in directory
-      requires gb directory with gbid.xyz file in it.
-      set confirm = False to not prompt for overwrite.
-    '''
+    """ 
+    Take grain boundary profile pic in directory
+    requires gb directory with gbid.xyz file in it.
+    set confirm = False to not prompt for overwrite.
+    """
     if confirm:
       var = 'n'
       var = raw_input('Retake photo (y/n)?')
@@ -101,10 +101,10 @@ class GBMaintenance(object):
       pass
 
   def remove_eo_files(self, path):
-    '''
-      In case the rsync brings across a bunch of log files
-      we can get rid of those.
-    '''
+    """
+    In case the rsync brings across a bunch of log files
+    we can get rid of those.
+    """
     eo_regex = re.compile(r'[eo][0-9]+')
     lst = os.listdir(path)
     for filename in lst:
@@ -118,10 +118,10 @@ class GBMaintenance(object):
         pass
 
   def remove_xyz(self, path, dryrun=True, remove_type='traj'):
-    ''' 
-        Removes xyz files according to a particular regex
-        if test is true it only prints the files to be removed.
-    '''
+    """ 
+    Removes xyz files according to a particular regex
+    if test is true it only prints the files to be removed.
+    """
     if remove_type == 'traj':
       xyz_regex = re.compile(r'.*?traj.*?xyz')
     elif remove_type == 'rbt': 
@@ -181,13 +181,13 @@ class GBMaintenance(object):
     new_json['n_at'] = len(at) 
 
   def update_json(self, dirname):
-    ''' 
+    """ 
     This function was originally written to update all keys in the
     json dictionaries in the grain boundary directories.
     The pattern is quite general and can be adapted to just add
     new keys, delete old keys, consider it a dictionary migration
     routine.
-    '''
+    """
     os.path.join(dirname,'gb.json')
     new_json = {}
     with open(json_path,'r') as json_old:
@@ -208,11 +208,11 @@ class GBMaintenance(object):
       json.dump(new_json, json_new_file, indent=2)
 
   def fix_json(self, path):
-    '''
+    """
     Once my json files had two {}{} dictionaries written to them
     this parser opened all the subgb files, 
     and selected the dictionary I actually wanted.
-    '''
+    """
     lst = os.listdir(path)
     for filename in lst:
       new_path = os.path.join(path, filename)
@@ -238,13 +238,13 @@ class GBMaintenance(object):
         pass
 
   def update_json(self, filename):
-    ''' 
+    """ 
     This function was originally written to update all keys in the
     json dictionaries in the grain boundary directories.
     The pattern is quite general and can be adapted to just add
     new keys delete old keys consider it a dictionary migration
     routine.
-    '''
+    """
     new_json = {}
     with open(filename,'r') as json_old:
       old_json = json.load(json_old)
@@ -271,10 +271,10 @@ class GBAnalysis():
     pass
 
   def find_gb_json(self, path, j_list, filetype):
-    ''' 
+    """ 
     Returns list of directories containing grain json files
     and the filename of the json files.
-    '''
+    """
     try:
       lst = os.listdir(path)
     except:

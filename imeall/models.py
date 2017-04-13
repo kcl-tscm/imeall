@@ -57,17 +57,12 @@ class PotentialParameters(object):
               }
     return rscale
 
-<<<<<<< HEAD
-  def return_pot(self, potential='PotBH.xml'):
-		try:
-			POT_DIR     = os.environ['POTDIR']
-		except:
-			sys.exit("PLEASE SET export POTDIR='path/to/potfiles/'")
-		r_scale = self.eam_rscale()[potential]
-		pot    = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=os.path.join(POT_DIR, potential))
-		return pot
-=======
   def paramfile_dict(self):
+    """
+    Dictionary Mapping directories to quip xml files.
+    Returns: 
+      {potential_directory:potential_file}
+    """
     paramfile      = {'DFT':'dft_vasp_pbe',
                       'PotBH':'PotBH.xml',
                       'EAM_Ack':'Fe_Ackland.xml',
@@ -78,14 +73,15 @@ class PotentialParameters(object):
 
   def potdir_dict(self):
     """
-    invert keys from paramfile_dict
+    :method:`potdir_dict` invert keys from `paramfile_dict` to give 
+    Returns: 
+      {potential_file:potential_directory}
     """
     paramfile_dict = self.paramfile_dict()
     potdir = {}
     for k,v in paramfile_dict.items():
       potdir[v] = k
     return potdir
->>>>>>> 1c9ba382833ce81be8c020f2399fecccb1fe1113
 
 class Job(object):
   """
@@ -121,24 +117,24 @@ class Job(object):
         v6bxv2z
     """
     lst = os.listdir(job_dir)
-    for dir in lst:
-      dir = os.path.join(job_dir, dir)
+    for target_dir in lst:
+      target_dir = os.path.join(job_dir, target_dir)
       if regex == None:
-        if os.path.isdir(dir) and dir != 'DFT':
+        if os.path.isdir(target_dir) and target_dir != 'DFT':
           self.sub_pbs(dir, suffix=suffix, regex=regex)
-        elif dir.split('_')[-1] == suffix:
-          pbs_dir = os.path.join(sub_dir, dir)
+        elif target_dir.split('_')[-1] == suffix:
+          pbs_dir = os.path.join(sub_dir, target_dir)
           os.system("cd {0}; qsub fe{1}.pbs".format(pbs_dir, job_dir+'_'+suffix))
         else:
           pass
       else:
-        if os.path.isdir(dir) and dir != 'DFT':
-          self.sub_pbs(dir, suffix=suffix, regex=regex)
-        elif regex.match(dir):
+        if os.path.isdir(target_dir) and target_dir != 'DFT':
+          self.sub_pbs(target_dir, suffix=suffix, regex=regex)
+        elif regex.match(target_dir):
           try:
-            dir  = '/'.join(dir.split('/')[:-1])
-            name = dir.split('/')[-1]
-            os.system("cd {0}; qsub fe{1}.pbs".format(dir, name))
+            target_dir  = '/'.join(target_dir.split('/')[:-1])
+            name = target_dir.split('/')[-1]
+            os.system("cd {0}; qsub fe{1}.pbs".format(target_dir, name))
           except:
             print 'Job Submit Failed'
         else:
@@ -173,21 +169,25 @@ class GBMaintenance(object):
     elif var =='n':
       pass
 
-  def remove_eo_files(self, path):
+  def remove_eo_files(self, path, num_deleted_files, dryrun=False):
     """
-    Remove files with pattern matching jobname.[eo][0-9]+.
+    Remove files with pattern matching jobname.[eo][0-9]+. 
+    Returns: number of deleted files.
     """
     eo_regex = re.compile(r'[eo][0-9]+')
     lst = os.listdir(path)
     for filename in lst:
       filename = os.path.join(path, filename)
       if os.path.isdir(filename):
-        self.remove_eo_files(filename)
+        rec_deleted_files = self.remove_eo_files(filename, 0)
+        num_deleted_files += rec_deleted_files
       elif eo_regex.match(filename.split('.')[-1]):
         print filename
         os.remove(filename)
+        num_deleted_files += 1
       else:
         pass
+    return num_deleted_files
 
   def add_key_to_dict(self, dirname):
     os.path.join(dirname, 'subgb.json')
@@ -581,5 +581,3 @@ if __name__ == '__main__':
 #   Search potential directory for the gamma surface it contains
 #   for all the cutoff radii.
     analyze.gam_min(directory=args.directory)
-
-
