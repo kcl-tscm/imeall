@@ -10,10 +10,8 @@ from ase.lattice.spacegroup import crystal
 from ase.lattice.surface import surface, bcc111,bcc110
 from ase.lattice.cubic   import BodyCenteredCubic
 from ase.utils.geometry  import get_duplicate_atoms
-from atomeye import take_pic
 from quippy  import io
 from quippy  import set_fortran_indexing
-from qlab    import set_fortran_indexing, view, gcat
 
 set_fortran_indexing(False)
 
@@ -148,10 +146,6 @@ def build_tilt_sym_gb(gbid='', bp = [3,3,2], v=[1,1,0],
   if target_dir != None:
     print '\t Writing {0}.xyz to file'.format(gbid)
     io.write('{0}.xyz'.format(os.path.join(target_dir, gbid)), grain_c)
-    try:
-      take_pic(os.path.join(target_dir, gbid),toggle=False)
-    except:
-      'atomeye not pleased!'
     return [z_planes, len(dups), n_grain_unit, grain_c]
   else:
     return grain_c

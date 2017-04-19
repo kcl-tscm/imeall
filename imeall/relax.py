@@ -103,16 +103,14 @@ def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200):
 
 #default to 5 if traj_steps = 120, otherwise increases
   num_iters = int(float(total_steps)/float(traj_steps))
-  print 'num_iters', num_iters
+  logging.debug('num_iters: {}'.format(num_iters))
   for i in range(num_iters):
     opt.run(fmax=FORCE_TOL, steps=traj_steps)
     out.write(grain)
     force_array = grain.get_forces()
     max_force_II = max([max(f) for f in force_array])
-    max_forces = [(fx**2+fy**2+fz**2)**0.5 for fx, fy, fz in zip(grain.properties['force'][0], 
+    max_forces = [np.sqrt(fx**2+fy**2+fz**2) for fx, fy, fz in zip(grain.properties['force'][0], 
                   grain.properties['force'][1], grain.properties['force'][2])]
-    print max(max_forces)
-    print max_force_II
     if max(max_forces) <= FORCE_TOL:
       CONVERGED = True
       break
