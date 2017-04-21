@@ -5,6 +5,7 @@ import shutil
 import ase.io        
 import argparse
 import numpy as np
+import logging
 from   pprint import pprint
 from   cStringIO           import StringIO
 from   ase.optimize.sciopt import SciPyFminCG

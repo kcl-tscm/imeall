@@ -549,15 +549,15 @@ if __name__ == '__main__':
   parser.add_argument("-e", "--extracten", action="store_true", help="Pull all energies for an orientation axis \
                                                     print lowest energies to terminal. List is ordered by angle.")
   parser.add_argument("-g", "--gam_min", action="store_true", help="Pull gamma surface for specified potential directory.")
-  parser.add_argument("-d", "--directory", default="PotBH", help="Directory to search for min_en structure. Default PotBH.")
-  parser.add_argument("-m", "--material", help="material", default="alphaFe")
-  parser.add_argument("-o", "--orientation", help="Orientation axis.", default="001_Tilt")
-  parser.add_argument("-p", "--potential", help="Potential file.", default ="PotBH.xml")
+  parser.add_argument("-d", "--directory", default="PotBH", help="Directory to search for min_en structure. (Default PotBH).")
+  parser.add_argument("-m", "--material", help="The material we wish to query. Default (alphaFe).", default="alphaFe")
+  parser.add_argument("-o", "--or_axis", help="Orientation axis.", default="001")
+  parser.add_argument("-pt", "--potential", help="Potential file.", default ="PotBH.xml")
   args = parser.parse_args()
   analyze =  GBAnalysis()
 
   if args.extracten:
-    or_axis = args.orientation
+    or_axis = args.or_axis
     gb_list = analyze.extract_energies(or_axis=or_axis)
     for gb in sorted(gb_list, key = lambda x: x['angle']):
       if gb['param_file'] == args.potential:
