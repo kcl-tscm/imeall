@@ -88,11 +88,11 @@ class EAMXML(object):
 
 if __name__ == '__main__':
 #If we convert the file into the Fe.alloy format then ase can read it directly.
-  eam_parse = EAMXML(rmin=0.0, rcut=5.3, ds=5.0)
-  PLOT_POT = False
+  eam_parse   = EAMXML(rmin=0.0, rcut=5.3, ds=5.0)
+  PLOT_POT    = True
   CONV_TO_XML = True
-  n_spec   = 4
-  n_pairs  = n_spec*(n_spec+1)/2
+  n_spec      = 4
+  n_pairs     = n_spec*(n_spec+1)/2
   print n_spec, n_pairs
   n_points = 10000
 #Atom Embedding Term

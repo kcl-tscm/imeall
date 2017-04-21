@@ -58,6 +58,11 @@ class PotentialParameters(object):
     return rscale
 
   def paramfile_dict(self):
+    """
+    Dictionary Mapping directories to quip xml files.
+    Returns: 
+      {potential_directory:potential_file}
+    """
     paramfile      = {'DFT':'dft_vasp_pbe',
                       'PotBH':'PotBH.xml',
                       'EAM_Ack':'Fe_Ackland.xml',
@@ -68,7 +73,9 @@ class PotentialParameters(object):
 
   def potdir_dict(self):
     """
-    invert keys from paramfile_dict
+    :method:`potdir_dict` invert keys from `paramfile_dict` to give 
+    Returns: 
+      {potential_file:potential_directory}
     """
     paramfile_dict = self.paramfile_dict()
     potdir = {}
@@ -110,24 +117,24 @@ class Job(object):
         v6bxv2z
     """
     lst = os.listdir(job_dir)
-    for dir in lst:
-      dir = os.path.join(job_dir, dir)
+    for target_dir in lst:
+      target_dir = os.path.join(job_dir, target_dir)
       if regex == None:
-        if os.path.isdir(dir) and dir != 'DFT':
+        if os.path.isdir(target_dir) and target_dir != 'DFT':
           self.sub_pbs(dir, suffix=suffix, regex=regex)
-        elif dir.split('_')[-1] == suffix:
-          pbs_dir = os.path.join(sub_dir, dir)
+        elif target_dir.split('_')[-1] == suffix:
+          pbs_dir = os.path.join(sub_dir, target_dir)
           os.system("cd {0}; qsub fe{1}.pbs".format(pbs_dir, job_dir+'_'+suffix))
         else:
           pass
       else:
-        if os.path.isdir(dir) and dir != 'DFT':
-          self.sub_pbs(dir, suffix=suffix, regex=regex)
-        elif regex.match(dir):
+        if os.path.isdir(target_dir) and target_dir != 'DFT':
+          self.sub_pbs(target_dir, suffix=suffix, regex=regex)
+        elif regex.match(target_dir):
           try:
-            dir  = '/'.join(dir.split('/')[:-1])
-            name = dir.split('/')[-1]
-            os.system("cd {0}; qsub fe{1}.pbs".format(dir, name))
+            target_dir  = '/'.join(target_dir.split('/')[:-1])
+            name = target_dir.split('/')[-1]
+            os.system("cd {0}; qsub fe{1}.pbs".format(target_dir, name))
           except:
             print 'Job Submit Failed'
         else:
@@ -162,21 +169,25 @@ class GBMaintenance(object):
     elif var =='n':
       pass
 
-  def remove_eo_files(self, path):
+  def remove_eo_files(self, path, num_deleted_files, dryrun=False):
     """
-    Remove files with pattern matching jobname.[eo][0-9]+.
+    Remove files with pattern matching jobname.[eo][0-9]+. 
+    Returns: number of deleted files.
     """
     eo_regex = re.compile(r'[eo][0-9]+')
     lst = os.listdir(path)
     for filename in lst:
       filename = os.path.join(path, filename)
       if os.path.isdir(filename):
-        self.remove_eo_files(filename)
+        rec_deleted_files = self.remove_eo_files(filename, 0)
+        num_deleted_files += rec_deleted_files
       elif eo_regex.match(filename.split('.')[-1]):
         print filename
         os.remove(filename)
+        num_deleted_files += 1
       else:
         pass
+    return num_deleted_files
 
   def add_key_to_dict(self, dirname):
     os.path.join(dirname, 'subgb.json')
@@ -380,7 +391,7 @@ class GBAnalysis(object):
         grain_energies.append(gdict)
     return grain_energies
 
-  def calc_energy(self, gb_dict, paramfile='PotBH.xml'):
+  def calc_energy(self, gb_dict, param_file='PotBH.xml'):
     """
     :method:`calc_energy` given a subgb.json dictionary, and a potential
     calculate grainboundary energy.
@@ -388,7 +399,7 @@ class GBAnalysis(object):
     pot_param     = PotentialParameters()
     ener_per_atom = pot_param.gs_ener_per_atom()
     try:
-      gb_ener = 16.02*((gb_dict['E_gb']-(ener_per_atom[paramfile]*float(gb_dict['n_at'])))/(2*gb_dict['A']))
+      gb_ener = 16.02*((gb_dict['E_gb']-(ener_per_atom[param_file]*float(gb_dict['n_at'])))/(2*gb_dict['A']))
     except KeyError:
       return None
     else:
@@ -567,33 +578,6 @@ if __name__ == '__main__':
           print 'No Valid Energy: ', gb['param_file'], gb['angle']
   
   if args.gam_min:
-#   Search potential directory for all the gamma surface it contains
+#   Search potential directory for the gamma surface it contains
 #   for all the cutoff radii.
-    subgb_files = []
-    analyze.find_gb_json(args.directory, subgb_files, 'subgb.json')
-    gam_surfs = []
-    for gb in subgb_files:
-      with open(gb[1],'r') as f:
-        gb_json = json.load(f)
-      locen = analyze.calc_energy(gb_json)
-      if locen is not None and locen >= 0.0:
-        gam_surfs.append((gb_json['rcut'], gb_json['rbt'][0], gb_json['rbt'][1], locen, gb[0]))
-      else:
-        pass
-    for gs in gam_surfs:
-      print gs
-    en_list = [x[3] for x in gam_surfs]
-    en_list = [x for x in en_list if x is not None]
-    min_en  = min(en_list)
-    print 'Min Energy: ', min_en, 'J/m^{2}' 
-    min_coords = filter(lambda x: round(x[3], 5) == round(min_en, 5), gam_surfs)
-    print 'Coordinates of Min Energy Grain Boundaries:'
-    for m in min_coords:
-      print m
-    max_en  = max(en_list)
-    print 'Max Energy: ', max_en, 'J/m^{2}'
-    print 'Coordinates of Max Energy Grain Boundaries:'
-    max_coords = filter(lambda x: round(x[3], 5)==round(max_en, 5), gam_surfs)
-    for m in max_coords:
-      print m
-
+    analyze.gam_min(directory=args.directory)
