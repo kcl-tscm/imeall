@@ -70,7 +70,7 @@ class PotentialParameters(object):
                       'EAM_Ack':'Fe_Ackland.xml',
                       'EAM_Men':'Fe_Mendelev.xml',
                       'EAM_Mish':'iron_mish.xml',
-                      'EAM_Dud':'Fe_Dudarev.xml'
+                      'EAM_Dud':'Fe_Dudarev.xml',
                       'GAP':'gp33b.xml'}
     return paramfile
 
