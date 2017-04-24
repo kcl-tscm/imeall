@@ -219,8 +219,10 @@ def gb_check_path(material='alphaFe', or_axis='001', modify_db=False):
 def gb_check_conv(material='alphaFe', or_axis='001', modify_db=False):
   """
   :method:`gb_check_conv` scans through grainboundary directory tree,
-           inspecting the json dictionary and update the SQLite model if 
-           the grain boundary energy or convergence flag is inconsistent.
+           inspecting the subgrain dictionary and the SQLite model to test if 
+           the grain boundary energy, number of atoms, gb_area, 
+           and convergence flag are consistent. If `modify_db`
+           is True the SQLite model will be updated.
   :attributes:
   material: Which material to do check json/database convergence consistency on.
   or_axis: Which orientation axis to check.
@@ -262,6 +264,33 @@ def gb_check_conv(material='alphaFe', or_axis='001', modify_db=False):
             print 'Model: ', subgb_model.converged, 'Json:', subgb_dict['converged']
             subgb_model.converged = subgb_dict['converged']
             subgb_model.save()
+
+      try:
+        assert subgb_model.n_at==subgb_dict['n_at']
+      except AssertionError:
+        if not modify_db:
+          print subgb_model.n_at, subgb_dict['n_at']
+        else:
+          print 'Updating model instance in database:'
+          subgb_model.n_at = subgb_dict['n_at']
+          print 'Model: {}  json:{}'.format(subgb_model.n_at, subgb_dict['n_at'])
+          subgb_model.save()
+
+      try:
+        assert (abs(subgb_model.area - subgb_dict['area']) < 1e-8)
+      except KeyError:
+        print 'adding area key'
+        subgb_dict['area'] = subgb_dict['A']
+        with open(subgb_dict_path, 'w') as f:
+          json.dump(subgb_dict, f, indent=2)
+      except AssertionError:
+        if not modify_db:
+          print subgb_model.area, subgb_dict['area']
+        else:
+          subgb_model.area = subgb_dict['area']
+          print 'Model: {}  json:{}'.format(subgb_model.area, subgb_dict['area'])
+          subgb_model.save()
+
       try:
         assert (abs(subgb_model.E_gb - subgb_dict['E_gb']) < 1e-8)
       except AssertionError:
@@ -279,7 +308,7 @@ def gb_check_conv(material='alphaFe', or_axis='001', modify_db=False):
         with open(subgb_dict_path, 'w') as f:
           json.dump(subgb_dict, f, indent=2)
 
-def gb_check_force(material='alphaFe', or_axis='001', force_tol=0.05, modify_db=False):
+def gb_check_force(material='alphaFe', or_axis='001', force_tol=0.05, modify_db=False, gb_start=0, sub_start=0):
   """
   :method:`gb_check_force`. Recurse through directory tree, loading the structure file, json dict 
   and the model for each subgrain. Check that the force tolerance in the structure file has actually been 
@@ -288,10 +317,8 @@ def gb_check_force(material='alphaFe', or_axis='001', force_tol=0.05, modify_db=
   analyze  = GBAnalysis()
   gb_files = []
   analyze.find_gb_json('{0}'.format(os.path.join(GRAIN_DATABASE, os.path.join(material, or_axis))), gb_files, 'gb.json')
-  start     = 6
-  sub_start = 0
   no_struct_file = open('no_struct.txt','a')
-  for gb_num, gb in enumerate(gb_files[start:]):
+  for gb_num, gb in enumerate(gb_files[gb_start:]):
     with open(gb[1], 'r') as f:
       gb_json = json.load(f)
     GB_model = GrainBoundary.select().where(GrainBoundary.gbid==gb_json['gbid']).get()
@@ -311,11 +338,11 @@ def gb_check_force(material='alphaFe', or_axis='001', force_tol=0.05, modify_db=
       except IOError:
         print 'No Traj File'
       else:  
-        print gb_num+start, subgb_num+sub_start, struct_path
+        print gb_num+gb_start, subgb_num+sub_start, struct_path
         try:
           forces = [np.sqrt(x**2+y**2+z**2) for x,y,z, in zip(ats.properties['force'][0], ats.properties['force'][1], ats.properties['force'][2])]
         except KeyError:
-          print gb_num+start, struct_path
+          print gb_num+gb_start, struct_path
           print 'No Force in atoms object'
           conv_check = False
         else:
@@ -326,15 +353,21 @@ def gb_check_force(material='alphaFe', or_axis='001', force_tol=0.05, modify_db=
             subgb_dict['E_gb'] = 0.0
 
       if modify_db:
-        subgb_dict['converged'] = conv_check
-        print struct_path
-        print subgb_dict['converged'], conv_check
-        with open(subgb_dict_path, 'w') as f:
-          json.dump(subgb_dict, f, indent=2)
+        if conv_check != subgb_dict['converged']:
+          print struct_path
+          print 'Force from .xyz: ', conv_check, 'json: ', subgb_dict['converged'], 'Model: ', subgb_model.converged
+          subgb_dict['converged'] = conv_check
+          with open(subgb_dict_path, 'w') as f:
+            json.dump(subgb_dict, f, indent=2)
+        else:
+          pass
       else:
-        print struct_path
         try:
-          print 'JSON', subgb_dict['converged'], conv_check
+          if conv_check != subgb_dict['converged']:
+            print struct_path
+            print 'Force from .xyz: ', conv_check, 'json: ', subgb_dict['converged'], 'Model: ', subgb_model.converged
+          else:
+            pass
         except KeyError:
           print 'no convergence key'
           subgb_dict['converged']=conv_check
@@ -344,7 +377,8 @@ def gb_check_force(material='alphaFe', or_axis='001', force_tol=0.05, modify_db=
 def change_json_key(material='alphaFe', or_axis='001'):
   """
   :method:`change_json_key` replaces '_traj' string in subgb_dict['gbid']
-  method could be useful if we wish to change database/subgb strings.
+  method. Can be modified to update or correct database/subgb strings in json
+  files.
   """
   analyze  = GBAnalysis()
   gb_files = []
@@ -517,8 +551,8 @@ def populate_db(material='alphaFe', or_axis='001', gbid='', modify=False):
 
 if __name__=="__main__":
   parser = argparse.ArgumentParser()
-#Specifieri
-  parser.add_argument("-m","--material", help="The material we wish to query.", default="alphaFe")
+#Specifiers
+  parser.add_argument("-m","--material", help="The material we wish to query. Default (alphaFe)", default="alphaFe")
   parser.add_argument("-o","--or_axis", help="Orientation axis to pull from database. (default: 001)", default="001")
   parser.add_argument("-gbt","--gb_type", help="Type of grain boundary to pull: mixed, tilt, twist. (default: tilt)", default="tilt")
   parser.add_argument("-pt","--potential", help="potential to pull from database. Use --list_potential to see available potentials.", default="PotBH.xml")
@@ -526,6 +560,8 @@ if __name__=="__main__":
   parser.add_argument("-j","--json_path", help="Path (relative to Database root of subgrain to be added to database).", default="")
   parser.add_argument("-mod","--modify", help="Generic flag. If included database will be updated, otherwise program just reports intended actions  \
                                                   without  modifying database. Applies to check_conv and check_force.", action="store_true")
+  parser.add_argument("-gbs", "--gb_start", help="Which grain number to start checking forces at. (default:0)", default=0, type=int)
+  parser.add_argument("-sgbs", "--sub_start", help="Which grain number to start checking forces at. (default:0)", default=0, type=int)
 #Actions
   parser.add_argument("-l","--list", help="List converged structures in database and their energies.", action="store_true")
   parser.add_argument("-a","--populate", help="Recurse through directory tree add subgrains to SQLite database. Choose orientation with or_axis.", action="store_true")
@@ -586,7 +622,7 @@ if __name__=="__main__":
     gb_check_conv(material=args.material, or_axis=args.or_axis, modify_db=args.modify)
 
   if args.check_force:
-    gb_check_force(material=args.material, or_axis=args.or_axis, modify_db=args.modify)
+    gb_check_force(material=args.material, or_axis=args.or_axis, modify_db=args.modify, gb_start=args.gb_start, sub_start=args.sub_start)
 
   if args.insert:
     assert args.gbid != ''

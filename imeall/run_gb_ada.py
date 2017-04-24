@@ -19,7 +19,7 @@ parser.add_argument("-gbt","--gb_type", help="Specify type of boundary twist or 
 parser.add_argument("-ct","--calc_type", help="Potential used for calculation.", required=True) 
 parser.add_argument("-p","--pattern", help="Job pattern to select grainboundaries.", default="001")
 parser.add_argument("-d","--delay", help="Time delay between job submissions.", type=int, default=60)
-parser.add_argument("-t","--tranchsize", help="Tranchsize.", type=int, default=800)
+parser.add_argument("-t","--tranchsize", help="Tranchsize.", type=int, default=2000)
 parser.add_argument("-q","--queue", help="Name of queue on machine.", default="LowMemShortterm.q") 
 parser.add_argument("-j","--jobfile", help="Job file if this is specified the jobs will only be run\
                                             if they are present in the file specified. Each gbid \
@@ -80,7 +80,7 @@ for job_tract in chunker(jobdirs, args.tranchsize):
     if parallel:
       print 'Parallel Job'
       pbs_str = open('/users/k1511981/pymodules/templates/calc_rundyn.pbs', 'r').read()
-                gb_args = '-ct {calc_type} -rc {rc} -i_v {i_v} -i_bxv {i_bxv} -gbt {gb_type}'.format(rc=job[1], i_v=job[2], i_bxv=job[3], 
+      gb_args = '-ct {calc_type} -rc {rc} -i_v {i_v} -i_bxv {i_bxv} -gbt {gb_type}'.format(rc=job[1], i_v=job[2], i_bxv=job[3], 
       calc_type = args.calc_type, gb_type=args.gb_type)
       pbs_str = pbs_str.format(jname='fe'+job[0][:8], time=jtime, queue=args.queue, gb_args=gb_args)
       with open('gb.pbs', 'w') as pbs_file:
@@ -90,13 +90,9 @@ for job_tract in chunker(jobdirs, args.tranchsize):
       job     = subprocess.Popen(qsub_args.split())
       job.wait()
     else:
-<<<<<<< HEAD
+      print 'Running in Serial'
       gb_args = '-ct {calc_type} -rc {rc} -i_v {i_v} -i_bxv {i_bxv} -gbt {gb_type}'.format(rc=job[1], i_v=job[2], i_bxv=job[3],
                 gb_type=args.gb_type, calc_type=args.calc_type)
-=======
-      print 'Running in Serial'
-      gb_args = '-rc {rc} -i_v {i_v} -i_bxv {i_bxv} -gbt {gb_type}'.format(rc=job[1], i_v=job[2], i_bxv=job[3], gb_type=args.gb_type)
->>>>>>> 1ee1cd3a5bce8d5c2d3dcb84ec9592e0df6a4236
       gb_args = "python /Users/lambert/pymodules/imeall/imeall/run_dyn.py {}".format(gb_args)
       print job, gb_args
       job = subprocess.Popen(gb_args.split())
