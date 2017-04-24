@@ -465,7 +465,7 @@ if __name__=='__main__':
                "orientation_axis": list(orientation_axis), 
                "type": "symmetric twist boundary",
                "angle": gb[0], "zplanes": zplanes, "sigma_csl": sigma_csl,
-               "n_at": nunitcell, 'A': A, 'H': H}
+               "n_at": nunitcell, 'A': A, 'area':A, 'H': H}
 
     with open(os.path.join(target_dir, 'gb.json'), 'w') as outfile:
       json.dump(gb_dict, outfile, indent=2)
