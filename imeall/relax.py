@@ -17,7 +17,7 @@ from   ase.optimize        import BFGS, FIRE, LBFGS, MDMin, QuasiNewton
 
 set_fortran_indexing(False)
 
-def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200):
+def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200, force_tol = 0.05):
   """
   :method:`relax_gb` function definition to relax a grain_boundary.
       gb_file     = gbid or subgbid.
@@ -110,7 +110,7 @@ def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200):
     json.dump(j_dict, outfile, indent=2)
 
   CONVERGED = False
-  FORCE_TOL = 0.05
+  FORCE_TOL = force_tol
 
 #default to 5 if traj_steps = 120, otherwise increases
   num_iters = int(float(total_steps)/float(traj_steps))
@@ -144,6 +144,7 @@ if __name__ == '__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument('-inp', '--input_file', help='name of input file')
   parser.add_argument('-ts',  '--traj_steps', help='Number of steps to write trajectory to file', type=int, default=120)
+  parser.add_argument('-f',  '--force_tol', help='Force tolerance for minimization', type=float, default=0.05)
   args = parser.parse_args()
   input_file = args.input_file
-  relax_gb(gb_file=input_file, traj_steps=args.traj_steps)
+  relax_gb(gb_file=input_file, traj_steps=args.traj_steps, force_tol=args.force_tol)

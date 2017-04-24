@@ -56,7 +56,8 @@ if args.pot_type == 'EAM':
 elif args.pot_type == 'GAP':
   #rescale not yet implemented
   #pot     = Potential('IP GAP do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=args.input_file)
-  pot     = Potential('IP GAP'.format(r_scale), param_filename=args.input_file)
+  print 'No Gap Rescale Implemented!'
+  pot     = Potential('IP GAP calc_variance=T'.format(r_scale), param_filename=args.input_file)
 else:
   sys.exit('Invalid pot_type')
 
@@ -67,7 +68,7 @@ minim   = Minim(fe_bulk, relax_positions=True, relax_cell=True)
 minim.run(fmax=1e-4)
 
 print 'After rescaled Relaxation'
-print 'Energy', fe_bulk.get_potential_energy()/len(fe_bulk)
+print 'Per Atom Energy', fe_bulk.get_potential_energy()/len(fe_bulk)
 print fe_bulk.get_cell().round(5)
 fe_bulk.write('Fe_rescaled_relax.xyz')
 

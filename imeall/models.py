@@ -43,7 +43,8 @@ class PotentialParameters(object):
               'iron_mish.xml'   : -4.28000356875,
               'Fe_Ackland.xml'  : -4.01298226805,
               'Fe_Dudarev.xml'  : -4.31608690638,
-              'dft_vasp_pbe'    : -8.238035
+              'dft_vasp_pbe'    : -8.238035,
+              'gp33b.xml'       : -3460.93341688
              }
     return eperat
 
@@ -53,7 +54,8 @@ class PotentialParameters(object):
               'iron_mish.xml'   : 1.0129007626,
               'Fe_Ackland.xml'  : 1.00894185389,
               'Fe_Dudarev.xml'  : 1.01279093417,
-              'dft_vasp_pbe'    : 1.00000000000
+              'dft_vasp_pbe'    : 1.00000000000,
+              'gp33b.xml'       : 1.0015226318
               }
     return rscale
 
@@ -68,7 +70,8 @@ class PotentialParameters(object):
                       'EAM_Ack':'Fe_Ackland.xml',
                       'EAM_Men':'Fe_Mendelev.xml',
                       'EAM_Mish':'iron_mish.xml',
-                      'EAM_Dud':'Fe_Dudarev.xml'}
+                      'EAM_Dud':'Fe_Dudarev.xml'
+                      'GAP':'gp33b.xml'}
     return paramfile
 
   def potdir_dict(self):
