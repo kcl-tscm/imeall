@@ -23,26 +23,23 @@ parser.add_argument("-s","--start_num", help="Job_num to start at.", type=int, d
 parser.add_argument("-n","--number", help="Num jobs to submit.", type=int, default=10)
 parser.add_argument("-t","--tranchsize", help="Tranchsize.", type=int, default=2000)
 parser.add_argument("-q","--queue", help="Name of queue on machine.", default="LowMemShortterm.q") 
-parser.add_argument("-j","--jobfile", help="Job file if this is specified the jobs will only be run\
+parser.add_argument("-i","--input_file", help="Job file if this is specified the jobs will only be run\
                                             if they are present in the file specified. Each gbid \
                                             should be on a different line.", default="") 
 args = parser.parse_args()
 
 #completed_jobs = ['00195301120','00181701140','0017575790','00171501160','0016193350','00149556130','00111421100']
 #[jobdirs.remove(x) for x in completed_jobs]
-
 template_dir = os.environ['TEMPLATE_DIR']
-print template_dir
-
 def chunker(seq, size):
   return (seq[pos:pos + size] for pos in xrange(0, len(seq), size))
 
 if args.gb_type=="tilt":
-  if args.jobfile=="":
+  if args.input_file=="":
     jobdirs   = glob.glob('{dir_pattern}*'.format(dir_pattern=args.pattern))
     jobdirs   = filter(os.path.isdir, jobdirs)
   else:
-    with open(args.jobfile, 'r') as f:
+    with open(args.input_file, 'r') as f:
       jobdirs = f.read().split()
   print jobdirs
   jdirs     = []

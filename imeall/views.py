@@ -129,15 +129,12 @@ def grain_boundary(url_path, gbid):
       subgrainsj.append(json.load(open(gb_path,'r')))
     except:
       pass
-  #Pull gamma surface
   analyze  = GBAnalysis()
-
   potparams = PotentialParameters()
   paramfile_dict = potparams.paramfile_dict()
   gam_dict = {}
   for potdir in paramfile_dict.keys():
     gam_dict[potdir] = analyze.pull_gamsurf(path=path, potential=potdir) 
-
   return render_template('grain_boundary.html', gbid=gbid, url_path=url_path,
                           gb_info=gb_info, tree=tree, subgrains=subgrains, 
                           subgrainsj=json.dumps(subgrainsj), gam_dict=gam_dict)
@@ -181,7 +178,6 @@ def analysis():
       gbs = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane == oraxis)
     else:
       sys.exit('Invalid gb_type!')
-
     for gb in gbs.order_by(GrainBoundary.angle):
       subgbs = (gb.subgrains.select(GrainBoundary, SubGrainBoundary)
                       .where(SubGrainBoundary.potential==potential)
@@ -191,8 +187,9 @@ def analysis():
       logging.debug(gb.gbid)
       subgbs = [(16.02*(subgb['E_gb']-float(subgb['n_at']*ener_per_atom[potential]))/(2.0*subgb['area']), subgb) for subgb in subgbs]
       subgbs.sort(key = lambda x: x[0])
-      if (len(subgbs) > 0) and subgbs[0][0] < 3.0:
-        gbdat.append({'param_file' : potential,
+      if (len(subgbs) > 0):
+        if (subgbs[0][0] > 0.0):
+          gbdat.append({'param_file' : potential,
                       'or_axis'    : ' '.join(map(str, subgbs[0][1]['orientation_axis'].split(','))),
                       'angle'      : subgbs[0][1]['angle']*(180./(3.14159)),
                       'min_en'     : subgbs[0][0],
@@ -200,6 +197,11 @@ def analysis():
                       'url'        : 'http://137.73.5.224:5000/grain/alphaFe/'
                                     +''.join(map(str, deserialize_vector_int(subgbs[0][1]['orientation_axis'])))
                                     +'/' + gb.gbid})
+        else:
+          print gb.gbid, potential, subgbs[0][1]['gbid'], subgbs[0][1]['angle']*(180./(3.14159)), subgbs[0][0], subgbs[0][1]['path']
+          print subgbs[0][1]['area'], subgbs[0][1]['n_at']
+      else:
+        pass
   return render_template('analysis.html', gbdat=json.dumps(gbdat))
 
 def make_tree(path):

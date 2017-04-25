@@ -43,7 +43,8 @@ class PotentialParameters(object):
               'iron_mish.xml'   : -4.28000356875,
               'Fe_Ackland.xml'  : -4.01298226805,
               'Fe_Dudarev.xml'  : -4.31608690638,
-              'dft_vasp_pbe'    : -8.238035
+              'dft_vasp_pbe'    : -8.238035,
+              'gp33b.xml'       : -3460.93341688
              }
     return eperat
 
@@ -53,7 +54,8 @@ class PotentialParameters(object):
               'iron_mish.xml'   : 1.0129007626,
               'Fe_Ackland.xml'  : 1.00894185389,
               'Fe_Dudarev.xml'  : 1.01279093417,
-              'dft_vasp_pbe'    : 1.00000000000
+              'dft_vasp_pbe'    : 1.00000000000,
+              'gp33b.xml'       : 1.0015226318
               }
     return rscale
 
@@ -68,7 +70,8 @@ class PotentialParameters(object):
                       'EAM_Ack':'Fe_Ackland.xml',
                       'EAM_Men':'Fe_Mendelev.xml',
                       'EAM_Mish':'iron_mish.xml',
-                      'EAM_Dud':'Fe_Dudarev.xml'}
+                      'EAM_Dud':'Fe_Dudarev.xml',
+                      'GAP':'gp33b.xml'}
     return paramfile
 
   def potdir_dict(self):
@@ -560,15 +563,15 @@ if __name__ == '__main__':
   parser.add_argument("-e", "--extracten", action="store_true", help="Pull all energies for an orientation axis \
                                                     print lowest energies to terminal. List is ordered by angle.")
   parser.add_argument("-g", "--gam_min", action="store_true", help="Pull gamma surface for specified potential directory.")
-  parser.add_argument("-d", "--directory", default="PotBH", help="Directory to search for min_en structure. Default PotBH.")
-  parser.add_argument("-m", "--material", help="material", default="alphaFe")
-  parser.add_argument("-o", "--orientation", help="Orientation axis.", default="001_Tilt")
-  parser.add_argument("-p", "--potential", help="Potential file.", default ="PotBH.xml")
+  parser.add_argument("-d", "--directory", default="PotBH", help="Directory to search for min_en structure. (Default PotBH).")
+  parser.add_argument("-m", "--material", help="The material we wish to query. Default (alphaFe).", default="alphaFe")
+  parser.add_argument("-o", "--or_axis", help="Orientation axis.", default="001")
+  parser.add_argument("-pt", "--potential", help="Potential file.", default ="PotBH.xml")
   args = parser.parse_args()
   analyze =  GBAnalysis()
 
   if args.extracten:
-    or_axis = args.orientation
+    or_axis = args.or_axis
     gb_list = analyze.extract_energies(or_axis=or_axis)
     for gb in sorted(gb_list, key = lambda x: x['angle']):
       if gb['param_file'] == args.potential:
