@@ -3,6 +3,7 @@ import sys
 import json
 import shutil
 import ase.io        
+import logging
 import argparse
 import numpy as np
 from   pprint import pprint
