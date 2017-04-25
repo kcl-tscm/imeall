@@ -3,6 +3,7 @@ import sys
 import json
 import shutil
 import ase.io        
+import logging
 import argparse
 import numpy as np
 import logging
@@ -16,7 +17,7 @@ from   ase.optimize        import BFGS, FIRE, LBFGS, MDMin, QuasiNewton
 
 set_fortran_indexing(False)
 
-def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200):
+def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200, force_tol = 0.05):
   """
   :method:`relax_gb` function definition to relax a grain_boundary.
       gb_file     = gbid or subgbid.
@@ -61,6 +62,12 @@ def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200):
     elif param_file == 'Fe_Dudarev.xml':
       eam_pot = os.path.join(POT_DIR,'Fe_Dudarev.xml')
       r_scale = 1.01279093417 
+    elif param_file == 'gp33b.xml':
+      eam_pot = os.path.join(POT_DIR,'gp33b.xml')
+      sparse_file = 'gp33b.xml.sparseX.GAP_2016_10_3_60_19_29_10_8911'
+      eam_pot_sparse = os.path.join(POT_DIR, sparse_file)
+      shutil.copy(eam_pot, './')
+      shutil.copy(eam_pot_sparse, './')
     else:
       print 'No paramfile found!'
       sys.exit()
@@ -73,7 +80,11 @@ def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200):
   print '{0}.xyz'.format(gb_file)
   print os.getcwd()
   grain       = AtomsReader('{0}.xyz'.format(gb_file))[-1]
-  pot         = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=eam_pot)
+  if param_file != 'gp33b.xml':
+    pot         = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=eam_pot)
+  else:
+    pot         = Potential('IP GAP', param_filename=eam_pot)
+
   grain.set_calculator(pot)
   grain.info['adsorbate_info'] = None
   E_gb_init   = grain.get_potential_energy()
@@ -85,7 +96,6 @@ def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200):
   strain_mask = [0,0,1,0,0,0]
   ucf         = UnitCellFilter(grain, strain_mask)
   opt         = FIRE(ucf)
-  #opt         = LBFGS(ucf)
   cell = grain.get_cell()
   A    = cell[0][0]*cell[1][1]
   H    = cell[2][2]
@@ -100,7 +110,7 @@ def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200):
     json.dump(j_dict, outfile, indent=2)
 
   CONVERGED = False
-  FORCE_TOL = 0.05
+  FORCE_TOL = force_tol
 
 #default to 5 if traj_steps = 120, otherwise increases
   num_iters = int(float(total_steps)/float(traj_steps))
@@ -126,12 +136,15 @@ def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200):
     for key, value in gb_dict.items():
       j_dict[key] = value
     json.dump(j_dict, outfile, indent=2)
+  os.remove(param_file)
+  os.remove(sparse_file)
 
 if __name__ == '__main__':
 #Command line tool for relaxing grainboundary structure
   parser = argparse.ArgumentParser()
   parser.add_argument('-inp', '--input_file', help='name of input file')
   parser.add_argument('-ts',  '--traj_steps', help='Number of steps to write trajectory to file', type=int, default=120)
+  parser.add_argument('-f',  '--force_tol', help='Force tolerance for minimization', type=float, default=0.05)
   args = parser.parse_args()
   input_file = args.input_file
-  relax_gb(gb_file=input_file, traj_steps=args.traj_steps)
+  relax_gb(gb_file=input_file, traj_steps=args.traj_steps, force_tol=args.force_tol)

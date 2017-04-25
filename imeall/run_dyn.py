@@ -383,23 +383,24 @@ if __name__=='__main__':
   parser.add_argument("-gbt",   "--gb_type", help="Specify type of boundary twist or tilt.", default="tilt")
 
   args = parser.parse_args()
-  calc_type = args.calc_type
   prefix    = args.prefix
   queue     = args.queue
   time      = args.time
   rcut      = float(args.rcut)
 
 # Each calculation type is associated with a potential:
-  if calc_type == 'EAM_Mish':
+  if args.calc_type == 'EAM_Mish':
     param_file = 'iron_mish.xml'
-  elif calc_type == 'PotBH':
+  elif args.calc_type == 'PotBH':
     param_file = 'PotBH.xml'
-  elif calc_type == 'EAM_Men':
+  elif args.calc_type == 'EAM_Men':
     param_file = 'Fe_Mendelev.xml'
-  elif calc_type == 'EAM_Ack':
+  elif args.calc_type == 'EAM_Ack':
     param_file = 'Fe_Ackland.xml'
-  elif calc_type == 'EAM_Dud':
+  elif args.calc_type == 'EAM_Dud':
     param_file = 'Fe_Dudarev.xml'
+  elif args.calc_type == 'GAP':
+    param_file = 'gp33b.xml'
   else:
     print 'No available potential corresponds to this calculation type.'
     sys.exit()
@@ -418,7 +419,7 @@ if __name__=='__main__':
       print '\n'
       print '\t', gbid
       print '\n'
-      gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type=calc_type,
+      gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type=args.calc_type,
                         potential='IP EAM_ErcolAd', param_file=param_file)
 
       if args.gb_type=="twist":
@@ -444,7 +445,7 @@ if __name__=='__main__':
     gbid = grain_dict['gbid']
     bp   = grain_dict['boundary_plane']
     v    = grain_dict['orientation_axis']
-    gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type=calc_type,
+    gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type=args.calc_type,
                       potential = 'IP EAM_ErcolAd', param_file=param_file)
     if args.gb_type=="twist":
       sup_v   = 4
