@@ -188,7 +188,7 @@ def analysis():
       subgbs = [(16.02*(subgb['E_gb']-float(subgb['n_at']*ener_per_atom[potential]))/(2.0*subgb['area']), subgb) for subgb in subgbs]
       subgbs.sort(key = lambda x: x[0])
       if (len(subgbs) > 0):
-        if (subgbs[0][0] > 0.0):
+        if (subgbs[0][1]['converged'] == True and subgbs[0][0] < 3.0):
           gbdat.append({'param_file' : potential,
                       'or_axis'    : ' '.join(map(str, subgbs[0][1]['orientation_axis'].split(','))),
                       'angle'      : subgbs[0][1]['angle']*(180./(3.14159)),
@@ -197,11 +197,11 @@ def analysis():
                       'url'        : 'http://137.73.5.224:5000/grain/alphaFe/'
                                     +''.join(map(str, deserialize_vector_int(subgbs[0][1]['orientation_axis'])))
                                     +'/' + gb.gbid})
-        else:
-          print gb.gbid, potential, subgbs[0][1]['gbid'], subgbs[0][1]['angle']*(180./(3.14159)), subgbs[0][0], subgbs[0][1]['path']
-          print subgbs[0][1]['area'], subgbs[0][1]['n_at']
+        #else:
+        #  print gb.gbid, potential, subgbs[0][1]['gbid'], subgbs[0][1]['angle']*(180./(3.14159)), subgbs[0][0], subgbs[0][1]['path']
+        #  print subgbs[0][1]['area'], subgbs[0][1]['n_at']
       else:
-        pass
+        print gb.gbid, potential
   return render_template('analysis.html', gbdat=json.dumps(gbdat))
 
 def make_tree(path):

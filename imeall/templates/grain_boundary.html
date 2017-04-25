@@ -87,14 +87,15 @@
         $("#subgraindirs").toggle();
       });
   </script>
-  <div id="subgraindirs">
     <ul>
       {%- for item in tree.children recursive %}
+        <div id="subgraindirs">
         {%- if item.children -%}
           <li> <a href="{{url_for('serve_file', gbid=gbid, filename=item.name, 
                           url_path=url_path, textpath=item.fullpath)}}"> {{item.name}} </a>
           <ul class="submenu">{{loop(item.children)}}</ul>
           </li>
+        </div>
         {% else %}
           {% if item.name|file_extension =='png' %}
              <li> 
@@ -112,5 +113,4 @@
         {%- endif %}
       {%- endfor %}
     </ul>
-  </div>
 {% endblock body %}
