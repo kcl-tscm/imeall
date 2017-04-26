@@ -267,6 +267,18 @@ def gb_check_conv(material='alphaFe', or_axis='001', modify_db=False):
 
       try:
         assert subgb_model.n_at==subgb_dict['n_at']
+      except KeyError:
+        try:
+          ats = Atoms(struct_path)
+        except RuntimeError:
+          print struct_path.replace('_traj','')
+          ats = Atoms(struct_path.replace('_traj',''))
+
+        cell = ats.get_cell()
+        subgb_dict['n_at'] = len(ats)
+        subgb_dict['area'] = cell[0][0]*cell[1][1]
+        with open(subgb_dict_path, 'w') as f:
+          json.dump(subgb_dict, f, indent=2)
       except AssertionError:
         if not modify_db:
           print subgb_model.n_at, subgb_dict['n_at']

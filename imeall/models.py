@@ -425,18 +425,22 @@ class GBAnalysis(object):
       for gb in subgb_files:
         with open(gb[1],'r') as f:
           gb_json = json.load(f)
-        ener = self.calc_energy(gb_json, paramfile=paramfile_dict[potential])
+        ener = self.calc_energy(gb_json, param_file=paramfile_dict[potential])
         if ener != None:
           gam_surfs.append((gb_json['rcut'], gb_json['rbt'][0], gb_json['rbt'][1], ener))
         else:
           unconv.append(gb[1])
       en_list     = [x[3] for x in gam_surfs]
-      min_en      = min(en_list)
+      try:
+        min_en      = min(en_list)
+      except ValueError:
+        return {'max_en':0.0, 'min_en':0.0, 'min_coords':[], 'max_coords':[]}
+      else:
 #Create lists of minimum energy structures (vx bxv rcut).
-      min_coords  = [(gam[1], gam[2], gam[0]) for gam in filter(lambda x: round(x[3], 5) == round(min_en, 5), gam_surfs)]
-      max_en      =  max(en_list)
-      max_coords  = [(gam[1], gam[2], gam[0]) for gam in filter(lambda x: round(x[3], 5)==round(max_en, 5), gam_surfs)]
-      gam_dict    = {'max_en':max_en, 'min_en':min_en, 'min_coords':min_coords, 'max_coords':max_coords}
+        min_coords  = [(gam[1], gam[2], gam[0]) for gam in filter(lambda x: round(x[3], 5) == round(min_en, 5), gam_surfs)]
+        max_en      =  max(en_list)
+        max_coords  = [(gam[1], gam[2], gam[0]) for gam in filter(lambda x: round(x[3], 5)==round(max_en, 5), gam_surfs)]
+        gam_dict    = {'max_en':max_en, 'min_en':min_en, 'min_coords':min_coords, 'max_coords':max_coords}
     else:
       print "No potential directory:", potential, "found."
       gam_dict = {'max_en':0.0, 'min_en':0.0,'min_coords':[],'max_coords':[]}
