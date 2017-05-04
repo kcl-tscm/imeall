@@ -32,19 +32,12 @@ def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200, force_tol = 
     if maxforce < fmax and maxstress < smax:
       return True
     return False
-  
   with open('subgb.json', 'r') as outfile:
     j_dict = json.load(outfile)
-  
-  #Rescaled to 2.83 which is magic number for the grain boundary canonical case.
-  #Ada
   try:
-    #POT_DIR = '/users/k1511981/pymodules/imeall/imeall/potentials' 
     POT_DIR     = os.environ['POTDIR']
   except:
     sys.exit("PLEASE SET export POTDIR='path/to/potfiles/'")
-  #Retina
-  #POT_DIR = '/Users/lambert/pymodules/imeall/imeall/potentials' 
   try: 
     param_file = j_dict['param_file']
     if param_file == 'iron_mish.xml':

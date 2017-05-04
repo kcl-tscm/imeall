@@ -18,6 +18,12 @@ class Hydrify(object):
   class:Hydrify contains methods for adding hydrogens at specific positions in a 
   simulation cell.
   """ 
+  def __init__(self):
+    pass
+
+  def __repr__(self):
+    print 'Hydrify Object.'
+
   def tetravol(self, a,b,c,d):
     """
     Calculates the volume of a tetrahedron, given vertices a,b,c and d (triplets)
@@ -33,8 +39,8 @@ class Hydrify(object):
 
   def append_if_thresh(self, h_pos, rcut = 1.6):
     """
-    :method: append_if_thresh add position vector to list if it is greater than a 
-    specified distance from existing vectors.
+    :method: append_if_thresh add position vector to list if 
+    it is greater than a specified distance from existing vectors.
     """
     pared_h = h_pos[0]
     for h in h_pos[1:]:
@@ -42,8 +48,8 @@ class Hydrify(object):
         pared_h =  np.vstack((pared_h, h))
     return pared_h
 
-  def hydrogenate_gb(self, gb, mode='GB', z_plane=None, rr=10.0, bp=np.array([1.,9.,0.]), d_plane=2.83, d_H=1.6, tetrahedral=True,
-  alat=2.83, crackpos_fix=None):
+  def hydrogenate_gb(self, gb, mode='GB', z_plane=None, rr=10.0, bp=np.array([1.,9.,0.]), 
+                     d_plane=2.83, d_H=1.6, tetrahedral=True, alat=2.83, crackpos_fix=None):
     """
     If mode is GB Given a grain boundary, find a bulk plane to dump hydrogen in,
     and a platelet of hydrogen parallel to the grain boundary. Routine
@@ -73,6 +79,8 @@ class Hydrify(object):
         fixed_mask = (np.sqrt(map(sum, map(np.square, gb.positions[:,0:3]-crackpos_fix[:]))) <= rr)
       cl         = gb.select(fixed_mask, orig_index=True)
       cl.write('cluster.xyz')
+    elif mode=='Defect':
+      cl = gb.copy()
     else:
       sys.exit('No Mode chosen.')
 # Select the bulk plane:
@@ -110,13 +118,18 @@ class Hydrify(object):
       oct_sites = self.append_if_thresh(oct_sites)
     elif mode=='CrackTip':
       oct_sites=filter(lambda x: np.sqrt(sum(map(np.square, x[:]-gb.params['CrackPos'][:]))) <= rr, plane_cc)
-      oct_sites = self.append_if_thresh(oct_sites)
+      oct_sites=self.append_if_thresh(oct_sites)
+    elif mode=='Defect':
+      #keep sites within radius 1.5 A of center of cell.
+      cell = cl.get_cell()
+      mid_point = np.array([cell[0][0]/2.0, cell[1][1]/2.0, cell[2][2]/2.0])
+      oct_sites=filter(lambda x: np.sqrt(sum(map(np.square, x[:]-mid_point[:]))) <= 1.5, plane_cc)
+      oct_sites=self.append_if_thresh(oct_sites)
     else:
       sys.exit('No valid mode chosen.')
 
     if tetrahedral:
-      #tetra_lattice = alat*np.array([[0.25,0.0,0.5]])
-      tetra_lattice = alat*np.array([[0.0, -0.5, -0.75]])
+      tetra_lattice = alat*np.array([[0.0,0.0,0.25]])
 #Depending on orientation of the unit cell we rotate the lattice
 #so that the addition of a vector from tetra_lattice is in the new x,y,z coordinate system.
 #i.e. we move from ([0,0,1], [0,1,0] ,[0,0,1]) for 001 oriented grain boundaries this is just a rotation
@@ -163,6 +176,19 @@ class Hydrify(object):
         h_list = self.append_if_thresh(h_list, rcut = d_H)
         #for h_pos in h_list:
         #  cl.add_atoms(h_pos,1)
+      elif mode=='Defect':
+        h_list = []
+        print 'Octahedral Sites', oct_sites 
+        #assumes orthorhombic cell along [100], [010], [001].
+        tetra = tetra_lattice
+        print 'Tetra lattice vector', tetra
+        for h in [oct_sites]:
+          print 'loop'
+          h_pos = h + tetra
+          h_list.append(np.array(h_pos))
+        h_list = self.append_if_thresh(h_list, rcut = d_H)
+        for h_pos in h_list:
+          gb.add_atoms(h_pos,1)
     else:
 #In this case we just add to the octahedral or in a non-bulk
 #environment largest volume sites.
@@ -170,6 +196,8 @@ class Hydrify(object):
       for h in oct_sites:
         h_list.append(h)
       h_list = self.append_if_thresh(h_list, rcut = d_H)
+      for h_pos in h_list:
+        ats.add_atoms(h_pos,1)
     return h_list
 
 if __name__=='__main__':
