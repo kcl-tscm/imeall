@@ -8,6 +8,13 @@ from quippy import Atoms, set_fortran_indexing, Potential
 set_fortran_indexing(False)
 
 class ElasticDipole(object):
+
+  def __init__(self):
+    """
+    Default numerical differentiation.
+    """
+    self.strain_tensor = [-0.01, -0.005, 0.0, 0.005, 0.01]
+
   def calc_interatomic_force(self, defect_index, at_index):
     """
     Should be in QUIP.
@@ -20,8 +27,8 @@ class ElasticDipole(object):
     the distinct contribution of a force from a particular atom,
     i.e. EAM or Tightbinding model.
     Params:
-      ats: `Atoms` object of system.
-      defect: `Atom` object specifying the defect atom.
+      :ats: `Atoms` object of system.
+      :defect: `Atom` object specifying the defect atom.
     """
     alpha_ij = self.calc_interatomic_force(defect_atom.index, ats)
     return alpha_ij
