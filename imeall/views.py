@@ -4,26 +4,14 @@ import re
 import json
 import logging
 import subprocess
-from   imeall  import app
-from   flask   import Flask, request, session, g, redirect, url_for, abort,\
-                      render_template, flash, send_file, jsonify, make_response
-from   imeall.models import GBAnalysis
-from   gb_models     import serialize_vector, GRAIN_DATABASE, DATABASE, GrainBoundary, SubGrainBoundary,\
-                            deserialize_vector_int
-from   models        import PotentialParameters
-from   peewee        import fn
-# Unique key is BBBAAAACCC
-# Common axis=[BBB], misorientation angle=AAAA, and GB plane = (CCC).
-# temporary table should be replaced by database.
-# Associated with each Grain Boundary we need a (many) calculation(s) object(s)
-# these should have some tag i.e. DFT-VASP-PBE. So clearly a one to many
-# relationship.
-# One GrainBoundary table with grain_boundary id (unique tag), name, raw atom structure
-# coincident site lattice etc, and a bunch of pointers to a CalculationTable
-# Each CalculationTable will have its own unique tag (DFT-VASP-PBE) along with the properties
-# Calculate: total energy, forces, atoms, magnetic moments.
-# Table energies should be populated in eV:
-# Each calculation should have the atoms object attached to it.
+from imeall import app
+from flask import Flask, request, session, g, redirect, url_for, abort,\
+                    render_template, flash, send_file, jsonify, make_response
+from imeall.models import GBAnalysis
+from gb_models import serialize_vector, GRAIN_DATABASE, DATABASE, GrainBoundary, SubGrainBoundary,\
+                      deserialize_vector_int
+from models import PotentialParameters
+
 calculations      = {}
 calculations['0000000000'] = {'VASP-DFT-PBE' : {'E0':-8.23807, 'DFT-mag': 2.2238, 'nat':1}, 'IP-EAM-MISH':{'E0': -4.2701, 'nat':1}}
 calculations['1107053111'] = {'VASP-DFT-PBE' : {'E0':-406.154623782, 'nat':96, 'A': 27.7436434255}}
@@ -35,22 +23,7 @@ valid_extensions = ['xyz', 'json', 'mp4', 'png','day']
 vasp_files       = ['IBZKPT', 'INCAR', 'CHG', 'CHGCAR', 'DOSCAR', 'EIGENVAL', 
                     'KPOINTS', 'OSZICAR', 'OUTCAR', 'PCDAT', 'POSCAR',
                     'POTCAR', 'WAVECAR', 'XDATCAR']
-# Currently the database connection is just a path name to our grain boundary
-# database stored as a file tree. I don't necessarily see any reason not to exploit
-# the existing filesystem and tools associated for searching. Why?
-#   1) The nature of the work pattern is I'll want to be able to rummage around
-#      in the different grain directories and subgrain directories to run quippy
-#      scripts etc, or copy subgraindirs with DFT stuff in them.
-#      Any work generated during this should just reside in the
-#      directory and I will only make what I want visible to the imeall browser
-#      xyz files for structures/forces, POSCAR, svg files for images, and json
-#      the rest will be invisible.
-#   2) By storing everything in the file system and only making what I want
-#      visible we still preserve a hierarchical relationship for all the grain
-#      boundaries within a class of materials and for different classes of
-#      materials. This tree structure would resemble a collection of documents and
-#      could be mapped onto a NoSQL type of database or serialized and normalized 
-#      in a closure tree.
+
 @app.before_request
 def before_request():
   g.gb_dir = app.config['GRAIN_DATABASE']
@@ -63,7 +36,6 @@ def home_page():
   """
   materials = os.listdir(g.gb_dir)
   return render_template('imeall.html', materials=materials)
-
 
 @app.route('/<material>/')
 def material(material):
@@ -86,7 +58,7 @@ def orientations(url_path, orientation):
   """
   :method:`orientations` List different orientation axes in the material database.
   """
-#Can only handle three digit or_axis atm.
+#can only handle three digit or_axis atm.
   url_path = url_path+'/'+orientation
   path     = os.path.join(g.gb_dir, url_path)
 #load serialized grain data
@@ -101,10 +73,9 @@ def orientations(url_path, orientation):
     gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane == oraxis)
   else:
     gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis)
-#Only valid directories beginning with orientation axis will be shown.
+#only valid directories beginning with orientation axis will be shown.
   for gb in gbs:
     grains.append(gb.gbid) 
-#Also dislocations of edge and screw fracture and plane type should be shown.
   return render_template('orientation.html', url_path=url_path, grains=grains)
 
 @app.route('/grain/<path:url_path>/<gbid>/')
@@ -141,18 +112,13 @@ def grain_boundary(url_path, gbid):
 
 @app.route("/db_sync/")
 def synchronization():
+  """
+  :method:`db_sync` view of db_log synchronization file.
+  """
   with open('./imeall/db_synclog','r') as f:
     db_log = f.read().split('\n\n')
   db_log.reverse()
   return render_template('synchronization.html', db_log=db_log)
-
-@app.route("/log/")
-def _log_in():
-#Some combination of pexpect and the like should let us handle the automatic
-#accessing of the different servers we wish to sync to.
-#http://stackoverflow.com/questions/37783368/pass-post-data-to-a-script-flask
-#http://stackoverflow.com/questions/2387731/use-subprocess-to-send-a-password
-  return redirect(url_for("synchronization"))
 
 @app.route('/analysis/')
 def analysis():
@@ -197,9 +163,6 @@ def analysis():
                       'url'        : 'http://137.73.5.224:5000/grain/alphaFe/'
                                     +''.join(map(str, deserialize_vector_int(subgbs[0][1]['orientation_axis'])))
                                     +'/' + gb.gbid})
-        #else:
-        #  print gb.gbid, potential, subgbs[0][1]['gbid'], subgbs[0][1]['angle']*(180./(3.14159)), subgbs[0][0], subgbs[0][1]['path']
-        #  print subgbs[0][1]['area'], subgbs[0][1]['n_at']
       else:
         print gb.gbid, potential
   return render_template('analysis.html', gbdat=json.dumps(gbdat))
@@ -220,7 +183,7 @@ def make_tree(path):
       if os.path.isdir(filename):
         tree['children'].append(make_tree(filename))
       else:
-#append file if it is a relevantwith its route:
+#append file if it is a relevant with its route:
         extension = name.split(".")[-1]
         if name in vasp_files or extension in valid_extensions:
           tree['children'].append(dict(name=name, fullpath=filename))
@@ -238,8 +201,7 @@ def extract_json(path, json_files):
       else:
         pass
 
-
-#Check for Ovito in different paths.
+#check for Ovito in different paths.
 def run_ovito(filename):
   """ 
   :method:`run_ovito` launches the Ovito application with the
@@ -253,9 +215,6 @@ def run_ovito(filename):
   except KeyError:
     flash('No path to OVITO found in the environment')
   if os.path.isfile(ovito):
-    print os.path.dirname(filename)
-#MORE SECURITY RISK IMEALL CANNOT BE ACCESSED GLOBALLY:
-    print os.path.dirname(filename), ovito, filename
     job = subprocess.Popen("{0} {1}".format(ovito, filename).split(), cwd=os.path.dirname(filename))
   else: 
     return flash('OVITO not in PATH variable.')

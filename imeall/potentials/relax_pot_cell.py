@@ -4,6 +4,11 @@ import numpy as np
 from quippy import bcc
 from quippy.potential import Potential, Minim
 
+
+############################
+###Tests atomic potential###
+###########################
+
 parser = argparse.ArgumentParser()
 parser.add_argument('-i', '--input_file', help='name of input file')
 parser.add_argument('-pt', '--pot_type', help='Potential type, GAP. EAM.')

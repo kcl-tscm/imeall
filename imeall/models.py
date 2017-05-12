@@ -86,6 +86,29 @@ class PotentialParameters(object):
       potdir[v] = k
     return potdir
 
+class FetchStructure(object):
+  """
+  :class:`FetchStructure` routine for grabbing desired gb .xyz file.
+  """
+  def __init__(self):
+    self.__repr__=="FetchStructure"
+
+  def pull_structure(gbid='', sup_cell=[6,2], rbt=[0.0, 0.0], rcut=1.4):
+    if os.path.isdir(self.subgbid):
+      AtomsReader(self.subgbid+'_traj.xyz')[-1]
+      return grain
+    else:
+      print 'No matching structure.'
+      return None
+  def find_struct_file(structure_name='', pot_dir='PotBH'):
+    """
+    :method: given a structure file
+    """
+    structure_list = structure_name.split('_')
+    struct_dir     = struct_list[0]
+    pot_dir        = struct_dir + '_'+ pot_dir
+    subgb_dir      = pot_dir + '_'.join()
+
 class Job(object):
   """
   class:'Job' collection of routines for generating 

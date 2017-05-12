@@ -1,0 +1,22 @@
+#!/usr/bin/env python
+import sys
+import json
+from quippy import AtomsReader
+from imeall.models import PotentialParameters
+
+with open('subgb.json','r') as f:
+  gb_dict = json.load(f)
+
+ats = AtomsReader(sys.argv[1])[-1]
+
+PotEn = PotentialParameters()
+pot = PotEn.return_pot(potential=gb_dict['param_file'])
+ats.set_calculator(pot)
+
+ats.add_property('at_en', 0)
+ats.at_en[:] = ats.get_potential_energies()
+
+ats.write('at_energies.xyz')
+  
+  
+

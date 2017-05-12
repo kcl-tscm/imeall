@@ -39,10 +39,6 @@ for job in jobdirs:
 
 jobdirs = filter(lambda x: os.path.isdir(x[0]), jdirs)
 jobdirs = jobdirs[:128]
-#os.chdir(jobdirs[0][0])
-#print os.getcwd()
-#[print x[0] for x in  jobdirs]
-
 njobs   = len(jobdirs)
 nodes   = npj*njobs
 

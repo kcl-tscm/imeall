@@ -20,9 +20,9 @@ set_fortran_indexing(False)
 def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200, force_tol = 0.05):
   """
   :method:`relax_gb` function definition to relax a grain_boundary.
-      gb_file     = gbid or subgbid.
-      traj_steps  = number of steps between print trajectories.
-      total_steps = total number of force relaxation steps.
+    gb_file     = gbid or subgbid.
+    traj_steps  = number of steps between print trajectories.
+    total_steps = total number of force relaxation steps.
   """
   def converged(grain, smax, fmax):
 
