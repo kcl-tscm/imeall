@@ -20,6 +20,8 @@ class VaspWriter(object):
         self.incar_str = re.sub('NPAR\s+=\s+[0-9]+', 'NPAR = {npar}'.format(npar=v), self.incar_str)
       if k=='kpar':
         self.incar_str =  re.sub('KPAR\s+=\s+[0-9]+', 'KPAR = {kpar}'.format(kpar=v), self.incar_str)
+      if k=='ediffg':
+        self.ediff_g = 'EDIFFG = {ediffg}'.format(ediffg=v)
 
   def write_incar(self):
     """
