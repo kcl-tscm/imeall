@@ -15,11 +15,21 @@ var diagonal = d3.svg.diagonal()
 
 var svg = d3.select("body").append("svg")
     .attr("width", width + margin.left + margin.right)
-  .append("g")
+    .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
 flare_root.x0 = 0;
 flare_root.y0 = 0;
+
+function collapse(d) {
+  if (d.children) {
+    d._children = d.children;
+    d._children.forEach(collapse);
+    d.children = null;
+  }
+};
+
+flare_root.children.forEach(collapse);
 update(root = flare_root);
 
 function update(source) {
@@ -62,7 +72,7 @@ function update(source) {
   nodeEnter.append("text")
       .attr("dy", 3.5)
       .attr("dx", 5.5)
-      .text(function(d) { return d.name; });
+      .text(function(d) { return "<a href="+'"'+d.fullpath+'"'+">" + d.name + "</a>"; });
 
   // Transition nodes to their new position.
   nodeEnter.transition()
