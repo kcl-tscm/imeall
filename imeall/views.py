@@ -95,20 +95,19 @@ def grain_boundary(url_path, gbid):
   subgrains  = []  
   subgrainsj = []
   for i, gb_path in enumerate(json_files):
-    try: 
-      subgrains.append([json.load(open(gb_path,'r')), i])
-      subgrainsj.append(json.load(open(gb_path,'r')))
-    except:
-      pass
+    subgrains.append([json.load(open(gb_path,'r')), i])
+    subgrainsj.append(json.load(open(gb_path,'r')))
   analyze  = GBAnalysis()
   potparams = PotentialParameters()
   paramfile_dict = potparams.paramfile_dict()
   gam_dict = {}
   for potdir in paramfile_dict.keys():
     gam_dict[potdir] = analyze.pull_gamsurf(path=path, potential=potdir) 
+
   return render_template('grain_boundary.html', gbid=gbid, url_path=url_path,
-                          gb_info=gb_info, tree=tree, subgrains=subgrains, 
+                          gb_info=gb_info, flare_root=json.dumps(tree), subgrains=subgrains, 
                           subgrainsj=json.dumps(subgrainsj), gam_dict=gam_dict)
+
 
 @app.route("/db_sync/")
 def synchronization():
@@ -160,7 +159,8 @@ def analysis():
                       'angle'      : subgbs[0][1]['angle']*(180./(3.14159)),
                       'min_en'     : subgbs[0][0],
                       'bp'         : ' '.join(map(str, map(int, deserialize_vector_int(subgbs[0][1]['boundary_plane'])))),
-                      'url'        : 'http://137.73.5.224:5000/grain/alphaFe/'
+                      #'url'        : 'http://137.73.5.224:5000/grain/alphaFe/'
+                      'url'        : 'http://127.0.0.1:5000/grain/alphaFe/'
                                     +''.join(map(str, deserialize_vector_int(subgbs[0][1]['orientation_axis'])))
                                     +'/' + gb.gbid})
       else:
@@ -214,10 +214,8 @@ def run_ovito(filename):
     ovito = os.environ["OVITO"]
   except KeyError:
     flash('No path to OVITO found in the environment')
-  if os.path.isfile(ovito):
-    job = subprocess.Popen("{0} {1}".format(ovito, filename).split(), cwd=os.path.dirname(filename))
-  else: 
-    return flash('OVITO not in PATH variable.')
+  #app.logger.debug(ovito, os.path.dirname(filename),  os.path.basename(filename))
+  job = subprocess.Popen("{0} {1}".format(ovito, os.path.basename(filename)).split(), cwd=os.path.dirname(filename))
 
 @app.route('/img/<path:filename>/<gbid>/<img_type>')
 def serve_img(filename, gbid, img_type):
@@ -250,6 +248,8 @@ def serve_file(gbid, filename):
   if filename.split(".")[-1] == 'xyz':
     text = text.split('\n')
     run_ovito(textpath)
+    logging.info(textpath)
+    print textpath
     return render_template('text.html', text=text)
   elif filename.endswith('json'):
     with open(textpath, 'r') as f:

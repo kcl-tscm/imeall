@@ -59,4 +59,3 @@ svg.append("g")
   .attr("class", "y axis")
   .call(yAxis)
   });
-</script>

@@ -59,8 +59,8 @@ class ElasticDipole(object):
     """
     ats.remove_atoms(defect.index+1)
     ats.set_calculator(pot)
-    ats.write('relaxed_cell_removed_defect.xyz')
     forces = ats.get_forces()
+    ats.write('relaxed_cell_removed_defect.xyz')
     #calculat dipole tensor
     alpha_ij = np.zeros([3,3])
     for defect_force, at in zip(forces, ats):

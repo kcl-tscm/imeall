@@ -19,7 +19,7 @@ except ImportError:
 try:
   from flask  import Flask, request, session, g, redirect
   from flask  import url_for, abort, render_template, flash
-except:
+except ImportError:
   print 'No Flask Module Available'
 
 # Currently Our models are stored by hand
