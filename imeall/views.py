@@ -6,7 +6,7 @@ import logging
 import subprocess
 from imeall import app
 from flask import Flask, request, session, g, redirect, url_for, abort,\
-                    render_template, flash, send_file, jsonify, make_response
+                  render_template, flash, send_file, jsonify, make_response, safe_join
 from imeall.models import GBAnalysis
 from gb_models import serialize_vector, GRAIN_DATABASE, DATABASE, GrainBoundary, SubGrainBoundary,\
                       deserialize_vector_int
@@ -65,17 +65,21 @@ def orientations(url_path, orientation):
   with open(os.path.join(path, 'or_axis.json'), 'r') as json_file:
     oraxis = json.load(json_file)
   oraxis = oraxis['oraxis']
-  grains = []
   gb_type = request.args.get('gb_type', 'tilt')
   if gb_type == 'tilt':
-    gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane != oraxis)
+    gbs   = (GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis)
+              .where(GrainBoundary.boundary_plane !=oraxis)
+              .order_by(GrainBoundary.angle))
   elif gb_type == 'twist':
-    gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane == oraxis)
+    gbs   = (GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis)
+                          .where(GrainBoundary.boundary_plane == oraxis)
+                          .order_by(GrainBoundary.angle))
   else:
-    gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis)
+    gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).order_by(GrainBoundary.angle)
 #only valid directories beginning with orientation axis will be shown.
+  grains = []
   for gb in gbs:
-    grains.append(gb.gbid) 
+    grains.append({'gbid':gb.gbid, 'angle':round(gb.angle*180/(3.14159), 2), 'bp':deserialize_vector_int(gb.boundary_plane)}) 
   return render_template('orientation.html', url_path=url_path, grains=grains)
 
 @app.route('/grain/<path:url_path>/<gbid>/')
@@ -97,13 +101,14 @@ def grain_boundary(url_path, gbid):
   for i, gb_path in enumerate(json_files):
     subgrains.append([json.load(open(gb_path,'r')), i])
     subgrainsj.append(json.load(open(gb_path,'r')))
+  #find lowest energy structure for every potential in the database
+  #TODO replace with SQL query.
   analyze  = GBAnalysis()
   potparams = PotentialParameters()
   paramfile_dict = potparams.paramfile_dict()
   gam_dict = {}
   for potdir in paramfile_dict.keys():
     gam_dict[potdir] = analyze.pull_gamsurf(path=path, potential=potdir) 
-
   return render_template('grain_boundary.html', gbid=gbid, url_path=url_path,
                           gb_info=gb_info, flare_root=json.dumps(tree), subgrains=subgrains, 
                           subgrainsj=json.dumps(subgrainsj), gam_dict=gam_dict)
@@ -217,6 +222,14 @@ def run_ovito(filename):
   #app.logger.debug(ovito, os.path.dirname(filename),  os.path.basename(filename))
   job = subprocess.Popen("{0} {1}".format(ovito, os.path.basename(filename)).split(), cwd=os.path.dirname(filename))
 
+
+@app.route('/struct/<path:filename>/<path:textpath>')
+def serve_struct(filename, textpath=None):
+  print 'in serve struct', filename, textpath
+  run_ovito(os.path.join(app.config['GRAIN_DATABASE'], textpath))
+  flash('running ovito')
+  return redirect(request.referrer)
+
 @app.route('/img/<path:filename>/<gbid>/<img_type>')
 def serve_img(filename, gbid, img_type):
   """
@@ -237,27 +250,26 @@ def serve_img(filename, gbid, img_type):
     img = 'NO IMAGE'
   return send_file(img)
 
-@app.route('/textfile/<gbid>/<path:filename>')
-def serve_file(gbid, filename):
+@app.route('/servefile/')
+def serve_file(textpath):
   """
   :method:`serve_file` serve different common file types to the browser.
   """
-  textpath = request.args.get('textpath')
-  with open('{0}'.format(textpath),'r') as text_file:
+  #textpath = request.args.get('textpath')
+  print textpath
+  with open('{0}'.format(textpath), 'r') as text_file:
     text = text_file.read()
-  if filename.split(".")[-1] == 'xyz':
-    text = text.split('\n')
+  print text
+  if textpath.endswith('xyz'):
     run_ovito(textpath)
-    logging.info(textpath)
-    print textpath
     return render_template('text.html', text=text)
-  elif filename.endswith('json'):
+  elif textpath.endswith('json'):
     with open(textpath, 'r') as f:
       j_file = json.load(f)
     return render_template("render_json.html", j_file=j_file)
-  elif filename.endswith('png'):
+  elif textpath.endswith('png'):
     return send_file(textpath)
-  elif filename == 'OSZICAR':  
+  elif textpath == 'OSZICAR':  
     rmm_regex  = re.compile(r'RMM:\s+([-+0-9.E\s]+)')
     osz_list = rmm_regex.findall(text)
     osz = []
@@ -274,7 +286,7 @@ def serve_file(gbid, filename):
       else:
         break
     return render_template('oszicar.html', osz=json.dumps(osz))
-  elif filename.endswith('mp4'):
+  elif textpath.endswith('mp4'):
     subprocess.Popen('open {0}'.format(textpath).split()) 
     return render_template('text.html', text='Playing Video')
   else:
