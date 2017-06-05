@@ -38,7 +38,7 @@
     <ul>
       <li> Min. Energy: {{ pot_gam_dict.min_en | round(4, 'floor') }} J/m^{2} </li>  
       <li> {{pot_gam_dict.min_path}} </li>
-      <li> <a href="{{url_for('serve_struct', filename='apathtoafile', textpath=pot_gam_dict.min_path)}}"> Structure </a></li>
+      <li> <a href="{{url_for('serve_struct', filename='apathtoafile', textpath=pot_gam_dict.min_path)}}"> Min. Energy Structure </a></li>
       <li> Rigid Body Translation (x,y, Cutoff Criterion)</li>
       <ul>
         {% for rbt in pot_gam_dict.min_coords %} 
@@ -46,6 +46,7 @@
         {% endfor %}
       </ul>
       <li> Max. Energy:{{ pot_gam_dict.max_en | round(4, 'floor') }} J/m^{2}  </li>  
+      <li> <a href="{{url_for('serve_struct', filename='apathtoafile', textpath=pot_gam_dict.max_path)}}"> Max. Energy Structure </a></li>
       <li> Rigid Body Translation (x,y, Cutoff Criterion)</li>
       <li> Structure </li>
       <ul>

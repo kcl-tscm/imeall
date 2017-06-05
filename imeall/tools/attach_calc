@@ -18,5 +18,3 @@ ats.at_en[:] = ats.get_potential_energies()
 
 ats.write('at_energies.xyz')
   
-  
-

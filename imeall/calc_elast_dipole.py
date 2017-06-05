@@ -2,13 +2,12 @@ import os
 import argparse
 import subprocess
 import numpy as np
-from ase.constraints import UnitCellFilter, StrainFilter
 from quippy import Atoms, set_fortran_indexing, Potential
+from ase.constraints import UnitCellFilter, StrainFilter
 
 set_fortran_indexing(False)
 
 class ElasticDipole(object):
-
   def __init__(self):
     """
     Default numerical differentiation.
@@ -52,16 +51,19 @@ class ElasticDipole(object):
     ats.write(output_name)
     return ats
   
-  def compute_vacancy_dipole(self, defect, ats, pot):
+  def compute_vacancy_dipole(self, defect, ats, pot=None, forces=None):
     """
     :method: Valid where there is a clear distinction between host lattice
     and the defect atom.
     """
-    ats.remove_atoms(defect.index+1)
-    ats.set_calculator(pot)
-    forces = ats.get_forces()
-    ats.write('relaxed_cell_removed_defect.xyz')
-    #calculat dipole tensor
+    if forces == None:
+      ats.remove_atoms(defect.index+1)
+      ats.set_calculator(pot)
+      forces = ats.get_forces()
+      ats.write('relaxed_cell_removed_defect.xyz')
+    else:
+      #force array has been passed (e.g. read from OUTCAR)
+      pass
     alpha_ij = np.zeros([3,3])
     for defect_force, at in zip(forces, ats):
       alpha_ij[0, 0] += defect_force[0]*(defect.position[0] - at.position[0])
