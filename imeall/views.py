@@ -133,11 +133,11 @@ def analysis():
   """
 # User chooses what orientation angle to look at via a GET argument:
 # This should be a separate Table.
-  pot_param     = PotentialParameters()
+  pot_param = PotentialParameters()
   ener_per_atom = pot_param.gs_ener_per_atom()
-  or_axis       = request.args.get('or_axis', '001')
-  gb_type       = request.args.get('gb_type', 'tilt')
-  gbdat         = []
+  or_axis = request.args.get('oraxisselect', default='001')
+  gb_type = request.args.get('gbtypeselect', default='tilt')
+  gbdat = []
   oraxis = ','.join([c for c in or_axis])
 # Creates list of grain boundaries ordered by angle.
   for potential in ener_per_atom.keys():
@@ -169,7 +169,8 @@ def analysis():
                                     +''.join(map(str, deserialize_vector_int(subgbs[0][1]['orientation_axis'])))
                                     +'/' + gb.gbid})
       else:
-        print gb.gbid, potential
+        #print gb.gbid, potential
+        pass
   return render_template('analysis.html', gbdat=json.dumps(gbdat))
 
 def make_tree(path):
