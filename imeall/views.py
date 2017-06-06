@@ -101,8 +101,8 @@ def grain_boundary(url_path, gbid):
   for i, gb_path in enumerate(json_files):
     subgrains.append([json.load(open(gb_path,'r')), i])
     subgrainsj.append(json.load(open(gb_path,'r')))
-  #find lowest energy structure for every potential in the database
-  #TODO replace with SQL query.
+#find lowest energy structure for every potential in the database
+#TODO replace with SQL query.
   analyze  = GBAnalysis()
   potparams = PotentialParameters()
   paramfile_dict = potparams.paramfile_dict()
@@ -190,8 +190,9 @@ def make_tree(path):
       else:
 #append file if it is a relevant with its route:
         extension = name.split(".")[-1]
-        if name in vasp_files or extension in valid_extensions:
-          tree['children'].append(dict(name=name, fullpath=filename))
+        filename = os.path.relpath(filename, app.config['GRAIN_DATABASE'])
+        if (name in vasp_files) or (extension in valid_extensions):
+          tree['children'].append(dict(name=name, fullpath=url_for('serve_struct', filename='apathtoafile', textpath=filename)))
   return tree
 
 def extract_json(path, json_files):
@@ -225,17 +226,26 @@ def run_ovito(filename):
 
 @app.route('/struct/<path:filename>/<path:textpath>')
 def serve_struct(filename, textpath=None):
-  print 'in serve struct', filename, textpath
-  run_ovito(os.path.join(app.config['GRAIN_DATABASE'], textpath))
-  flash('running ovito')
-  return redirect(request.referrer)
+  if textpath.endswith('xyz'):
+    run_ovito(os.path.join(app.config['GRAIN_DATABASE'], textpath))
+    flash('running ovito')
+    return redirect(request.referrer)
+  elif textpath.endswith('json'):
+    with open(os.path.join(app.config['GRAIN_DATABASE'], textpath),'r') as f:
+      text = f.read()
+    return text
+  elif textpath.endswith('png'):
+    print os.path.join(app.config['GRAIN_DATABASE'], textpath)
+    return send_file(os.path.join(app.config['GRAIN_DATABASE'], textpath))
+  else:
+    return redirect(request.referrer)
+  
 
 @app.route('/img/<path:filename>/<gbid>/<img_type>')
 def serve_img(filename, gbid, img_type):
   """
   :method:`serve_img` serve image_file to the browser.
   """
-  print 'Calling serve img', gbid, img_type, filename
   img = os.path.join(filename,'{0}.png'.format(gbid))
   if img_type =='struct':
     img  = app.config['GRAIN_DATABASE']+'/'+filename+'/{0}.png'.format(gbid)
@@ -256,10 +266,8 @@ def serve_file(textpath):
   :method:`serve_file` serve different common file types to the browser.
   """
   #textpath = request.args.get('textpath')
-  print textpath
   with open('{0}'.format(textpath), 'r') as text_file:
     text = text_file.read()
-  print text
   if textpath.endswith('xyz'):
     run_ovito(textpath)
     return render_template('text.html', text=text)

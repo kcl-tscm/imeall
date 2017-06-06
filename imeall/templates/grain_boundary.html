@@ -60,17 +60,11 @@
 	<h2> Structure  </h2>
   <img src = "{{url_for('serve_img', filename=url_path, gbid=gbid, img_type='struct')}}" alt="GB structure" width=700>
 	<h2> Coincident Site Lattice  </h2>
-  <img src = "{{url_for('serve_img', filename=url_path, gbid=gbid, img_type='csl')}}"    alt="GB structure" width=700>
-{# Should convert this to java view.            #}
+  <img src = "{{url_for('serve_img', filename=url_path, gbid=gbid, img_type='csl')}}" alt="GB structure" width=700>
 {# Collapsible indented tree layout taken from
-   http://bl.ocks.org/mbostock/1093025          #}
+   http://bl.ocks.org/mbostock/1093025 #}
   <h3> Subgrain Directories of {{gbid}}: </h3> 
   <p> <button id="subgraindirbutton"> Show/Hide Subgrain Subdirectories </button> </p>
-  <script>
-    $("#subgraindirbutton").click(function() {
-        $("#subgraindirs").toggle();
-      });
-  </script>
   <script src="https://d3js.org/d3-hierarchy.v1.min.js"></script>
   <div id="subgraindirs">
     <script> 

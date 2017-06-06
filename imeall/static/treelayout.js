@@ -13,7 +13,7 @@ var tree = d3.layout.tree()
 var diagonal = d3.svg.diagonal()
     .projection(function(d) { return [d.y, d.x]; });
 
-var svg = d3.select("body").append("svg")
+var svg = d3.select("body").select("div.page").append("svg")
     .attr("width", width + margin.left + margin.right)
     .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
@@ -69,10 +69,13 @@ function update(source) {
       .style("fill", color)
       .on("click", click);
 
-  nodeEnter.append("text")
+  //nodeEnter.append("text")
+  nodeEnter.append("a")
+      .attr("xlink:href", function(d) {return d.fullpath;})
+      .append("text")
       .attr("dy", 3.5)
       .attr("dx", 5.5)
-      .text(function(d) { return "<a href="+'"'+d.fullpath+'"'+">" + d.name + "</a>"; });
+      .text(function(d) { return d.name;});
 
   // Transition nodes to their new position.
   nodeEnter.transition()
