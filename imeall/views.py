@@ -137,15 +137,20 @@ def analysis():
   ener_per_atom = pot_param.gs_ener_per_atom()
   or_axis = request.args.get('oraxisselect', default='001')
   gb_type = request.args.get('gbtypeselect', default='tilt')
+  material = request.args.get('materialselect', default='alphaFe')
   gbdat = []
   oraxis = ','.join([c for c in or_axis])
 # Creates list of grain boundaries ordered by angle.
   for potential in ener_per_atom.keys():
 # GrainBoundary Energies in J/m^{2}
     if gb_type == 'tilt':
-      gbs = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane != oraxis)
+      gbs = (GrainBoundary.select()
+                         .where(GrainBoundary.orientation_axis==oraxis)
+                         .where(GrainBoundary.boundary_plane != oraxis))
     elif gb_type == 'twist':
-      gbs = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane == oraxis)
+      gbs = (GrainBoundary.select()
+                         .where(GrainBoundary.orientation_axis==oraxis)
+                         .where(GrainBoundary.boundary_plane == oraxis))
     else:
       sys.exit('Invalid gb_type!')
     for gb in gbs.order_by(GrainBoundary.angle):
@@ -233,8 +238,8 @@ def serve_struct(filename, textpath=None):
     return redirect(request.referrer)
   elif textpath.endswith('json'):
     with open(os.path.join(app.config['GRAIN_DATABASE'], textpath),'r') as f:
-      text = f.read()
-    return text
+      json_dict = json.load(f)
+    return render_template('json_dict.html', json_dict=json_dict)
   elif textpath.endswith('png'):
     print os.path.join(app.config['GRAIN_DATABASE'], textpath)
     return send_file(os.path.join(app.config['GRAIN_DATABASE'], textpath))
