@@ -36,7 +36,7 @@ def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200, force_tol = 
     j_dict = json.load(outfile)
   try:
     POT_DIR     = os.environ['POTDIR']
-  except:
+  except KeyError:
     sys.exit("PLEASE SET export POTDIR='path/to/potfiles/'")
   try: 
     param_file = j_dict['param_file']

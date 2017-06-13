@@ -86,6 +86,14 @@ class PotentialParameters(object):
       potdir[v] = k
     return potdir
 
+  def calc_e_gb(self, at, E_bulk):
+    cell = at.get_cell()
+    A    = cell[0,0]*cell[1,1]
+    E_gb = (at.get_potential_energy()-(at.n*(E_bulk)))/(2.*A)
+    at.get_potential_energies()
+    E_gb = 16.02*(at.get_potential_energy()-(at.n*(E_bulk)))/(2.*A)
+    return E_gb
+
 class FetchStructure(object):
   """
   :class:`FetchStructure` routine for grabbing desired gb .xyz file.
