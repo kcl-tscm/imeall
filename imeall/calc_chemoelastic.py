@@ -17,7 +17,11 @@ def strain_energy(ats):
   cursor = 0.2
   elastic_energy = []
   while cursor < (z_height + 0.2):
-    cum_energy = 16.02*sum([x+4.01298214176 for x in np.array(filter(lambda x: x[1]<= cursor, ener_z))[:,0]])/(A)
+    try:
+      cum_energy = 16.02*sum([x+4.01298214176 for x in np.array(filter(lambda x: x[1]<= cursor, ener_z))[:,0]])/(A)
+    except IndexError:
+      cursor += 0.2 #initial step doesn't capture atoms
+      continue 
     elastic_energy.append((cursor, cum_energy))
     cursor += 0.2
   return elastic_energy
@@ -55,32 +59,24 @@ def calc_chemomechanical(ats):
   elastic_energy = np.sum(bcc[:,0])
   total_energy = chemical_energy + elastic_energy
   gb_energy = 16.02*(total_energy)/(2.*A)
-  print 'Chemical {}%, Elastic {}%'.format(round(100*chemical_energy/total_energy, 2), round(100*elastic_energy/total_energy, 2))
-  return [chemical_energy, elastic_energy, gb_energy]
+  print 'Chemical {}%, Elastic {}%'.format(round(100*chemical_energy/total_energy, 2), 
+                                           round(100*elastic_energy/total_energy, 2))
+  return [(chemical_energy/total_energy)*gb_energy, (elastic_energy/total_energy)*gb_energy, gb_energy]
 
-potparam = PotentialParameters()
-ener_bulk_dict = potparam.gs_ener_per_atom()
-r_scale_dict = potparam.eam_rscale()
-r_scale = r_scale_dict['PotBH.xml']
-E_bulk = ener_bulk_dict['PotBH.xml']
-
-try:
-  POT_DIR = os.environ ['POTDIR']
-except KeyError:
-  sys.exit("PLEASE SET export POTDIR='path/to/potfiles/'")
-
-eam_pot = 'PotBH.xml'
-eam_pot = os.path.join(POT_DIR, eam_pot)
-pot = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=eam_pot)
-
-if __name__=='__main__':
-  parser = argparse.ArgumentParser()
-  parser.add_argument('--input_file', '-i', help='Input grain boundary struct file to produce cumulative energy')
-  parser.add_argument('--calc_cumenergy','-cc', action='store_true')
-  parser.add_argument('--calc_chemomechanical','-cm', action='store_true')
-  args = parser.parse_args()
-
-  ats = AtomsReader(args.input_file)[-1]
+def calc_chemoelast(input_file):
+  potparam = PotentialParameters()
+  ener_bulk_dict = potparam.gs_ener_per_atom()
+  r_scale_dict = potparam.eam_rscale()
+  r_scale = r_scale_dict['PotBH.xml']
+  E_bulk = ener_bulk_dict['PotBH.xml']
+  try:
+    POT_DIR = os.environ ['POTDIR']
+  except KeyError:
+    sys.exit("PLEASE SET export POTDIR='path/to/potfiles/'")
+  eam_pot = 'PotBH.xml'
+  eam_pot = os.path.join(POT_DIR, eam_pot)
+  pot = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=eam_pot)
+  ats = AtomsReader(input_file)[-1]
   ats.set_calculator(pot)
   gb_energy = potparam.calc_e_gb(ats, E_bulk)
   print gb_energy, 'J/^2m'
@@ -90,11 +86,17 @@ if __name__=='__main__':
     for x in elastic_energy:
       print >> f, x[0], x[1]
 #generates output.xyz
-  args_str =  'ovitos /Users/lambert/pymodules/imeall/imeall/ovito_scripts/attach_cna.py -i {input_file}'.format(input_file=args.input_file).split()
+  args_str =  'ovitos /Users/lambert/pymodules/imeall/imeall/ovito_scripts/attach_cna.py -i {input_file}'.format(input_file='full.xyz').split()
   job = subprocess.Popen(args_str)
   job.wait()
   ats = Atoms('output.xyz')
 #print the three contributions
   x = calc_chemomechanical(ats)
   assert round(gb_energy,2) == round(x[2],2)
+  return x
 
+if __name__=='__main__':
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--input_file', '-i', help='Input grain boundary struct file to produce cumulative energy')
+  args = parser.parse_args()
+  calc_chemoelast(input_file=args.input_file)

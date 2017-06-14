@@ -8,6 +8,7 @@ import argparse
 import numpy as np
 import slabmaker.slabmaker as slabmaker
 
+
 from  quippy import Atoms
 from  scipy.spatial import Voronoi, voronoi_plot_2d
 
@@ -94,20 +95,92 @@ class PotentialParameters(object):
     E_gb = 16.02*(at.get_potential_energy()-(at.n*(E_bulk)))/(2.*A)
     return E_gb
 
-class FetchStructure(object):
+class GBQuery(object):
   """
-  :class:`FetchStructure` routine for grabbing desired gb .xyz file.
+  :class:`GBQuery` routines for grabbing desired gb .xyz files and paths.
   """
   def __init__(self):
     self.__repr__=="FetchStructure"
 
-  def pull_structure(gbid='', sup_cell=[6,2], rbt=[0.0, 0.0], rcut=1.4):
-    if os.path.isdir(self.subgbid):
-      AtomsReader(self.subgbid+'_traj.xyz')[-1]
-      return grain
-    else:
-      print 'No matching structure.'
-      return None
+  def copy_gb_dirtree(self, material="alphaFe", or_axis="0,0,1", pots=['PotBH.xml']):
+    """
+    :method:`copy_gb_dirtree` pull all min energy structures across from database.
+    """
+    grain_dicts = self.pull_minen_structs(material=material, or_axis=or_axis, pots=pots)
+    for gd in grain_dicts:
+      gbid = gd['gbid']
+      new_dir_name=gbid.split('_')[0]
+      try:
+        os.mkdir(new_dir_name)
+      except OSError:
+        pass
+      struct_name = gbid+'_traj.xyz'
+      dir_path = gd['path']
+    #grab the gb.json file path.
+      gb_path = gd['path']
+      gb_path = '/'.join(gb_path.split('/')[0:3])+'/gb.json'
+      gb_path = os.path.join(GBDATABASE, gb_path)
+    #grab the struct file and the subgb.json path.
+      dir_path = os.path.join(GBDATABASE, dir_path)
+      struct_path = os.path.join(dir_path, struct_name)
+      subgb_path = os.path.join(dir_path, 'subgb.json')
+      shutil.copy(struct_path, new_dir_name)
+      shutil.copy(subgb_path, new_dir_name)
+      shutil.copy(gb_path, new_dir_name)
+
+  def sort_jobdirs(self, pattern='001*', sort_key='angle'):
+    """
+    :method:`sort_jobdirs` Given a directory full of Grain Boundary directories
+    with gb.json files return a sorted list of those directories
+    by arbitrary key.
+    pattern: glob pattern for directory names
+    sort_key: attribute of the gb.json file to sort by.
+    """
+    job_dirs = glob.glob(pattern)
+    job_dirs = filter(os.path.isdir, job_dirs)
+    scratch = os.getcwd()
+    job_list = []
+    for job in job_dirs:
+      os.chdir(job)
+      with open('gb.json','r') as f:
+        j_dict = json.load(f)
+      sort_attr = j_dict[sort_key]
+      job_list.append((job, sort_attr))
+      os.chdir(scratch)
+    job_list = sorted(job_list, key= lambda x : x[1])
+    return job_list
+
+  def pull_minen_structs(material="alphaFe", or_axis="0,0,1", pots=['PotBH.xml']):
+    """
+    :method:`pull_minen_structs` grab the minimum energy structure json dictionaries
+    for a given material, orientation_axis, potential.
+    """
+    from gb_models import database, GrainBoundary, SubGrainBoundary
+    from collections import OrderedDict
+
+    database.connect()
+    pot_param     = PotentialParameters()
+    ener_per_atom = pot_param.gs_ener_per_atom()
+    gbs = (GrainBoundary.select()
+                        .where(GrainBoundary.orientation_axis==or_axis)
+                        .where(GrainBoundary.boundary_plane != or_axis))
+    dict_list = []
+    for gb in gbs.order_by(GrainBoundary.angle):
+      pot_dict = OrderedDict({})
+      for potential in pots:
+        subgbs = (gb.subgrains.select(GrainBoundary, SubGrainBoundary)
+                      .where(SubGrainBoundary.potential==potential)
+                      .join(GrainBoundary)
+                      .order_by(SubGrainBoundary.E_gb)
+                      .dicts())
+        subgbs = [(16.02*(subgb['E_gb']-float(subgb['n_at']*ener_per_atom[potential]))/
+                  (2.0*subgb['area']), subgb) for subgb in subgbs]
+        subgbs.sort(key = lambda x: x[0])
+        pot_dict[potential] = subgbs[0][0]
+        dict_list.append(subgbs[0][1])
+      print '{:.3f}'.format(180.0/np.pi*gb.angle), ' '.join(['{:.3f}'.format(x) for x in pot_dict.values()])
+    return dict_list
+
   def find_struct_file(structure_name='', pot_dir='PotBH'):
     """
     :method: given a structure file
