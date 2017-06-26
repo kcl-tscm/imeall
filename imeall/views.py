@@ -174,7 +174,6 @@ def analysis():
                                     +''.join(map(str, deserialize_vector_int(subgbs[0][1]['orientation_axis'])))
                                     +'/' + gb.gbid})
       else:
-        #print gb.gbid, potential
         pass
   return render_template('analysis.html', gbdat=json.dumps(gbdat))
 

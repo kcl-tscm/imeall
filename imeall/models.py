@@ -150,7 +150,7 @@ class GBQuery(object):
     job_list = sorted(job_list, key= lambda x : x[1])
     return job_list
 
-  def pull_minen_structs(material="alphaFe", or_axis="0,0,1", pots=['PotBH.xml']):
+  def pull_minen_structs(material="alphaFe", or_axis="1,1,1", pots=['PotBH.xml']):
     """
     :method:`pull_minen_structs` grab the minimum energy structure json dictionaries
     for a given material, orientation_axis, potential.
@@ -162,7 +162,7 @@ class GBQuery(object):
     pot_param     = PotentialParameters()
     ener_per_atom = pot_param.gs_ener_per_atom()
     gbs = (GrainBoundary.select()
-                        .where(GrainBoundary.orientation_axis==or_axis)
+                        .where(GrainBoundary.orientation_axis == or_axis)
                         .where(GrainBoundary.boundary_plane != or_axis))
     dict_list = []
     for gb in gbs.order_by(GrainBoundary.angle):
@@ -176,8 +176,13 @@ class GBQuery(object):
         subgbs = [(16.02*(subgb['E_gb']-float(subgb['n_at']*ener_per_atom[potential]))/
                   (2.0*subgb['area']), subgb) for subgb in subgbs]
         subgbs.sort(key = lambda x: x[0])
-        pot_dict[potential] = subgbs[0][0]
-        dict_list.append(subgbs[0][1])
+        try:
+          if subgbs[0][1]['converged'] == True:
+            pot_dict[potential] = subgbs[0][0]
+            dict_list.append(subgbs[0][1])
+        except IndexError:
+          print 'no subgbs there: ', gb.gbid, potential
+
       print '{:.3f}'.format(180.0/np.pi*gb.angle), ' '.join(['{:.3f}'.format(x) for x in pot_dict.values()])
     return dict_list
 
