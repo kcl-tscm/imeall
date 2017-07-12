@@ -8,6 +8,7 @@ import argparse
 import numpy as np
 import slabmaker.slabmaker as slabmaker
 
+
 from  quippy import Atoms
 from  scipy.spatial import Voronoi, voronoi_plot_2d
 
@@ -19,7 +20,7 @@ except ImportError:
 try:
   from flask  import Flask, request, session, g, redirect
   from flask  import url_for, abort, render_template, flash
-except:
+except ImportError:
   print 'No Flask Module Available'
 
 # Currently Our models are stored by hand
@@ -85,6 +86,114 @@ class PotentialParameters(object):
     for k,v in paramfile_dict.items():
       potdir[v] = k
     return potdir
+
+  def calc_e_gb(self, at, E_bulk):
+    cell = at.get_cell()
+    A    = cell[0,0]*cell[1,1]
+    E_gb = (at.get_potential_energy()-(at.n*(E_bulk)))/(2.*A)
+    at.get_potential_energies()
+    E_gb = 16.02*(at.get_potential_energy()-(at.n*(E_bulk)))/(2.*A)
+    return E_gb
+
+class GBQuery(object):
+  """
+  :class:`GBQuery` routines for grabbing desired gb .xyz files and paths.
+  """
+  def __init__(self):
+    self.__repr__=="FetchStructure"
+
+  def copy_gb_dirtree(self, material="alphaFe", or_axis="0,0,1", pots=['PotBH.xml']):
+    """
+    :method:`copy_gb_dirtree` pull all min energy structures across from database.
+    """
+    grain_dicts = self.pull_minen_structs(material=material, or_axis=or_axis, pots=pots)
+    for gd in grain_dicts:
+      gbid = gd['gbid']
+      new_dir_name=gbid.split('_')[0]
+      try:
+        os.mkdir(new_dir_name)
+      except OSError:
+        pass
+      struct_name = gbid+'_traj.xyz'
+      dir_path = gd['path']
+    #grab the gb.json file path.
+      gb_path = gd['path']
+      gb_path = '/'.join(gb_path.split('/')[0:3])+'/gb.json'
+      gb_path = os.path.join(GBDATABASE, gb_path)
+    #grab the struct file and the subgb.json path.
+      dir_path = os.path.join(GBDATABASE, dir_path)
+      struct_path = os.path.join(dir_path, struct_name)
+      subgb_path = os.path.join(dir_path, 'subgb.json')
+      shutil.copy(struct_path, new_dir_name)
+      shutil.copy(subgb_path, new_dir_name)
+      shutil.copy(gb_path, new_dir_name)
+
+  def sort_jobdirs(self, pattern='001*', sort_key='angle'):
+    """
+    :method:`sort_jobdirs` Given a directory full of Grain Boundary directories
+    with gb.json files return a sorted list of those directories
+    by arbitrary key.
+    pattern: glob pattern for directory names
+    sort_key: attribute of the gb.json file to sort by.
+    """
+    job_dirs = glob.glob(pattern)
+    job_dirs = filter(os.path.isdir, job_dirs)
+    scratch = os.getcwd()
+    job_list = []
+    for job in job_dirs:
+      os.chdir(job)
+      with open('gb.json','r') as f:
+        j_dict = json.load(f)
+      sort_attr = j_dict[sort_key]
+      job_list.append((job, sort_attr))
+      os.chdir(scratch)
+    job_list = sorted(job_list, key= lambda x : x[1])
+    return job_list
+
+  def pull_minen_structs(material="alphaFe", or_axis="1,1,1", pots=['PotBH.xml']):
+    """
+    :method:`pull_minen_structs` grab the minimum energy structure json dictionaries
+    for a given material, orientation_axis, potential.
+    """
+    from gb_models import database, GrainBoundary, SubGrainBoundary
+    from collections import OrderedDict
+
+    database.connect()
+    pot_param     = PotentialParameters()
+    ener_per_atom = pot_param.gs_ener_per_atom()
+    gbs = (GrainBoundary.select()
+                        .where(GrainBoundary.orientation_axis == or_axis)
+                        .where(GrainBoundary.boundary_plane != or_axis))
+    dict_list = []
+    for gb in gbs.order_by(GrainBoundary.angle):
+      pot_dict = OrderedDict({})
+      for potential in pots:
+        subgbs = (gb.subgrains.select(GrainBoundary, SubGrainBoundary)
+                      .where(SubGrainBoundary.potential==potential)
+                      .join(GrainBoundary)
+                      .order_by(SubGrainBoundary.E_gb)
+                      .dicts())
+        subgbs = [(16.02*(subgb['E_gb']-float(subgb['n_at']*ener_per_atom[potential]))/
+                  (2.0*subgb['area']), subgb) for subgb in subgbs]
+        subgbs.sort(key = lambda x: x[0])
+        try:
+          if subgbs[0][1]['converged'] == True:
+            pot_dict[potential] = subgbs[0][0]
+            dict_list.append(subgbs[0][1])
+        except IndexError:
+          print 'no subgbs there: ', gb.gbid, potential
+
+      print '{:.3f}'.format(180.0/np.pi*gb.angle), ' '.join(['{:.3f}'.format(x) for x in pot_dict.values()])
+    return dict_list
+
+  def find_struct_file(structure_name='', pot_dir='PotBH'):
+    """
+    :method: given a structure file
+    """
+    structure_list = structure_name.split('_')
+    struct_dir     = struct_list[0]
+    pot_dir        = struct_dir + '_'+ pot_dir
+    subgb_dir      = pot_dir + '_'.join()
 
 class Job(object):
   """
@@ -295,7 +404,6 @@ class GBMaintenance(object):
 class GBAnalysis(object):
   def __init__(self):
     pass
-
   def find_gb_json(self, path, j_list, filetype):
     """ 
     :method:`find_gb_json` Populates the list j_list with lists of the form
@@ -412,13 +520,19 @@ class GBAnalysis(object):
     """
     :method:`pull_gamsurf` Loop over subgrain directories of a potential (default PotBH) 
     to find the minimum and maximum energies for the canonical grain, return
-    a dictionary, with information about the lowest and highest energy structures.
+    a dictionary, with information about the lowest and highest energy structures, and the
+    directory they are contained in:
+    Parameters:
+      path: file path to begin search for json files.
+      potential: name of desired potential.
+    Return:
+      gam_dict = {'max_en':0.0, 'min_en':0.0,'min_coords':[],'max_coords':[], 'path':gb[0]}
     """
     potparams = PotentialParameters()
     paramfile_dict = potparams.paramfile_dict()
     subgb_files = []
-    if os.path.isdir(os.path.join(path,potential)):
-      self.find_gb_json(os.path.join(path,potential), subgb_files, 'subgb.json')
+    if os.path.isdir(os.path.join(path, potential)):
+      self.find_gb_json(os.path.join(path, potential), subgb_files, 'subgb.json')
       gam_surfs   = []
       unconv      = []
 #Only pulling for PotBH:
@@ -427,23 +541,33 @@ class GBAnalysis(object):
           gb_json = json.load(f)
         ener = self.calc_energy(gb_json, param_file=paramfile_dict[potential])
         if ener != None:
-          gam_surfs.append((gb_json['rcut'], gb_json['rbt'][0], gb_json['rbt'][1], ener))
+          try:
+            gam_surfs.append((gb_json['rcut'], gb_json['rbt'][0], gb_json['rbt'][1], ener, gb[0], gb_json['gbid']))
+          except KeyError:
+            gam_surfs.append((gb_json['rcut'], gb_json['rbt'][0], gb_json['rbt'][1], ener, gb[0], gb_json['name']))
         else:
           unconv.append(gb[1])
       en_list     = [x[3] for x in gam_surfs]
       try:
         min_en      = min(en_list)
       except ValueError:
-        return {'max_en':0.0, 'min_en':0.0, 'min_coords':[], 'max_coords':[]}
+        return {'max_en':0.0, 'min_en':0.0, 'min_coords':[], 'max_coords':[], 'min_path':'', 'max_path':''}
       else:
 #Create lists of minimum energy structures (vx bxv rcut).
-        min_coords  = [(gam[1], gam[2], gam[0]) for gam in filter(lambda x: round(x[3], 5) == round(min_en, 5), gam_surfs)]
-        max_en      =  max(en_list)
-        max_coords  = [(gam[1], gam[2], gam[0]) for gam in filter(lambda x: round(x[3], 5)==round(max_en, 5), gam_surfs)]
-        gam_dict    = {'max_en':max_en, 'min_en':min_en, 'min_coords':min_coords, 'max_coords':max_coords}
+        max_en = max(en_list)
+        min_coords = [(gam[1], gam[2], gam[0]) for gam in filter(lambda x: round(x[3], 5) == round(min_en, 5), gam_surfs)]
+        max_coords = [(gam[1], gam[2], gam[0]) for gam in filter(lambda x: round(x[3], 5) == round(max_en, 5), gam_surfs)]
+        min_path = [(gam[4], gam[5]) for gam in filter(lambda x: round(x[3], 5) == round(min_en, 5), gam_surfs)]
+        max_path = [(gam[4], gam[5]) for gam in filter(lambda x: round(x[3], 5) == round(max_en, 5), gam_surfs)]
+        min_path = '/'.join(min_path[0])+'_traj.xyz'
+        max_path = '/'.join(max_path[0])+'_traj.xyz'
+        min_path = os.path.relpath(min_path, app.config['GRAIN_DATABASE'])
+        max_path = os.path.relpath(max_path, app.config['GRAIN_DATABASE'])
+        gam_dict = {'max_en':max_en, 'min_en':min_en, 'min_coords':min_coords, 'max_coords':max_coords,
+                    'min_path':min_path, 'max_path':max_path}
     else:
       print "No potential directory:", potential, "found."
-      gam_dict = {'max_en':0.0, 'min_en':0.0,'min_coords':[],'max_coords':[]}
+      gam_dict = {'max_en':0.0, 'min_en':0.0,'min_coords':[],'max_coords':[], 'max_path':'', 'min_path':''}
     return gam_dict
 
   def plot_gamsurf(self, pot_dir='PotBH', rcut=None, print_gamsurf=False):

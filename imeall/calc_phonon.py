@@ -111,4 +111,3 @@ with open('subgb.json','w') as f:
   gb_dict['nqs']        = [nqx, nqy, nqz]
   json.dump(gb_dict,f,indent=2)
 
-

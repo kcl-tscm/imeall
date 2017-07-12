@@ -20,9 +20,9 @@ set_fortran_indexing(False)
 def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200, force_tol = 0.05):
   """
   :method:`relax_gb` function definition to relax a grain_boundary.
-      gb_file     = gbid or subgbid.
-      traj_steps  = number of steps between print trajectories.
-      total_steps = total number of force relaxation steps.
+    gb_file     = gbid or subgbid.
+    traj_steps  = number of steps between print trajectories.
+    total_steps = total number of force relaxation steps.
   """
   def converged(grain, smax, fmax):
 
@@ -32,11 +32,12 @@ def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200, force_tol = 
     if maxforce < fmax and maxstress < smax:
       return True
     return False
+
   with open('subgb.json', 'r') as outfile:
     j_dict = json.load(outfile)
   try:
     POT_DIR     = os.environ['POTDIR']
-  except:
+  except KeyError:
     sys.exit("PLEASE SET export POTDIR='path/to/potfiles/'")
   try: 
     param_file = j_dict['param_file']
@@ -135,7 +136,7 @@ def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200, force_tol = 
 if __name__ == '__main__':
 #Command line tool for relaxing grainboundary structure
   parser = argparse.ArgumentParser()
-  parser.add_argument('-inp', '--input_file', help='name of input file')
+  parser.add_argument('-inp', '--input_file', help='name of input structure file')
   parser.add_argument('-ts',  '--traj_steps', help='Number of steps to write trajectory to file', type=int, default=120)
   parser.add_argument('-f',  '--force_tol', help='Force tolerance for minimization', type=float, default=0.05)
   args = parser.parse_args()

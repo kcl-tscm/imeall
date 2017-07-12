@@ -15,8 +15,9 @@ set_fortran_indexing(False)
 
 class Hydrify(object):
   """"
-  class:Hydrify contains methods for adding hydrogens at specific positions in a 
-  simulation cell.
+  class: Hydrify contains methods for adding hydrogens at specific positions in a 
+  simulation cell handles different situations: crack geometry, grainboundry,
+  and conventional crystal.
   """ 
   def __init__(self):
     pass
@@ -174,8 +175,6 @@ class Hydrify(object):
             h_pos = h + lat
             h_list.append(np.array(h_pos))
         h_list = self.append_if_thresh(h_list, rcut = d_H)
-        #for h_pos in h_list:
-        #  cl.add_atoms(h_pos,1)
       elif mode=='Defect':
         h_list = []
         print 'Octahedral Sites', oct_sites 
@@ -190,8 +189,8 @@ class Hydrify(object):
         for h_pos in h_list:
           gb.add_atoms(h_pos,1)
     else:
-#In this case we just add to the octahedral or in a non-bulk
-#environment largest volume sites.
+# In this case we just add to the octahedral or in a non-bulk
+# environment largest volume sites.
       h_list = []
       for h in oct_sites:
         h_list.append(h)
@@ -205,14 +204,11 @@ if __name__=='__main__':
   parser.add_argument('-p','--pattern', default="1.traj.xyz")
   args    = parser.parse_args()
   pattern = args.pattern
-
   jobs = glob.glob(pattern)
-  print jobs
   hydrify =  Hydrify()
   scratch = os.getcwd()
   for job in jobs:
     os.chdir(job)
     ats = Atoms('crack.xyz')
     hydrify.hydrogenate_gb(mode='CrackTip')
-
 

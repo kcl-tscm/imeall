@@ -28,7 +28,6 @@ for gb in selected_grains.order_by(GrainBoundary.angle)[2:]:
   subgbs = [(16.02*(subgb['E_gb']-float(subgb['n_at']*ener_per_atom['PotBH.xml']))/(2.0*subgb['area']), subgb) for subgb in subgbs]
   subgbs.sort(key = lambda x: x[0])
   try:
-    #print '\t {} {} {}'.format(round(gb.angle*(180.0/3.14159),3), round(subgbs[0][0],3), subgbs[0][1]['path'])
     print subgbs[0][1]['path']
     continue
     

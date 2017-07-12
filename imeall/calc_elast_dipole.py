@@ -1,18 +1,19 @@
 import os
+import sys
 import argparse
 import subprocess
 import numpy as np
-from ase.constraints import UnitCellFilter, StrainFilter
 from quippy import Atoms, set_fortran_indexing, Potential
+from ase.constraints import UnitCellFilter, StrainFilter
 
-set_fortran_indexing(False)
+set_fortran_indexing(True)
 
 class ElasticDipole(object):
-  def calc_interatomic_force(self, defect_index, at_index):
+  def __init__(self):
     """
-    Should be in QUIP.
+    Default numerical differentiation.
     """
-    pass
+    self.strain_tensor = [-0.01, -0.005, 0.0, 0.005, 0.01]
 
   def defect_force_method(self, ats, defect, rcut=None):
     """
@@ -20,8 +21,8 @@ class ElasticDipole(object):
     the distinct contribution of a force from a particular atom,
     i.e. EAM or Tightbinding model.
     Params:
-      ats: `Atoms` object of system.
-      defect: `Atom` object specifying the defect atom.
+      :ats: `Atoms` object of system.
+      :defect: `Atom` object specifying the defect atom.
     """
     alpha_ij = self.calc_interatomic_force(defect_atom.index, ats)
     return alpha_ij
@@ -40,21 +41,30 @@ class ElasticDipole(object):
       ucf = UnitCellFilter(ats, strain_mask)
       opt = FIRE(ucf)
     else:
-      opt = FIRE(ats)
+      strain_mask  = [0,0,0,0,0,0]
+      ucf = UnitCellFilter(ats, strain_mask)
+      opt = FIRE(ucf)
     opt.run(fmax = force_tol)
     ats.write(output_name)
     return ats
   
-  def compute_vacancy_dipole(self, defect, ats, pot):
+  def compute_vacancy_dipole(self, defect, ats, pot=None, forces=None):
     """
     :method: Valid where there is a clear distinction between host lattice
     and the defect atom.
     """
-    ats.remove_atoms(defect.index+1)
-    ats.set_calculator(pot)
-    ats.write('relaxed_cell_removed_defect.xyz')
-    forces = ats.get_forces()
-    #calculat dipole tensor
+    if forces == None:
+      print len(ats) 
+      ats.remove_atoms([defect.index+1])
+      for at in ats:
+        print at
+      print len(ats)
+      ats.set_calculator(pot)
+      forces = ats.get_forces()
+      ats.write('relaxed_cell_removed_defect.xyz')
+    else:
+      #force array has been passed (e.g. read from OUTCAR)
+      pass
     alpha_ij = np.zeros([3,3])
     for defect_force, at in zip(forces, ats):
       alpha_ij[0, 0] += defect_force[0]*(defect.position[0] - at.position[0])
@@ -71,25 +81,24 @@ class ElasticDipole(object):
 if __name__=='__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument('-i', '--input_file', help="Structure file of system with defect. (xyz)", required=True)
-  parser.add_argument('-d', '--defect_index', help="Atom index (base 0) of the defect atom.", type=int)
   parser.add_argument('-rc', '--relax_cell', help="Relax defect super cell.", action='store_true')
   parser.add_argument('-f', '--force_tol', help="force_tolerance.", type=float, default=0.0001)
   args = parser.parse_args()
   try:
     POT_DIR     = os.environ['POTDIR']
-  except:
+  except KeyError:
     sys.exit("PLEASE SET export POTDIR='path/to/potfiles/'")
 
   elastic = ElasticDipole()  
   eam_pot = os.path.join(POT_DIR, 'PotBH.xml')
   pot = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(1.00894848312), param_filename=eam_pot)
 
-# relax defect cell
   ats = Atoms(args.input_file)
   ats.set_calculator(pot)
 
   init_vol = ats.get_volume()
   print 'Initial Vol.', init_vol
+# relax defect cell
   elastic.relax_defect_cell(ats, force_tol=args.force_tol, relax_cell=args.relax_cell)
   final_vol = ats.get_volume()
   print 'Final Vol.', final_vol

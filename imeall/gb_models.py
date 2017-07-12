@@ -10,9 +10,10 @@ from peewee   import *
 from datetime import datetime, timedelta
 from models   import GBAnalysis, PotentialParameters
 from quippy   import Atoms, set_fortran_indexing, Potential, AtomsReader
+from imeall import app
 
 set_fortran_indexing(False)
-GRAIN_DATABASE = "/home/lambert/pymodules/imeall/imeall/grain_boundaries/"
+GRAIN_DATABASE = app.config['GRAIN_DATABASE']
 
 logging.basicConfig(filename='example.log',level=logging.DEBUG)
 
@@ -588,7 +589,7 @@ if __name__=="__main__":
   args   = parser.parse_args()
   database.connect()
   if args.list:
-    oraxis = '0,0,1'
+    oraxis = ','.join([c for c in args.or_axis])
     pot_param     = PotentialParameters()
     ener_per_atom = pot_param.gs_ener_per_atom()
 
@@ -599,6 +600,7 @@ if __name__=="__main__":
     else:
       sys.exit('Invalid grain boundary type.')
 
+    print "List Minimum Energy Structures for Potential and Orientation Axis"
     print 'Material: {}, Orientation Axis: {} Potential: {}'.format(args.material, ' '.join(args.or_axis.split(',')), args.potential)
     for gb in selected_grains.order_by(GrainBoundary.angle):
       subgbs = (gb.subgrains.select(GrainBoundary, SubGrainBoundary)

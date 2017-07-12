@@ -1,9 +1,0 @@
-example01.py:
-  Script demonstrates a simple query to the database to pull the minimum energy
-  values for a user chosen potential (or list of potentials), and orientation axis.
-usage:
-  python example01.py
-
-example02.py:
-  Calculate the elastic dipole tensor for a hydrogen at a grain boundary
-  using an embedded atom potential

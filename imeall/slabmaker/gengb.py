@@ -6,7 +6,7 @@ from   fractions import gcd
 
 class QuaternionGB(object):
   """
-  This object contains routines to generate lists of valid 
+  :class:`QuaternionGB` This object contains routines to generate lists of valid 
   grain boundary orientations (i.e. the boundary planes of 
   grain for different orientation axes and misorientation angles) using
   quaternion algebra. Routines for symmetric tilt, and twist grain
@@ -96,4 +96,4 @@ class QuaternionGB(object):
 
 if __name__=='__main__':
  quatgb = QuaternionGB() 
- quatgb.gen_sym_tilt()
+ quatgb.gen_sym_tilt(orientation_axis=[0,0,1])

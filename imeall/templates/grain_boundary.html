@@ -37,6 +37,8 @@
     <p> {{pot}} </p>
     <ul>
       <li> Min. Energy: {{ pot_gam_dict.min_en | round(4, 'floor') }} J/m^{2} </li>  
+      <li> {{pot_gam_dict.min_path}} </li>
+      <li> <a href="{{url_for('serve_struct', filename='apathtoafile', textpath=pot_gam_dict.min_path)}}"> Min. Energy Structure </a></li>
       <li> Rigid Body Translation (x,y, Cutoff Criterion)</li>
       <ul>
         {% for rbt in pot_gam_dict.min_coords %} 
@@ -44,7 +46,9 @@
         {% endfor %}
       </ul>
       <li> Max. Energy:{{ pot_gam_dict.max_en | round(4, 'floor') }} J/m^{2}  </li>  
+      <li> <a href="{{url_for('serve_struct', filename='apathtoafile', textpath=pot_gam_dict.max_path)}}"> Max. Energy Structure </a></li>
       <li> Rigid Body Translation (x,y, Cutoff Criterion)</li>
+      <li> Structure </li>
       <ul>
         {% for rbt in pot_gam_dict.max_coords %}
           <li> {{rbt}} </li>
@@ -56,61 +60,16 @@
 	<h2> Structure  </h2>
   <img src = "{{url_for('serve_img', filename=url_path, gbid=gbid, img_type='struct')}}" alt="GB structure" width=700>
 	<h2> Coincident Site Lattice  </h2>
-  <img src = "{{url_for('serve_img', filename=url_path, gbid=gbid, img_type='csl')}}"    alt="GB structure" width=700>
-{#
-  <p> <button id="subgrainbutton"> Show/Hide Subgrain Energetics </button> </p>
-  <script>
-    $("#subgrainbutton").click(function() {
-        $("#subgraineners").toggle();
-      });
-  </script>
-    <ul>
-      {% if 'E_gb' in gb_info %} 
-        <li> Number of Atoms in Unit Cell:  {{ gb_info.n_unit_cell }}                        </li>
-      {% else %}
-        <li> Number of Atoms in Unit Cell:  {{ gb_info.n_at }}                        </li>
-      {% endif %}
-      {% if 'E_gb' in gb_info %} 
-        <li> Total Energy:                  {{ gb_info.E_gb | round(3,'floor') }} eV </li>
-        <li> Total Energy per Atom:         {{ (gb_info.E_gb/gb_info.n_at) | round(3,'floor') }} eV </li>
-      {% endif %}
-    </ul> #}
-{# Should convert this to java view.            #}
+  <img src = "{{url_for('serve_img', filename=url_path, gbid=gbid, img_type='csl')}}" alt="GB structure" width=700>
 {# Collapsible indented tree layout taken from
-   http://bl.ocks.org/mbostock/1093025          #}
-
-
+   http://bl.ocks.org/mbostock/1093025 #}
   <h3> Subgrain Directories of {{gbid}}: </h3> 
   <p> <button id="subgraindirbutton"> Show/Hide Subgrain Subdirectories </button> </p>
-  <script>
-    $("#subgraindirbutton").click(function() {
-        $("#subgraindirs").toggle();
-      });
-  </script>
-    <ul>
-      {%- for item in tree.children recursive %}
-        <div id="subgraindirs">
-        {%- if item.children -%}
-          <li> <a href="{{url_for('serve_file', gbid=gbid, filename=item.name, 
-                          url_path=url_path, textpath=item.fullpath)}}"> {{item.name}} </a>
-          <ul class="submenu">{{loop(item.children)}}</ul>
-          </li>
-        </div>
-        {% else %}
-          {% if item.name|file_extension =='png' %}
-             <li> 
-                  <a href="{{url_for('serve_file', gbid=gbid, filename=item.name, 
-                                                  url_path=url_path, textpath=item.fullpath)}}" title={{item.name}}>
-                  <img src = "{{url_for('serve_file', gbid=gbid, filename=item.name, 
-                                url_path=url_path, textpath=item.fullpath)}}" style="width:120px;height:120px;border:0;"
-                                alt = {{item.name}}>
-                  </a>
-             </li>
-          {% else %}
-             <li> <a href="{{url_for('serve_file', gbid=gbid, filename=item.name, 
-                             url_path=url_path, textpath=item.fullpath)}}">{{item.name}}</a> </li>
-          {% endif %}
-        {%- endif %}
-      {%- endfor %}
-    </ul>
+  <script src="https://d3js.org/d3-hierarchy.v1.min.js"></script>
+  <div id="subgraindirs">
+    <script> 
+      var flare_root = jQuery.parseJSON('{{ flare_root|safe }}');
+    </script> 
+    <script src="{{ url_for('static', filename='treelayout.js')}}"></script>
+  </div>
 {% endblock body %}
