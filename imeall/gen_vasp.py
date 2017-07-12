@@ -6,7 +6,7 @@ from ase.calculators.vasp import Vasp
 set_fortran_indexing(False)
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-i', '--input_file', help="Structure file of system with defect. (xyz)", required=True)
+parser.add_argument('-i', '--input_file', help="Structure file of system (xyz)", required=True)
 args = parser.parse_args()
 
 ats = Atoms(args.input_file)
