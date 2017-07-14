@@ -7,6 +7,7 @@ from pylada_defects import get_interstitials, write_interstitials, get_unique_wy
 from pylada_defects import get_ints_in_prim_cell, get_unique_ints
 from pyspglib import spglib
 from quippy import Atoms, farray, frange, set_fortran_indexing
+
 import json
 import argparse
 import numpy as np
@@ -22,6 +23,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--gen_interface','-g', action='store_true')
 parser.add_argument('--decorate_interface','-d', action='store_true')
 args = parser.parse_args()
+
+select_interface = True
 
 if args.gen_interface:
   #output.xyz must have structure_type property attached.
@@ -39,9 +42,10 @@ if args.gen_interface:
   #take slice of interface max uncoordinated with min uncoordinated.
   z_width = (z_max-z_min)/2.0
   z_center = z_width + z_min
-  gb_max = z_max + 0.0*z_width
-  gb_min = z_min - 0.0*z_width
+  gb_max = z_max + 1.0*z_width
+  gb_min = z_min - 1.0*z_width
   zint = ats.select([(gb_min <= at.position[2] <= gb_max) for at in ats])
+  zint.center(vacuum=1.0,axis=2)
   zint.write('interface.xyz')
   #Write POSCAR to use interstitial site generator:
   ats = Atoms('interface.xyz')
@@ -72,22 +76,17 @@ if args.decorate_interface:
     json.dump([list(u) for u in unique_lattice_sites], f)
   interstitial_sites = get_all_interstitials(struct, unique_lattice_sites)
   print 'Number of Interstitial Sites: ', len(interstitial_sites)
-  #unique_site_mask = [nearest_to_unique(at, unique_lattice_sites) for at in ats]
-  #ints_prim = get_ints_in_prim_cell(struct, unique_lattice_sites)
   decorator = []
   for site in interstitial_sites:
     if site[0]=='B':
       decorator.append(np.array(site[1]))
   unique_interstitial_sites = get_unique_ints(struct, ats, decorator, ttol=0.5)
-
   unique_list = []
   for unique in unique_interstitial_sites:
-    if z_min <= unique[2] <= z_max:
       unique_list.append(unique)
   with open('unique_h_sites.json', 'w') as f:
     json.dump([list(u) for u in unique_list], f)
   for unique in unique_interstitial_sites:
-    if z_min <= unique[2] <= z_max: 
       ats.add_atoms(unique,1)
   #relabel atom ids for plotting in ovito
   for i in frange(len(ats)):
