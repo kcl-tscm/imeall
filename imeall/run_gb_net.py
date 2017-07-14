@@ -15,28 +15,31 @@ npj     = 1 # nodes per job
 scratch = os.getcwd()
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-gbt", "--gb_type", help="Specify type of boundary twist or tilt.", required=True)
-parser.add_argument("-p", "--pattern", help="Job pattern to select grainboundaries.", default="001")
-parser.add_argument("-d", "--delay", help="Time delay between job submissions.", type=int, default=60)
-parser.add_argument("-ct", "--calc_type", help="Calculation types.", required=True) 
-parser.add_argument("-q", "--queue", help="Calculation types.", default="LowMemShortterm.q") 
-parser.add_argument("-j", "--jobfile", help="Job file if this is specified the jobs will only be run\
-                                             if they are present in the file specified. Each gbid \
-                                             should be on a different line.", default="") 
+parser.add_argument("-gbt","--gb_type", help="Specify type of boundary twist or tilt.", required=True)
+parser.add_argument("-ct","--calc_type", help="Potential used for calculation.", required=True) 
+parser.add_argument("-p","--pattern", help="Job pattern to select grainboundaries.", default="001")
+parser.add_argument("-d","--delay", help="Time delay between job submissions.", type=int, default=60)
+parser.add_argument("-s","--start_num", help="Job_num to start at.", type=int, default=0)
+parser.add_argument("-n","--number", help="Num jobs to submit.", type=int, default=10)
+parser.add_argument("-t","--tranchsize", help="Tranchsize.", type=int, default=2000)
+parser.add_argument("-q","--queue", help="Name of queue on machine.", default="LowMemShortterm.q") 
+parser.add_argument("-i","--input_file", help="Job file if this is specified the jobs will only be run\
+                                            if they are present in the file specified. Each gbid \
+                                            should be on a different line.", default="") 
 args = parser.parse_args()
 
 #completed_jobs = ['00195301120','00181701140','0017575790','00171501160','0016193350','00149556130','00111421100']
 #[jobdirs.remove(x) for x in completed_jobs]
-
+template_dir = os.environ['TEMPLATE_DIR']
 def chunker(seq, size):
   return (seq[pos:pos + size] for pos in xrange(0, len(seq), size))
 
 if args.gb_type=="tilt":
-  if args.jobfile=="":
+  if args.input_file=="":
     jobdirs   = glob.glob('{dir_pattern}*'.format(dir_pattern=args.pattern))
     jobdirs   = filter(os.path.isdir, jobdirs)
   else:
-    with open(args.jobfile, 'r') as f:
+    with open(args.input_file, 'r') as f:
       jobdirs = f.read().split()
   print jobdirs
   jdirs     = []
@@ -72,12 +75,13 @@ else:
   parallel = False
 
 log  = open('gbcalclog.out', 'a')
-for job_tract in chunker(jobdirs, 72):
+for job_tract in chunker(jobdirs, args.tranchsize):
   for job in job_tract:
     os.chdir(os.path.join(scratch, job[0]))
     print 'Current Working Directory', os.getcwd()
     if parallel:
-      pbs_str = open('/users/k1511981/pymodules/templates/calc_rundyn.pbs', 'r').read()
+      print 'Parallel Job'
+      pbs_str = open(os.path.join(template_dir, 'calc_rundyn.pbs'), 'r').read()
       gb_args = '-ct {calc_type} -rc {rc} -i_v {i_v} -i_bxv {i_bxv} -gbt {gb_type}'.format(rc=job[1], i_v=job[2], i_bxv=job[3], 
       calc_type = args.calc_type, gb_type=args.gb_type)
       pbs_str = pbs_str.format(jname='fe'+job[0][:8], time=jtime, queue=args.queue, gb_args=gb_args)
@@ -88,13 +92,14 @@ for job_tract in chunker(jobdirs, 72):
       job     = subprocess.Popen(qsub_args.split())
       job.wait()
     else:
-      gb_args = '-rc {rc} -i_v {i_v} -i_bxv {i_bxv} -gbt {gb_type}'.format(rc=job[1], i_v=job[2], i_bxv=job[3], gb_type=args.gb_type)
+      print 'Running in Serial'
+      gb_args = '-ct {calc_type} -rc {rc} -i_v {i_v} -i_bxv {i_bxv} -gbt {gb_type}'.format(rc=job[1], i_v=job[2], i_bxv=job[3],
+                gb_type=args.gb_type, calc_type=args.calc_type)
       gb_args = "python /Users/lambert/pymodules/imeall/imeall/run_dyn.py {}".format(gb_args)
       print job, gb_args
       job = subprocess.Popen(gb_args.split())
       job.wait()
   time.sleep(args.delay)
   os.chdir(scratch)
-  now       = datetime.now()
   log.flush()
 log.close()

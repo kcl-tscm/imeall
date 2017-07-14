@@ -88,11 +88,11 @@ class EAMXML(object):
 
 if __name__ == '__main__':
 #If we convert the file into the Fe.alloy format then ase can read it directly.
-  eam_parse   = EAMXML(rmin=0.0, rcut=5.3, ds=5.0)
-  PLOT_POT    = True
-  CONV_TO_XML = True
-  n_spec      = 4
-  n_pairs     = n_spec*(n_spec+1)/2
+  eam_parse = EAMXML(rmin=0.0, rcut=5.3, ds=5.0)
+  PLOT_POT = True
+  CONV_TO_XML = False
+  n_spec   = 4
+  n_pairs  = n_spec*(n_spec+1)/2
   print n_spec, n_pairs
   n_points = 10000
 #Atom Embedding Term
@@ -137,13 +137,14 @@ if __name__ == '__main__':
     rho = [float(x.attrib['r']) for x in root[0][1]]
     print 'length of vectors', len(xpts), len(rho)
     fig, ax = plt.subplots(3,1)
-    ax[0].set_ylim([-1,2])
+    ax[0].set_ylim([-1,5])
     ax[0].set_ylabel('Density')
     ax[0].plot(xpts, R)
     ax[1].set_ylim([-5,50])
     ax[1].set_ylabel('V')
     ax[1].plot(xpts,V)
-    ax[2].set_ylim([-50,20])
+    ax[2].set_ylim([-50,50])
     ax[2].set_ylabel('Embedding Term')
     ax[2].plot(rho, F)
+  fig.savefig('eam_pot.svg')
   plt.show()

@@ -4,6 +4,7 @@ import json
 import shutil
 import ase.io        
 import glob
+import logging
 from   ase.constraints import UnitCellFilter
 from   ase.optimize    import BFGS, FIRE
 from   quippy          import Atoms, Potential
@@ -221,21 +222,17 @@ class GBRelax(object):
     print 'Generate Job in:'
     print '\t', self.calc_dir
 
-  def gen_super_rbt(self, bp=[],v=[], rbt=[0.0, 0.0], sup_v=6, sup_bxv=4, rcut=2.0, gb_type="tilt"):
+  def gen_super_rbt(self, bp=[],v=[], rbt=[0.0, 0.0], sup_v=6, sup_bxv=2, rcut=2.0, gb_type="tilt"):
     """
     Create a grain boundary with rigid body translations.
     """
     io = ImeallIO()
     if gb_type=="tilt":
       grain = build_tilt_sym_gb(bp=bp, v=v, rbt=rbt)
+      logging.debug('bp: {} v: {} rbt: {}'.format(bp, v, rbt))
     elif gb_type=="twist":
-      grain = build_twist_sym_gb(bp=[0,0,1], v=np.array([3,5,0]), rbt=rbt)
-# For RBT we build a top level dir with just the translated supercell and no
-# deleted atoms then we create subdirectories with particular deletion criteria
-# to them. This means we don't have to duplicate the structure files.
-# Restoring the write to file
-# Check if this initial grain with the atom deletion criterion and the rigid body translations
-# is present if not generate it:
+      grain = build_twist_sym_gb(bp=[0,0,1], v=v, rbt=rbt)
+    #For RBT we build a top level dir with just the translated supercell and no deletion criterion
     m, n, grain  = self.gen_super(grain=grain, rbt=rbt, sup_v=sup_v, sup_bxv=sup_bxv,  rcut=0.0)
     self.name    = '{0}_v{1}bxv{2}_tv{3}bxv{4}'.format(self.gbid,
     str(m), str(n), str(round(rbt[0],2)), str(round(rbt[1],2)))
@@ -246,9 +243,8 @@ class GBRelax(object):
     self.subgrain_dir = io.make_dir(self.subgrain_dir, self.name)
     print "delete atoms"
     grain = self.delete_atoms(grain=grain, rcut=rcut)
-#Deposit all initial structures in the struct dir:
     grain.write('{0}.xyz'.format(os.path.join(self.subgrain_dir, self.name)))
-# Finally deposit json and grain file with translation information.
+    #write json file with subgb information.
     try:
       f = open('{0}/subgb.json'.format(self.subgrain_dir), 'r')
       j_dict = json.load(f)
@@ -256,17 +252,20 @@ class GBRelax(object):
     except IOError:
       f = open('{0}/subgb.json'.format(self.subgrain_dir), 'w')
       j_dict = {}
-# Terms to append to subgrain dictionary:
+    #Terms to append to subgrain dictionary:
     cell           = grain.get_cell()
     cell_area      = cell[0,0]*cell[1,1]
     cell_height    = cell[2,2]
     j_dict['param_file'] = self.param_file
+    j_dict['potential']  = self.param_file
     j_dict['name'] = self.name
     j_dict['rbt']  = rbt
     j_dict['rcut'] = rcut
     j_dict['H']    = cell_height
     j_dict['A']    = cell_area
-    j_dict['n_at'] = len(grain)
+    j_dict['converged'] = False
+    j_dict['area']      = cell_area
+    j_dict['n_at']      = len(grain)
     f = open('{0}/subgb.json'.format(self.subgrain_dir), 'w')
     json.dump(j_dict, f, indent=2)
     f.close()
@@ -338,7 +337,7 @@ class GBRelax(object):
     x.calc_connect()
     x.calc_dists()
     rem=[]
-    u = fzeros(3)
+    u=fzeros(3)
     for i in frange(x.n):
       for n in frange(x.n_neighbours(i)):
         j = x.neighbour(i, n, distance=3.0, diff=u)
@@ -384,23 +383,24 @@ if __name__=='__main__':
   parser.add_argument("-gbt",   "--gb_type", help="Specify type of boundary twist or tilt.", default="tilt")
 
   args = parser.parse_args()
-  calc_type = args.calc_type
   prefix    = args.prefix
   queue     = args.queue
   time      = args.time
   rcut      = float(args.rcut)
 
 # Each calculation type is associated with a potential:
-  if calc_type == 'EAM_Mish':
+  if args.calc_type == 'EAM_Mish':
     param_file = 'iron_mish.xml'
-  elif calc_type == 'PotBH':
+  elif args.calc_type == 'PotBH':
     param_file = 'PotBH.xml'
-  elif calc_type == 'EAM_Men':
+  elif args.calc_type == 'EAM_Men':
     param_file = 'Fe_Mendelev.xml'
-  elif calc_type == 'EAM_Ack':
+  elif args.calc_type == 'EAM_Ack':
     param_file = 'Fe_Ackland.xml'
-  elif calc_type == 'EAM_Dud':
+  elif args.calc_type == 'EAM_Dud':
     param_file = 'Fe_Dudarev.xml'
+  elif args.calc_type == 'GAP':
+    param_file = 'gp33b.xml'
   else:
     print 'No available potential corresponds to this calculation type.'
     sys.exit()
@@ -419,12 +419,12 @@ if __name__=='__main__':
       print '\n'
       print '\t', gbid
       print '\n'
-      gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type=calc_type,
+      gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type=args.calc_type,
                         potential='IP EAM_ErcolAd', param_file=param_file)
 
       if args.gb_type=="twist":
-        sup_v   = 3
-        sup_bxv = 3
+        sup_v   = 4
+        sup_bxv = 4
       elif args.gb_type=="tilt":
         sup_v   = 6
         sup_bxv = 2
@@ -445,11 +445,11 @@ if __name__=='__main__':
     gbid = grain_dict['gbid']
     bp   = grain_dict['boundary_plane']
     v    = grain_dict['orientation_axis']
-    gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type=calc_type,
+    gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type=args.calc_type,
                       potential = 'IP EAM_ErcolAd', param_file=param_file)
     if args.gb_type=="twist":
-      sup_v   = 3
-      sup_bxv = 3
+      sup_v   = 4
+      sup_bxv = 4
     elif args.gb_type=="tilt":
       sup_v   = 6
       sup_bxv = 2

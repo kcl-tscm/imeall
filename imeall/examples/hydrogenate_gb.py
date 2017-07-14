@@ -10,8 +10,11 @@ from   ase.lattice.cubic  import BodyCenteredCubic
 from   ase.constraints    import UnitCellFilter, StrainFilter
 
 from   quippy import Atoms, Potential, AtomsReader
-from   fracture.hydrify_cracktips import Hydrify
+from   imeall.hydrogenate import Hydrify
 
+
+
+#Constants
 E_H2    = -4.73831215118
 E_diss  =  0.291385500301
 j_file  = '00121243160_v6bxv2_tv0.3bxv0.1_d1.7z_traj.xyz'
@@ -76,7 +79,6 @@ with open('H_en.dat', 'a') as f:
 
     gb.set_calculator(pot)
     gb_h.set_calculator(pot)
-    
     E_gb   = gb.get_potential_energy()
     strain_mask = [0,0,0,0,0,0]
     ucf         = UnitCellFilter(gb_h, strain_mask)
@@ -87,4 +89,3 @@ with open('H_en.dat', 'a') as f:
     n_H  = sum([at.number == 1 for at in gb_h])
     E_sg = E_gbh-E_gb-n_H*0.5*E_H2 
     print >> f, n_H, d_H, E_gbh, E_gb, n_H*0.5*E_H2, E_sg, n_H*E_diss, E_sg-n_H*E_diss
-
