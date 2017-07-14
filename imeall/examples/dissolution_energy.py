@@ -19,7 +19,6 @@ gb = BodyCenteredCubic(directions = [[1,0,0], [0,1,0], [0,0,1]],
                        size = (4,4,4), symbol='Fe', pbc=(1,1,1),
                        latticeconstant = alat)
 
-
 tetra_pos = alat*np.array([0.25, 0.0, 0.5])
 
 h2 = aseAtoms('H2', positions=[[0, 0, 0],[0, 0, 0.7]])
