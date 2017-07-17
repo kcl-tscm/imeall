@@ -7,6 +7,7 @@ from pylada_defects import get_interstitials, write_interstitials, get_unique_wy
 from pylada_defects import get_ints_in_prim_cell, get_unique_ints
 from pyspglib import spglib
 from quippy import Atoms, farray, frange, set_fortran_indexing
+
 import json
 import argparse
 import numpy as np
@@ -22,6 +23,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--gen_interface','-g', action='store_true')
 parser.add_argument('--decorate_interface','-d', action='store_true')
 args = parser.parse_args()
+
+select_interface = True
 
 if args.gen_interface:
   #output.xyz must have structure_type property attached.
@@ -78,7 +81,6 @@ if args.decorate_interface:
     if site[0]=='B':
       decorator.append(np.array(site[1]))
   unique_interstitial_sites = get_unique_ints(struct, ats, decorator, ttol=0.5)
-
   unique_list = []
   for unique in unique_interstitial_sites:
       unique_list.append(unique)
