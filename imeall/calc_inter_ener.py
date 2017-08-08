@@ -1,9 +1,9 @@
 import os
 import json
 import numpy as np
+import argparse
 from ase.optimize import FIRE
 from quippy import Atoms, Potential, frange
-
 
 #calc_inter_diss_ener.py calculates intersitial dissolution energy
 def h2_formation_energy(pot):
@@ -40,11 +40,37 @@ def get_interface_bounds(ats):
   zint = ats.select([(gb_min <= at.position[2] <= gb_max) for at in ats])
   return gb_min, gb_max, z_width
 
-#calculated for Ramasubramaniam
+def apply_strain(ats, st_type, st_num):
+  e1 = np.array([1,0,0])
+  e2 = np.array([0,1,0])
+  e3 = np.array([0,0,1])
+  cell = ats.get_cell()
+  if st_type == 'hydrostatic':
+    strain_tensor = np.eye(3) + st_num*np.eye(3)
+    cell = cell*strain_tensor
+    ats.set_cell(cell, scale_atoms=True)
+    print 'Hydrostatic strain', st_num
+    print 'strain tensor', strain_tensor
+  elif st_type == 'stretch':
+    strain_tensor = np.tensordot(e2, e2, axes=0)
+    strain_tensor = np.eye(3) + st_num*strain_tensor
+    cell = strain_tensor*cell
+    print 'Stretch strain'
+    print 'Cell:', cell
+    ats.set_cell(cell, scale_atoms=True)
+  elif st_type == 'shear':
+    strain_tensor = np.tensordot(e1, e2, axes=0)
+    strain_tensor = np.eye(3) + st_num*strain_tensor
+    cell = strain_tensor.dot(cell)
+    print 'Shear Strain', strain_tensor
+    print 'Cell:', cell
+    ats.set_cell(cell, scale_atoms=True)
+  else:
+    print 'No strain applied.'
+  return ats
 
-#Calculates dissolution energies given a list of h_sites.
-#bulk_sites = [tetrahedral site and octahedral]
 alat = 2.83
+#bulk_sites = [tetrahedral site and octahedral]
 bulk_sites = map(lambda x: alat*x, [np.array([0.25, 0.0, 0.5]), np.array([0,0,0.5])])
 
 POT_DIR = os.environ['POTDIR']
@@ -52,40 +78,46 @@ eam_pot = os.path.join(POT_DIR, 'PotBH.xml')
 r_scale = 1.00894848312
 pot = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=eam_pot)
 
-with open('unique_h_sites.json','r') as f:
-  h_sites = json.load(f)
 
-ats = Atoms('output.xyz')
-gb_min, gb_max, z_width = get_interface_bounds(ats)
-g = open('h_site_ener.txt','w')
-#CONSTANTS
-with open('subgb.json','r') as f:
-  subgb_dict = json.load(f)
+if __name__=='__main__':
+  parser = argparse.ArgumentParser() 
+  parser.add_argument('-m','--st_modes', nargs='+', help='Type of strain mode: shear, stretch, or hydrostatic.', default=['shear', 'stretch'])
+  parser.add_argument('-s','--st_nums', nargs='+', help='Type of strain mode: shear, stretch, or hydrostatic.', default=[-0.01, -0.005, 0.0, 0.005, 0.01], type=float)
+  args = parser.parse_args()
+  with open('unique_h_sites.json','r') as f:
+    h_sites = json.load(f)
+  
+  ats = Atoms('output.xyz')
+  gb_min, gb_max, z_width = get_interface_bounds(ats)
+  with open('subgb.json','r') as f:
+    subgb_dict = json.load(f)
 
-force_tol = 0.01
-E_h2 = -4.73831215121
-#E_h2_dft = -4.52
-E_gb = subgb_dict['E_gb']
-#Test
-all_h_ats = ats.copy()
-for h_site in h_sites:
-  h_site[2] += float(gb_min)-1.00000 #rescale into cell remove vacuum of 1 A.
-  h_ats = ats.copy()
-  if (gb_min + 1.0*z_width) <= h_site[2] <= (gb_max-1.0*z_width): #test tight to interface
-    all_h_ats.add_atoms(h_site,1)
-    h_ats.add_atoms(h_site,1)
-    h_ats.set_calculator(pot)
-    opt = FIRE(h_ats)
-    opt.run(fmax = force_tol)
-    E_gbh = h_ats.get_potential_energy()
-    h_at_rel = filter(lambda x:x.number == 1, h_ats)
-    print h_at_rel
-    print >> g, h_at_rel[0].position, E_gbh, E_gbh - E_gb - 0.5*E_h2
-    g.flush()
-  else:
-    pass
-
-for i in frange(len(h_ats)):
-  all_h_ats.id[i] = i
-all_h_ats.write('full_hydrogenated_grain.xyz')
-g.close()
+  force_tol = 0.05
+  E_h2 = -4.73831215121
+  E_gb = subgb_dict['E_gb']
+  all_h_ats = ats.copy()
+  for st_type in args.st_modes:
+    for st_num in args.st_nums:
+      g = open('h_site_ener_{}_{}.txt'.format(st_type, str(st_num)), 'w')
+      s_ats = ats.copy()
+      s_ats = apply_strain(s_ats, st_type, st_num)
+      s_ats.set_calculator(pot)
+      E_gb = s_ats.get_potential_energy()
+      for h_site in h_sites:
+          h_site[2] += float(gb_min)-1.00000 #rescale into cell remove vacuum of 1 A.
+          h_ats = s_ats.copy()
+          if (gb_min + 1.0*z_width) <= h_site[2] <= (gb_max-1.0*z_width): #test tight to interface
+            h_ats.add_atoms(h_site,1)
+            h_ats.set_calculator(pot)
+            opt = FIRE(h_ats)
+            opt.run(fmax = force_tol)
+            E_gbh = h_ats.get_potential_energy()
+            h_at_rel = filter(lambda x:x.number == 1, h_ats)
+            all_h_ats.add_atoms(h_at_rel[0].position, 1)
+          #print position of relaxed h atom and the interstitial energies.
+            print >> g, h_at_rel[0].position, E_gbh, E_gbh - E_gb - 0.5*E_h2
+            g.flush()
+          else:
+            print 'h_site out of bounds'
+            pass
+      g.close()
