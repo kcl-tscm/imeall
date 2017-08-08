@@ -64,6 +64,7 @@ with open('subgb.json','r') as f:
 
 force_tol = 0.01
 E_h2 = -4.73831215121
+#E_h2_dft = -4.52
 E_gb = subgb_dict['E_gb']
 #Test
 all_h_ats = ats.copy()
