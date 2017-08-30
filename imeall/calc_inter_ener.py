@@ -82,6 +82,7 @@ pot = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), par
 if __name__=='__main__':
   parser = argparse.ArgumentParser() 
   parser.add_argument('-m','--st_modes', nargs='+', help='Type of strain mode: shear, stretch, or hydrostatic.', default=['shear', 'stretch'])
+  parser.add_argument('-r','--rescale', help='interstitial site needs to be rescaled into lattice', action='store_true')
   parser.add_argument('-s','--st_nums', nargs='+', help='Type of strain mode: shear, stretch, or hydrostatic.', default=[-0.01, -0.005, 0.0, 0.005, 0.01], type=float)
   args = parser.parse_args()
   with open('unique_h_sites.json','r') as f:
@@ -104,7 +105,8 @@ if __name__=='__main__':
       s_ats.set_calculator(pot)
       E_gb = s_ats.get_potential_energy()
       for h_site in h_sites:
-          h_site[2] += float(gb_min)-1.00000 #rescale into cell remove vacuum of 1 A.
+          if args.rescale:
+            h_site[2] += float(gb_min)-1.00000 #rescale into cell remove vacuum of 1 A.
           h_ats = s_ats.copy()
           if (gb_min + 1.0*z_width) <= h_site[2] <= (gb_max-1.0*z_width): #test tight to interface
             h_ats.add_atoms(h_site,1)
