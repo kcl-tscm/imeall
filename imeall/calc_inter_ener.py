@@ -94,7 +94,6 @@ if __name__=='__main__':
   args = parser.parse_args()
   with open('unique_h_sites.json','r') as f:
     h_sites = json.load(f)
- 
   print 'There are ', len(h_sites), 'H interstitials'
   ats = Atoms('output.xyz')
   gb_min, gb_max, z_width = get_interface_bounds(ats)
