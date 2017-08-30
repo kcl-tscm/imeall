@@ -11,7 +11,8 @@ set_fortran_indexing(True)
 class ElasticDipole(object):
   def __init__(self):
     """
-    Default numerical differentiation.
+    :class:`ElasticDipole` contains methods for computing
+    the elastic dipole tensor of a point defect in a material.
     """
     self.strain_tensor = [-0.01, -0.005, 0.0, 0.005, 0.01]
 
@@ -20,9 +21,14 @@ class ElasticDipole(object):
     Requires an interatomic potential that can calculate
     the distinct contribution of a force from a particular atom,
     i.e. EAM or Tightbinding model.
-    Params:
-      :ats: `Atoms` object of system.
-      :defect: `Atom` object specifying the defect atom.
+
+    Args:
+      ats (:obj:`Atoms`): Atoms object of structure.
+      defect(:obj:`Atom`): Specifies the defect atom.
+      rcut (float): Cutoff radius to consider forces.
+
+    Todo:
+      *Implement this method
     """
     alpha_ij = self.calc_interatomic_force(defect_atom.index, ats)
     return alpha_ij
@@ -30,10 +36,15 @@ class ElasticDipole(object):
   def relax_defect_cell(self, ats, output_name='defect_cell_relaxed.xyz', force_tol=0.0001, relax_cell=False):
     """
     Accepts atoms object with an attached calculator.Minimize forces.
-    Params:
-      :ats: atoms
-      :force_tol: force tolerance
-      :relax_cell: relax lattice parameters
+
+    Args:
+      ats (:obj:`Atoms`): Atoms with defect to relax.
+      output_name (str, optional): Filename to print relaxed atoms structure to.
+      force_tol (float, optional): Force tolerance to stop relaxation.
+      relax_cell (bool, optional): Relax lattice parameters.
+
+    Returns:
+      :class:`Atoms`: A relaxed Atoms object.
     """
     from ase.optimize import FIRE
     if relax_cell:
@@ -48,12 +59,21 @@ class ElasticDipole(object):
     ats.write(output_name)
     return ats
   
-  def compute_vacancy_dipole(self, defect, ats, pot=None, forces=None):
+  def compute_vacancy_dipole(self, defect, ats, pot=None, forces=np.array([])):
     """
-    :method: Valid where there is a clear distinction between host lattice
-    and the defect atom.
+    :method:`compute_vacancy_dipole` this method is valid where 
+             there is a clear distinction between the host lattice 
+             and the defect atom.
+    Args: 
+      defect (:obj:`Atom`): Atom object of defect atom.
+      ats (:obj:`Atoms`): If forces are required to be calculated atoms object must have defect, otherwise it is absent.
+      pot (:obj:`Potential`, optional): Potential for calculating interatomic forces if required,
+      forces(:obj:`numpy array`, optional): numpy array of forces if already available.
+
+    Returns: 
+      G 3x3 numpy array of G the dipole tensor.
     """
-    if forces == None:
+    if not forces.any():
       print len(ats) 
       ats.remove_atoms([defect.index+1])
       for at in ats:
@@ -67,49 +87,109 @@ class ElasticDipole(object):
       pass
     alpha_ij = np.zeros([3,3])
     for defect_force, at in zip(forces, ats):
-      alpha_ij[0, 0] += defect_force[0]*(defect.position[0] - at.position[0])
-      alpha_ij[0, 1] += defect_force[0]*(defect.position[1] - at.position[1])
-      alpha_ij[0, 2] += defect_force[0]*(defect.position[2] - at.position[2])
-      alpha_ij[1, 0] += defect_force[1]*(defect.position[0] - at.position[0])
-      alpha_ij[1, 1] += defect_force[1]*(defect.position[1] - at.position[1])
-      alpha_ij[1, 2] += defect_force[1]*(defect.position[2] - at.position[2])
-      alpha_ij[2, 0] += defect_force[2]*(defect.position[0] - at.position[0])
-      alpha_ij[2, 1] += defect_force[2]*(defect.position[1] - at.position[1])
-      alpha_ij[2, 2] += defect_force[2]*(defect.position[2] - at.position[2])
+      if np.linalg.norm(defect.position-at.position) <= 'Inf': 
+        alpha_ij[0, 0] += defect_force[0]*(defect.position[0] - at.position[0])
+        alpha_ij[0, 1] += defect_force[0]*(defect.position[1] - at.position[1])
+        alpha_ij[0, 2] += defect_force[0]*(defect.position[2] - at.position[2])
+        alpha_ij[1, 0] += defect_force[1]*(defect.position[0] - at.position[0])
+        alpha_ij[1, 1] += defect_force[1]*(defect.position[1] - at.position[1])
+        alpha_ij[1, 2] += defect_force[1]*(defect.position[2] - at.position[2])
+        alpha_ij[2, 0] += defect_force[2]*(defect.position[0] - at.position[0])
+        alpha_ij[2, 1] += defect_force[2]*(defect.position[1] - at.position[1])
+        alpha_ij[2, 2] += defect_force[2]*(defect.position[2] - at.position[2])
     return alpha_ij
 
-if __name__=='__main__':
-  parser = argparse.ArgumentParser()
-  parser.add_argument('-i', '--input_file', help="Structure file of system with defect. (xyz)", required=True)
-  parser.add_argument('-rc', '--relax_cell', help="Relax defect super cell.", action='store_true')
-  parser.add_argument('-f', '--force_tol', help="force_tolerance.", type=float, default=0.0001)
-  args = parser.parse_args()
+
+def find_h_atom(ats):
+  """
+  :method:`find_h_atom` finds the hydrogen atom and returns its `Atom` object.
+  
+  Args:
+    ats(:obj:`Atoms`) object.
+
+  Returns: 
+    :obj:`Atom` object.
+  """
+  h_list = [at for at in ats if at.number==1]
+  if len(h_list) > 1:
+    sys.exit('too many hydrogens in unit cell.')
+  elif len(h_list) == 0:
+    sys.exit('No hydrogen in unit cell.')
+  else:
+    defect = h_list[0]
+  return defect
+
+def calc_elast_dipole_eam(input_file, force_tol, relax_cell):
+  """
+  Calculate elastic dipole using an Embedded Atom Potential.
+
+  Args:
+    input_file (str): Name of .xyz file contains unitcell with defect.
+    force_tol (float): Force tolerance to stop relaxation.
+    relax_cell (bool): Relax lattice vectors or not.
+
+  Returns:
+    Elastic Dipole 3x3 numpy array tensor.
+  """
   try:
-    POT_DIR     = os.environ['POTDIR']
+    POT_DIR = os.environ['POTDIR']
   except KeyError:
     sys.exit("PLEASE SET export POTDIR='path/to/potfiles/'")
 
   elastic = ElasticDipole()  
+
   eam_pot = os.path.join(POT_DIR, 'PotBH.xml')
   pot = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(1.00894848312), param_filename=eam_pot)
 
-  ats = Atoms(args.input_file)
+  ats = Atoms(input_file)
   ats.set_calculator(pot)
 
   init_vol = ats.get_volume()
   print 'Initial Vol.', init_vol
-# relax defect cell
-  elastic.relax_defect_cell(ats, force_tol=args.force_tol, relax_cell=args.relax_cell)
+  elastic.relax_defect_cell(ats, force_tol=force_tol, relax_cell=relax_cell)
   final_vol = ats.get_volume()
   print 'Final Vol.', final_vol
-  print 'Diff.', final_vol-init_vol
-# compute dipole tensor
+  print 'Volume Diff.', final_vol-init_vol
   ats = Atoms('defect_cell_relaxed.xyz')
-  h_list = [at for at in ats if at.number==1]
-  if len(h_list) > 1:
-    sys.exit('too many hydrogens in unit cell')
-  else:
-    defect = h_list[0]
+  defect = find_h_atom(ats)
   print 'Defect index', defect.index, 'Position', defect.position, 'Type: ', defect.number
   ats.set_calculator(pot)
-  print elastic.compute_vacancy_dipole(defect, ats.copy(), pot)
+  return elastic.compute_vacancy_dipole(defect, ats.copy(), pot)
+
+def calc_elast_dipole_dft(input_file):
+  """
+  :method:`calc_elast_dipole_dft` from OUTCAR with one shot forces induced by removal of defect, and defect position from xyz file.
+
+  Args:
+    input_file(str): name of input .xyz file containing defect cell.
+
+  Returns:
+    `G' elastic dipole tensor as 3x3 numpy array.
+  """
+  import ase.io.vasp as vs
+  elastic = ElasticDipole()
+  ats_def = Atoms(input_file)
+  defect = find_h_atom(ats_def)
+  ats_pos = vs.read_vasp()
+  ats = vs.read_vasp_out()
+  ats = Atoms(ats)
+  print 'Defect index', defect.index, 'Position', defect.position, 'Type: ', defect.number
+  ats.get_forces()
+  ats.write('force.xyz')
+  return elastic.compute_vacancy_dipole(defect, ats_pos.copy(), forces=ats.get_forces())
+
+if __name__ == '__main__':
+  parser = argparse.ArgumentParser()
+  parser.add_argument('-ct', '--calc_type', help="Can use 'EAM' or 'DFT' potential. If DFT then script requires OUTCAR with single shot \
+                                                  forces for defectless cell and xyz input for cell with defect.", required=True)
+  parser.add_argument('-rc', '--relax_cell', help="Relax defect super cell.", action='store_true')
+  parser.add_argument('-f', '--force_tol', help="force_tolerance.", type=float, default=0.0001)
+  parser.add_argument('-i', '--input_file', help="Structure file of system with defect. (.xyz format)", required=True)
+  args = parser.parse_args()
+
+  if args.calc_type == 'EAM':
+    print calc_elast_dipole_eam(args.input_file, args.force_tol, args.relax_cell)
+  elif args.calc_type == 'DFT':
+    print calc_elast_dipole_dft(args.input_file)
+  else:
+    sys.exit('Invalid potential type chosen. Please select DFT or EAM.')

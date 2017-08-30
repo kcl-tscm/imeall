@@ -20,8 +20,8 @@ def nearest_to_unique(at, unique_sites):
   return equiv_site
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--gen_interface','-g', action='store_true')
-parser.add_argument('--decorate_interface','-d', action='store_true')
+parser.add_argument('--gen_interface','-g',help='create a slab of the interfacial region.', action='store_true')
+parser.add_argument('--decorate_interface','-d',help='decorate the slab of interfacial region with unique hydrogens at the interstitials.', action='store_true')
 args = parser.parse_args()
 
 select_interface = True

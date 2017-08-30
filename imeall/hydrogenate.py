@@ -13,6 +13,7 @@ from imeall.slabmaker import transformations as quat
 
 set_fortran_indexing(False)
 
+@deprecated('to be replaced by external pylada_defects library.')
 class Hydrify(object):
   """"
   class: Hydrify contains methods for adding hydrogens at specific positions in a 
