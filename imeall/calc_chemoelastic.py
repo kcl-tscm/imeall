@@ -8,37 +8,37 @@ from quippy import Atoms, Potential, AtomsReader, set_fortran_indexing
 from imeall.models import PotentialParameters
 
 set_fortran_indexing(False)
-def strain_energy(ats):
+def strain_energy(ats, cursor_step=0.2):
+  """
+  method: `strain_energy` create an array tracking the accumulation of energy above the bulk.
+           For interfacial structures this has pronounced speakes in the region of the interface.
+  parameters: ats `Atoms` object with a potential calculator attached.
+              cursor_step: step distance along z to add atomic energies to the cumulative energy.
+  returns: an array of numbers.
+  """
   cell = ats.get_cell()
   A = cell[0][0]*cell[1][1]
   z_height = cell[2][2]
   ener_z = np.transpose(np.vstack((ats.get_potential_energies(), [at.position[2] for at in ats])))
   ener_z = np.array(sorted(ener_z, key=lambda x: x[1]))
-  cursor = 0.2
+  cursor = cursor_step
   elastic_energy = []
-  while cursor < (z_height + 0.2):
+  while cursor < (z_height + cursor_step):
     try:
       cum_energy = 16.02*sum([x+4.01298214176 for x in np.array(filter(lambda x: x[1]<= cursor, ener_z))[:,0]])/(A)
     except IndexError:
-      cursor += 0.2 #initial step doesn't capture atoms
+      cursor += cursor_step #initial step doesn't capture atoms
       continue 
     elastic_energy.append((cursor, cum_energy))
-    cursor += 0.2
+    cursor += cursor_step
   return elastic_energy
-
-def convolution(original_curve, z_height=79.0):
-  sigma = 0.2
-  norm = np.sqrt(2*np.pi)
-  dx = float(z_height-0.2)/len(original_curve)
-  gx = np.arange(-3*sigma, 3*sigma, dx)
-  gaussian = np.exp(-(gx/sigma)**2/2.0)/norm
-  result = np.convolve(original_curve, gaussian, mode="full")
-  return result
 
 def calc_chemomechanical(ats):
   """
-  method:`chemoelastic_percentage` requires atoms object to have at least structure_type
-          and local_energy property. bcc lattice structure_type=3.
+  method:`calc_chemomechanical` requires atoms object with a potential capable of return a per atom energy.
+         `Atoms` object must have at least structure_type and local_energy properties. For a bcc lattice structure_type=3. 
+  parameters: ats `Atoms` object.
+  returns: a list of [(chemical_energy/total_energy)*gb_energy, (elastic_energy/total_energy)*gb_energy, gb_energy]
   """
 #case quip types to numpy arrays stack and transpose
   loc_en = np.array(ats.properties['local_energy'])
@@ -46,8 +46,7 @@ def calc_chemomechanical(ats):
   joined = np.vstack((loc_en, struct_type)).transpose()
   cell = ats.get_cell()
   A = cell[0][0]*cell[1][1]
-#compute relative total energy contributions of the
-#two types
+#compute relative total energy contributions of the two types
   gs = np.zeros(np.shape(joined))
 #zero energies
   gs[:,0] = -4.01298
@@ -64,6 +63,10 @@ def calc_chemomechanical(ats):
   return [(chemical_energy/total_energy)*gb_energy, (elastic_energy/total_energy)*gb_energy, gb_energy]
 
 def calc_chemoelast(input_file):
+  """
+  method: Adds the structure type using ovitos script to the atoms object and calculates the breakdown of energy contributions.
+  returns: a list of [(chemical_energy/total_energy)*gb_energy, (elastic_energy/total_energy)*gb_energy, gb_energy]
+  """
   potparam = PotentialParameters()
   ener_bulk_dict = potparam.gs_ener_per_atom()
   r_scale_dict = potparam.eam_rscale()
@@ -102,4 +105,4 @@ if __name__=='__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument('--input_file', '-i', help='Input grain boundary struct file to produce cumulative energy')
   args = parser.parse_args()
-  calc_chemoelast(input_file=args.input_file)
+  add_structure_type(input_file=args.input_file)

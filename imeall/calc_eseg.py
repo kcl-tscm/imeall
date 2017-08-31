@@ -20,8 +20,8 @@ def nearest_to_unique(at, unique_sites):
   return equiv_site
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--gen_interface','-g', action='store_true')
-parser.add_argument('--decorate_interface','-d', action='store_true')
+parser.add_argument('--gen_interface','-g',help='create a slab of the interfacial region.', action='store_true')
+parser.add_argument('--decorate_interface','-d',help='decorate the slab of interfacial region with unique hydrogens at the interstitials.', action='store_true')
 args = parser.parse_args()
 
 select_interface = True
@@ -30,7 +30,7 @@ if args.gen_interface:
   #output.xyz must have structure_type property attached.
   ats = Atoms('output.xyz')
   cell_midpoint = ats.get_cell()[2,2]/2.0
-  #select non BCC sites are 0 otherwise [1-3] inclusive.
+  #select non-BCC sites are 0 otherwise 3.
   struct_type = np.array(ats.properties['structure_type'])
   struct_mask = [not struct for struct in struct_type]
   interface = ats.select(struct_mask)
@@ -45,7 +45,7 @@ if args.gen_interface:
   gb_max = z_max + 1.0*z_width
   gb_min = z_min - 1.0*z_width
   zint = ats.select([(gb_min <= at.position[2] <= gb_max) for at in ats])
-  zint.center(vacuum=1.0,axis=2)
+  zint.center(vacuum=1.0, axis=2)
   zint.write('interface.xyz')
   #Write POSCAR to use interstitial site generator:
   ats = Atoms('interface.xyz')
