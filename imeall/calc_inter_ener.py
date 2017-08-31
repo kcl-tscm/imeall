@@ -26,7 +26,7 @@ def get_interface_bounds(ats):
     ats (:obj:`Atoms`): Atoms object of full bi-crystal.
 
   Returns: 
-    gb_min, gm_max, z_width
+    gb_min, gm_max, z_width, min_at
   """
   cell_midpoint = ats.get_cell()[2,2]/2.0
   #select non BCC sites are 0 otherwise [1-3] inclusive.
@@ -44,7 +44,8 @@ def get_interface_bounds(ats):
   gb_max = z_max + 1.0*z_width
   gb_min = z_min - 1.0*z_width
   zint = ats.select([(gb_min <= at.position[2] <= gb_max) for at in ats])
-  return gb_min, gb_max, z_width
+  at_min = zint.positions[:,2].min() - gb_min
+  return gb_min, gb_max, z_width, at_min
 
 def apply_strain(ats, mode, num):
   e1 = np.array([1,0,0])
@@ -96,7 +97,7 @@ if __name__=='__main__':
     h_sites = json.load(f)
   print 'There are ', len(h_sites), 'H interstitials'
   ats = Atoms('output.xyz')
-  gb_min, gb_max, z_width = get_interface_bounds(ats)
+  gb_min, gb_max, z_width, at_min = get_interface_bounds(ats)
   with open('subgb.json','r') as f:
     subgb_dict = json.load(f)
 
@@ -114,8 +115,8 @@ if __name__=='__main__':
       for h_site in h_sites:
         h_ats = s_ats.copy()
         h_site_tmp = list(h_site)
-        #-1.0 to subtract vacuum added in calc_eseg.py
-        h_site_tmp[2] += gb_min-1.0
+        #-1.0 to subtract vacuum added in calc_eseg.py at_min to account for diff between gb_min and lowest atom.
+        h_site_tmp[2] += gb_min - 1.0 + at_min
         h_ats.add_atoms(h_site_tmp, 1)
         h_ats.set_calculator(pot)
         opt = FIRE(h_ats)
