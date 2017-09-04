@@ -110,4 +110,3 @@ with open('subgb.json','w') as f:
   gb_dict['n_sup_cell'] = [n_sup_x, n_sup_y, n_sup_z]
   gb_dict['nqs']        = [nqx, nqy, nqz]
   json.dump(gb_dict,f,indent=2)
-

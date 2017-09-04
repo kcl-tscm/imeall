@@ -5,7 +5,6 @@ from pyspglib import spglib
 from pylada.crystal import read as read_poscar
 from pylada_defects import get_interstitials, write_interstitials, get_unique_wyckoff, get_all_interstitials
 from pylada_defects import get_ints_in_prim_cell, get_unique_ints
-from pyspglib import spglib
 from quippy import Atoms, farray, frange, set_fortran_indexing
 
 import json
@@ -13,20 +12,39 @@ import argparse
 import numpy as np
 
 def nearest_to_unique(at, unique_sites):
+  """
+  Given an atom object and an array of site vectors find
+  whether there is a correspondence between the atoms object
+  and one of those sites
+
+  Args:
+    at(:obj:`Atom`): atom object 
+    unique_sites(list): list of position vectors.
+
+  Returns:
+    equiv_site (bool): 
+  """
   equiv_site = False
   for site in unique_sites:
     if np.allclose(at.position, np.array(site[:3])):
       equiv_site = True
   return equiv_site
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--gen_interface','-g',help='create a slab of the interfacial region.', action='store_true')
-parser.add_argument('--decorate_interface','-d',help='decorate the slab of interfacial region with unique hydrogens at the interstitials.', action='store_true')
-args = parser.parse_args()
 
-select_interface = True
+def gen_interface():
+  """
+  :method:`gen_interface` selects an interfacial region of a bi-crystal 
+  based on common neighbour analysis. The width of the interfacial region
+  is equal to 2*(gb_max-gb_min).
 
-if args.gen_interface:
+  The method creates a file `interface.xyz` in the working directory,
+  with the interface centered in a unit cell with 1 angstrom vacuum 
+  on each side. 
+
+  Returns:
+    interface (:obj:`Atoms`): Atoms object of the interfacial slab in same 
+    coordinates as original bicrystal.
+  """
   #output.xyz must have structure_type property attached.
   ats = Atoms('output.xyz')
   cell_midpoint = ats.get_cell()[2,2]/2.0
@@ -45,6 +63,8 @@ if args.gen_interface:
   gb_max = z_max + 1.0*z_width
   gb_min = z_min - 1.0*z_width
   zint = ats.select([(gb_min <= at.position[2] <= gb_max) for at in ats])
+  #make a copy to return
+  int_ats = zint.copy()
   zint.center(vacuum=1.0, axis=2)
   zint.write('interface.xyz')
   #Write POSCAR to use interstitial site generator:
@@ -56,8 +76,26 @@ if args.gen_interface:
   vasp = Vasp(**vasp_args)
   vasp.initialize(ats)
   write_vasp('POSCAR', vasp.atoms_sorted, symbol_count=vasp.symbol_count, vasp5=True)
+  return int_ats
 
-if args.decorate_interface:
+def decorate_interface(write_file=True):
+  """
+  :method:`decorate_interface` reads `interface.xyz` file written by 
+  :method:`gen_interface`, and uses :module:`pylada_defect` to decorate
+  all unique interstitial positions according the method described in 
+  https://github.com/pylada/pylada-defects. The decorated interface
+  is writting to hydrogenated_grains.
+
+  Also generates unique_lattice_sites.json and unique_h_sites.json
+  which contains the unique positions in the original interface lattice
+  and the unique hydrogen interstitials.
+
+  Args:
+    write_file (bool, optional) : generates hydrogenated_grain.xyz file.
+
+  Returns:
+    ats(:obj:`Atoms`): interface atoms decorated with hydrogen.
+  """
   ats = Atoms('interface.xyz')
   vasp_args = dict(xc='PBE', amix=0.01, amin=0.001, bmix=0.001, amix_mag=0.01, bmix_mag=0.001,
                    kpts=[3, 3, 3], kpar=9, lreal='auto', ibrion=-1, nsw=0, nelmdl=-15, ispin=2,
@@ -91,4 +129,19 @@ if args.decorate_interface:
   #relabel atom ids for plotting in ovito
   for i in frange(len(ats)):
     ats.id[i] = i
-  ats.write('hydrogenated_grain.xyz')
+
+  if write_file:
+    ats.write('hydrogenated_grain.xyz')
+  return ats
+
+if __name__=='__main__':
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--gen_interface','-g',help='create a slab of the interfacial region.', action='store_true')
+  parser.add_argument('--decorate_interface','-d',help='decorate the slab of interfacial region with unique hydrogens at the interstitials.', action='store_true')
+  args = parser.parse_args()
+
+  if args.gen_interface:
+    gen_interface()
+
+  if args.decorate_interface:
+    decorate_interface()

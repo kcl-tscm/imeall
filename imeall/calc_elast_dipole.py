@@ -129,7 +129,7 @@ def calc_elast_dipole_eam(input_file, force_tol, relax_cell):
     relax_cell (bool): Relax lattice vectors or not.
 
   Returns:
-    Elastic Dipole 3x3 numpy array tensor.
+    Elastic Dipole Tensor 3x3 numpy array.
   """
   try:
     POT_DIR = os.environ['POTDIR']
@@ -164,7 +164,7 @@ def calc_elast_dipole_dft(input_file):
     input_file(str): name of input .xyz file containing defect cell.
 
   Returns:
-    `G' elastic dipole tensor as 3x3 numpy array.
+    Elastic Dipole Tensor 3x3 numpy array.
   """
   import ase.io.vasp as vs
   elastic = ElasticDipole()

@@ -29,14 +29,15 @@ class BaseModel(Model):
 
 class GrainBoundary(BaseModel):
   """
-  Canonical Parent Grain Model.
-  Vectors are serialized to csv.
-  Parameters:
-  path: relative to the grain boundary database root.
-  material: name for the material class (e.g. alphaFe)
+  :class:`GrainBoundar` Canonical Parent Grain Model. SQL database of the
+  grain boundaries. All vectors are serialized to csv string for storage.
+
+  Attributes:
+    orientation_axis(str): orientation axis defining the grain.
+    angle(str): misorientation angle for defining the grain.
+    boundary_plane(str): boundary plane normal defining the grain.  
+    path(str): relative to the grain boundary database root.
   """
-#add material
-# material         = CharField()
   orientation_axis = CharField()
   angle            = FloatField()
   boundary_plane   = CharField()

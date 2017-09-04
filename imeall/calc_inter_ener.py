@@ -5,8 +5,11 @@ import argparse
 from ase.optimize import FIRE
 from quippy import Atoms, Potential, frange
 
-#calc_inter_diss_ener.py calculates intersitial dissolution energy
 def h2_formation_energy(pot):
+  """
+  Given a potential calculate the H2 formation energy and
+  equilibrium bond spacing.
+  """
   h2 = aseAtoms('H2', positions=[[0, 0, 0],[0, 0, 0.7]])
   h2 = Atoms(h2)
   h2.set_calculator(pot)

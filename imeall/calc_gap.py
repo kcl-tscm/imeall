@@ -51,4 +51,3 @@ for gb in selected_grains.order_by(GrainBoundary.angle)[2:]:
   except IndexError:
     print '\t', round(gb.angle*(180.0/3.14159),3), subgbs
 
-

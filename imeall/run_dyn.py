@@ -1,25 +1,25 @@
-import os
-import sys
-import json
-import shutil
+import argparse
 import ase.io        
 import glob
+import json
 import logging
-from   ase.constraints import UnitCellFilter
-from   ase.optimize    import BFGS, FIRE
-from   quippy          import Atoms, Potential
-from   quippy          import set_fortran_indexing, fzeros, frange
-from   quippy.io       import AtomsWriter, AtomsReader, write
-from   pprint          import pprint
-from   cStringIO       import StringIO
-from   slabmaker.slabmaker import build_tilt_sym_gb
-from   slabmaker.twist     import build_twist_sym_gb
-from   relax               import relax_gb
+import numpy as np
+import os
+import sys
+import shutil
+
+from ase.constraints import UnitCellFilter
+from ase.optimize import BFGS, FIRE
+from cStringIO import StringIO
+from pprint import pprint
+from quippy import Atoms, Potential
+from quippy import set_fortran_indexing, fzeros, frange
+from quippy.io import AtomsWriter, AtomsReader, write
+from relax import relax_gb
+from slabmaker.slabmaker import build_tilt_sym_gb
+from slabmaker.twist import build_twist_sym_gb
 
 set_fortran_indexing(False)
-
-import argparse
-import numpy as np
 
 class Capturing(list):
   """
@@ -53,7 +53,15 @@ class ImeallIO(object):
 
   def make_dir(self, target_dir, dir_name):
     """
-    Create grain boundary directory
+    Create grain boundary directory if it does not exit and
+    return the concatenated string name.
+
+    Args:
+      target_dir(str) :
+      dir_name(str) :
+
+    Returns:
+      target_subdir(str)
     """
     target_subdir = os.path.join(target_dir, dir_name)
     if not os.path.isdir(target_subdir):
@@ -64,146 +72,47 @@ class ImeallIO(object):
     return target_subdir
 
   def load_json(self, json_file):
+    """Helper function to return gb_data as dict.
+    Args:
+      json_file(str): name of gb.json file.
+
+    Returns:
+      gb_data(dict): grain boundary data dictionary.
+    """
+  
 		with open(json_file, 'r') as datfile:
 			gb_data = json.load(datfile)
 		return gb_data
 
   def find_subdir(self, target_dir, calc_suffix):
-    for dir in os.listdir(target_dir):
-      if calc_suffix in dir:
-        from_dir = os.path.join(target_dir, dir)
-        from_dir_name = dir
+    for _dir in os.listdir(target_dir):
+      if calc_suffix in _dir:
+        from_dir = os.path.join(target_dir, _dir)
+        from_dir_name = _dir
         return from_dir, from_dir_name
     print 'no directory with calc_suffix,', calc_suffix
     return None
-
-# Common pattern might be I have a list of grain dir directories
-# with xyz files in them. Say the relaxed EAM grainboundaries for
-# a certain orientation. /gb/EAM/gbid_criteria/gbid_traj.xyz.
-  def copy_struct(self, from_dir, target_dir, from_sub_dir, 
-      target_sub_dir, calc_suffix='_d2.0', calc_point='final', md_step=1):
-# The calc_suffix determines which subgrain directories to
-# copy across. For instance _d2.0 will search for all subgrains
-# generated with the deletion critera for atoms with nn distance < 2.0 A.
-# This is useful if there are a number of subgrains with different deletion
-# criteria or defect concentrations etc. calculated in the EAM directory
-# and we want to copy those over to a DFT calc, or a Tightbinding representation of the
-# grain boundary. Another intended use is if I have a
-# eam grain boundary or cleavage plane
-# md run and I want to copy across snap 
-# shots of the trajectory to do some DFT on.
-    json_file = os.path.join(from_dir, 'gb.json')
-    gb_data = self.load_json(json_file)
-    from_dir = os.path.join(from_dir, from_sub_dir)	
-    calc_dirs = os.listdir(from_dir)
-#Search for path that matches the calc_suffix
-    for dir in calc_dirs:
-      if calc_suffix in dir:
-        from_dir = os.path.join(from_dir, dir)
-        from_dir_name = dir
-        break
-    if not os.path.isdir(from_dir):
-      print 'no directory with calc_suffix,', calc_suffix
-# Can start grain_boundary at arbitrary point in the trajectory
-# start at the end of the md run, midpoint, beginning, or arbitrary, 
-# position 
-    at = AtomsReader('{0}/{1}_traj.xyz'.format(from_dir, gb_data['gbid']))
-    if calc_point =='final':
-      grain = at[-1]
-    elif calc_point =='midpoint':
-      grain = at[int(float(len(at)/2.))]
-    elif calc_point =='beginning':	
-      grain = at[1]
-    elif calc_point =='arbitrary':	
-      grain = at[md_step]
-    else:
-      print 'invalid starting point'
-# Now write atom object to target directory:
-    target_dir = os.path.join(target_dir, os.path.join(target_sub_dir, from_dir_name))
-    if not os.path.isdir(target_dir):
-        os.makedirs(target_dir)
-    else:
-      print target_dir, ' already exists.'
-# We have now copied the desired xyz (last snap shot of trajector)
-# file from from_dir/EAM
-# to target_dir/DFT along with the gb json data file.
-    out = AtomsWriter('{0}'.format(os.path.join(target_dir,
-                      '{0}.xyz'.format(gb_data['gbid']))))
-    out.write(grain)
-    gb_data['n_at'] = len(grain)
-    with open(os.path.join(target_dir,'gb.json'),'w') as json_file:
-      json.dump(gb_data, json_file, indent=2)
-
-  def xyz_to_vasp(self, target_dir, target_sub_dir, calc_suffix='_d2.0'):
-    """
-    :method:`xyz_to_vasp` Initialize a vasp calculation. Read in the xyz file 
-    if it is present and generate an INCAR, POSCAR, 
-    run_vasp file in the directory the vasp template.
-    """
-    json_file = os.path.join(target_dir, 'gb.json')
-    gb_data = self.load_json(json_file)
-    target_dir = os.path.join(target_dir, target_sub_dir)
-    calc_dirs = os.listdir(target_dir)
-    for dir in calc_dirs:
-      if calc_suffix in dir:
-        target_dir = os.path.join(target_dir, dir)
-        break
-    if not os.path.isdir(target_dir):
-      print 'no directory with calc_suffix,', calc_suffix
-    incar_tmp_file = os.path.join(self.vasp_template_dir, 'INCAR')
-    with open(incar_tmp_file, 'r') as incar_file:
-      incar_template = incar_file.read()
-
-    grain = Atoms('{0}'.format(os.path.join(target_dir,
-    '{0}.xyz'.format(gb_data['gbid']))))
-    n_at           = len(grain)
-#Write INCAR file to target directory
-    self.vasp_dict['n_at'] = n_at
-    with open(os.path.join(target_dir, 'INCAR'),'w') as incar_file:
-      print >> incar_file, incar_template.format(**self.vasp_dict)
-#Write run.sh with job time and number of nodes to job directory
-    runsh_tmp_file = os.path.join(self.vasp_template_dir, 'run.sh')
-    with open(runsh_tmp_file, 'r') as runsh_file:
-      runsh_template = runsh_file.read()
-    with open(os.path.join(target_dir, 'run.sh'),'w') as runsh_file:
-      print >> runsh_file, runsh_template.format(**self.runsh)
-      os.chmod(os.path.join(target_dir, 'run.sh'), 0775)
-#Write  POSCAR to target directory
-    ase.io.write(os.path.join(target_dir, 'POSCAR'), grain)	
-#Write KPOINT file to target directory
-    with open(os.path.join(self.vasp_template_dir, 'KPOINTS'), 'r') as kpt_tmp_file:
-      kpt_template = kpt_tmp_file.read() 
-    with open(os.path.join(target_dir, 'KPOINTS'), 'w') as kpt_file:
-      print >>kpt_file, kpt_template.format(**self.kpt_grid)
-#Copy run_vasp configuration file and the pseudopotential
-    shutil.copy(os.path.join(self.vasp_template_dir, 'run_vasp'), target_dir)
-    shutil.copy(os.path.join(self.vasp_template_dir, 'POTCAR'), target_dir)
-
-  def submit_job(self, target_dir, target_sub_dir, calc_suffix='_d2.0'):
-    target_dir = os.path.join(target_dir, target_sub_dir)
-    target_dir, target_dir_name = self.find_subdir(target_dir, calc_suffix)
-    try:
-      gb_data = json.load(open(os.path.join(target_dir,'gb.json')))
-      pprint(gb_data)
-    except:
-      print 'Error Opening JSON FILE'
 
 class GBRelax(object):
   def __init__(self, grain_dir='./', gbid='0000000000', calc_type='EAM',
                potential = 'IP EAM_ErcolAd', param_file = 'iron_mish.xml',
                traj_file='traj.xyz'):
     """
-    :class:`GBRelax` is responsible for generating the initial configuration of the grain
-    boundary before and relaxation occurs.
+    :class:`GBRelax` is responsible for generating the 
+    initial configuration of the grain boundary before relaxation occurs.
     Here we Initialize some naming conventions, the calculation type, and
-    necessary input files. grain_dir is the overarching grain directory (the theme):
+    necessary input files. grain_dir is the overarching grain directory,
     the target dir is the subdirectory depending on the
-    calculation type (flavour) at the highest level and then the
-    variations (deletions, translation, substitutions, vacancies) 
-    on the theme are subgrain(s) i.e. in subgrain_dir named
-    according to the variation. atom deletion for atoms within radius
-    rcut is written gbid_r2.0, translations gbid_tx_0.1, gbid_ty,0.2 etc.
-    Hydrogen inclusion is denoted in terms of concentration.
+    calculation type,  at the highest level and then the
+    variations (deletions, translation, substitutions, vacancies).
+
+    Args: 
+      grain_dir (str, optional): root directory to build grain boundary tree.
+      gbid (str,optional): gbid of grain boundary root.
+      calc_type(str,optional): Type of calculation: EAM, DFT, TB, GAP.
+      potential(str,optional): Quippy potential class string.
+      param_file(str,optional): Name of interatomic potential file.
+      traj_file(str, optional):
     """
 
     self.gbid        =  gbid
@@ -224,7 +133,19 @@ class GBRelax(object):
 
   def gen_super_rbt(self, bp=[],v=[], rbt=[0.0, 0.0], sup_v=6, sup_bxv=2, rcut=2.0, gb_type="tilt"):
     """
-    Create a grain boundary with rigid body translations.
+    Create a grain boundary supercell with rigid body translations (rbt).
+
+    Args:
+      bp (list): Boundary plane normal.
+      v (list): Perpendicular vector to the boundary plane normal.
+      rbt (list): rigid body translation as fractional translations of the supercell.
+      sup_v(int): Size of supercell along v.
+      sup_bxv(int): Size of supercell along boundary_plane_normal crossed with v.
+      rcut(float): Atom deletion criterion angstrom.
+      gb_type(str): Determine whether to generate a tilt or twist boundary.
+
+    Returns:
+      None
     """
     io = ImeallIO()
     if gb_type=="tilt":
@@ -274,6 +195,13 @@ class GBRelax(object):
     """ 
     :method:`gen_super` to create a grain boundary super cell we use the parameters of
     Rittner and Seidman (PRB 54 6999).
+
+    Args:
+      grain(:obj:`Atoms`): atoms object passed from gen_super_rbt.
+      rbt (list): rigid body translation as fractional translations of the supercell.
+      sup_v(int): Size of supercell along v.
+      sup_bxv(int): Size of supercell along boundary_plane_normal crossed with v.
+      rcut(float): Atom deletion criterion angstrom.
     """
     io = ImeallIO()
     if rbt == None:
@@ -282,51 +210,60 @@ class GBRelax(object):
       x = Atoms(grain)
 
     struct_dir = os.path.join(self.grain_dir, 'structs')  
-    self.name  = '{0}_v{1}bxv{2}_tv{3}bxv{4}_d{5}z'.format(self.gbid,
+    self.name = '{0}_v{1}bxv{2}_tv{3}bxv{4}_d{5}z'.format(self.gbid,
     str(sup_v), str(sup_bxv), '0.0', '0.0', str(rcut))
+#TODO fix this so it is more transparent.
+#if rcut = 0 then only a super cell is generated with no deletion of atoms.
     if rcut > 0.0:
       x.set_cutoff(2.4)
       x.calc_connect()
       x.calc_dists()
-      rem=[]
+      rem = []
       u = np.zeros(3)
       for i in range(x.n):
         for n in range(x.n_neighbours(i)):
           j = x.neighbour(i, n, distance=3.0, diff=u)
-          if x.distance_min_image(i,j) < rcut and j!=i:
+          if x.distance_min_image(i,j) < rcut and j != i:
             rem.append(sorted([j,i]))
       rem = list(set([a[0] for a in rem]))
-      if len(rem) >0:
+      if len(rem) > 0:
         x.remove_atoms(rem)
       else:
         print 'No duplicate atoms in list.'
     else:
-      pass
-  # Now create super cell:
       x = x*(sup_v, sup_bxv, 1)
       x.set_scaled_positions(x.get_scaled_positions())
 
     if rbt == None:
-      self.struct_file  = self.name
+      self.struct_file = self.name
       self.subgrain_dir = io.make_dir(self.calc_dir, self.name)
       try:
-        with  open('{0}/subgb.json'.format(self.subgrain_dir), 'r') as f:
+        with open('{0}/subgb.json'.format(self.subgrain_dir), 'r') as f:
           j_dict = json.load(f)
       except IOError:
         j_dict             = {}
+
       j_dict['name']       = self.name
       j_dict['param_file'] = self.param_file
       j_dict['rbt']        = [0.0, 0.0]
       j_dict['rcut']       = rcut
+
       with open('{0}/subgb.json'.format(self.subgrain_dir), 'w') as f:
         json.dump(j_dict, f, indent=2)
-#Deposit structure in the structs directory of the grain
     else:
       return sup_v, sup_bxv, x
 
   def delete_atoms(self, grain=None, rcut=2.0):
     """ 
-    Delete atoms below a certain distance threshold
+    Delete atoms below a certain distance threshold.
+
+    Args:
+      grain(:obj:`Atoms`): Atoms object of the grain.
+      rcut(float): Atom deletion criterion.
+
+    Returns:
+      Atoms object with atoms nearer than deletion criterion
+      removed.
     """ 
     io = ImeallIO()
     if grain == None:
@@ -360,6 +297,10 @@ class GBRelax(object):
   def gen_pbs(self, time='02:30:00', queue='serial.q'):
     """ 
     :method:`gen_pbs` generates job pbs file.
+
+    Args:
+      time(str): length of job time in string format.
+      queue(str): string
     """
     pbs_str = open('/users/k1511981/pymodules/templates/calc_ada.pbs','r').read()
     pbs_str = pbs_str.format(jname='fe'+self.name, xyz_file='{0}.xyz'.format(self.name), 
@@ -381,12 +322,13 @@ if __name__=='__main__':
   parser.add_argument("-i_v",   "--i_v",    type = float, help="Rigid body translation along i_v.", default=0.0)
   parser.add_argument("-i_bxv", "--i_bxv",  type = float, help="Rigid body translation along i_bxv.", default=0.0)
   parser.add_argument("-gbt",   "--gb_type", help="Specify type of boundary twist or tilt.", default="tilt")
+  parser.add_argument("-fs","--from_script", help="Whether this pyscript is run from a script.", action="store_false", default=True)
 
   args = parser.parse_args()
-  prefix    = args.prefix
-  queue     = args.queue
-  time      = args.time
-  rcut      = float(args.rcut)
+  prefix = args.prefix
+  queue = args.queue
+  time = args.time
+  rcut = float(args.rcut)
 
 # Each calculation type is associated with a potential:
   if args.calc_type == 'EAM_Mish':
@@ -405,10 +347,7 @@ if __name__=='__main__':
     print 'No available potential corresponds to this calculation type.'
     sys.exit()
 
-  from_script = True
-  if not from_script:
-#Standard mode for ada, we have a pattern append all sub grain jobs we want to look
-#at and relax boundaries.
+  if not args.from_script:
     jobdirs = []
     for target_dir in os.listdir('./'):
       if os.path.isdir(target_dir) and thing[:len(prefix)]==prefix:
@@ -432,29 +371,29 @@ if __name__=='__main__':
       with open(os.path.join(job_dir,'gb.json')) as f:
         grain_dict = json.load(f)
       bp = grain_dict['boundary_plane']
-      v  = grain_dict['orientation_axis']
+      v = grain_dict['orientation_axis']
       for i in np.linspace(0.125, 1.0):
         for j in np.linspace(0.125, 1.0):
           gbrelax.gen_super_rbt(rcut=rcut, bp=bp, v=v, sup_v=sup_v, sup_bxv=sup_bxv, rbt=[i,j])
           gbrelax.gen_pbs(time=time, queue=queue)
-  elif from_script:
+  elif args.from_script:
     job_dir = os.getcwd()
     print job_dir
     with open(os.path.join(job_dir,'gb.json')) as f:
       grain_dict = json.load(f)
     gbid = grain_dict['gbid']
-    bp   = grain_dict['boundary_plane']
-    v    = grain_dict['orientation_axis']
+    bp = grain_dict['boundary_plane']
+    v = grain_dict['orientation_axis']
     gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type=args.calc_type,
                       potential = 'IP EAM_ErcolAd', param_file=param_file)
     if args.gb_type=="twist":
-      sup_v   = 4
+      sup_v = 4
       sup_bxv = 4
     elif args.gb_type=="tilt":
-      sup_v   = 6
+      sup_v = 6
       sup_bxv = 2
     print "Boundary Plane", bp, "Orientation Axis", v
-    i_v   = float(args.i_v) 
+    i_v = float(args.i_v) 
     i_bxv = float(args.i_bxv)
 # Generate the appropriate grain boundary in this directory.
     gbrelax.gen_super_rbt(rcut=rcut, bp=bp, v=v, sup_v=sup_v, sup_bxv=sup_bxv, rbt=[i_v, i_bxv], gb_type=args.gb_type)
