@@ -2,9 +2,9 @@ from ase import Atoms as aseAtoms
 from ase.io.vasp import write_vasp
 from ase.calculators.vasp import Vasp
 from pyspglib import spglib
-from pylada.crystal import read as read_poscar
-from pylada_defects import get_interstitials, write_interstitials, get_unique_wyckoff, get_all_interstitials
-from pylada_defects import get_ints_in_prim_cell, get_unique_ints
+#from pylada.crystal import read as read_poscar
+from pylada_defects_2 import get_interstitials, write_interstitials, get_unique_wyckoff, get_all_interstitials
+from pylada_defects_2 import get_ints_in_prim_cell, get_unique_ints
 from quippy import Atoms, farray, frange, set_fortran_indexing
 
 import json
@@ -12,17 +12,17 @@ import argparse
 import numpy as np
 
 def nearest_to_unique(at, unique_sites):
-  """
-  Given an atom object and an array of site vectors find
-  whether there is a correspondence between the atoms object
-  and one of those sites
+  """Given an :py:class:`Atom` object and an array of site vectors finds
+  whether there is a correspondence between the atom position
+  and one of the sites.
 
   Args:
-    at(:obj:`Atom`): atom object 
+    at(:py:class:`Atom`): atom object. 
     unique_sites(list): list of position vectors.
 
   Returns:
-    equiv_site (bool): 
+    equiv_site (bool): whether or not atom position is identical to a site
+    in the unique_sites list.
   """
   equiv_site = False
   for site in unique_sites:
@@ -32,17 +32,17 @@ def nearest_to_unique(at, unique_sites):
 
 
 def gen_interface():
-  """
-  :method:`gen_interface` selects an interfacial region of a bi-crystal 
+  """Selects an interfacial region of a bicrystal 
   based on common neighbour analysis. The width of the interfacial region
-  is equal to 2*(gb_max-gb_min).
+  is equal to 2*(gb_max-gb_min) where gb_max is the z-coordinate of the highest
+  non-bcc atom, and gb_min is the lowest non-bcc atom.
 
   The method creates a file `interface.xyz` in the working directory,
   with the interface centered in a unit cell with 1 angstrom vacuum 
   on each side. 
 
   Returns:
-    interface (:obj:`Atoms`): Atoms object of the interfacial slab in same 
+    interface (:py:class:`Atoms`): Atoms object of the interfacial slab in same 
     coordinates as original bicrystal.
   """
   #output.xyz must have structure_type property attached.
@@ -79,22 +79,18 @@ def gen_interface():
   return int_ats
 
 def decorate_interface(write_file=True):
-  """
-  :method:`decorate_interface` reads `interface.xyz` file written by 
-  :method:`gen_interface`, and uses :module:`pylada_defect` to decorate
-  all unique interstitial positions according the method described in 
-  https://github.com/pylada/pylada-defects. The decorated interface
-  is writting to hydrogenated_grains.
-
-  Also generates unique_lattice_sites.json and unique_h_sites.json
-  which contains the unique positions in the original interface lattice
-  and the unique hydrogen interstitials.
+  """Reads `interface.xyz` file written by 
+  :py:func:`gen_interface`, and uses modified pylada_defect module to decorate
+  all unique interstitial defect positions.
+  This routine also `generates unique_lattice_sites.json` and `unique_h_sites.json`
+  which contain the unique wyckoff positions in the original interface lattice
+  and the unique hydrogen interstitials in a modified interfacial coordinate system.
 
   Args:
-    write_file (bool, optional) : generates hydrogenated_grain.xyz file.
+    write_file (bool, optional) : If True, generates `hydrogenated_grain.xyz` file.
 
   Returns:
-    ats(:obj:`Atoms`): interface atoms decorated with hydrogen.
+    :py:class:`Atoms`: Interface atoms decorated with hydrogen.
   """
   ats = Atoms('interface.xyz')
   vasp_args = dict(xc='PBE', amix=0.01, amin=0.001, bmix=0.001, amix_mag=0.01, bmix_mag=0.001,
@@ -104,7 +100,8 @@ def decorate_interface(write_file=True):
   vasp = Vasp(**vasp_args)
   vasp.initialize(ats)
   write_vasp('POSCAR', vasp.atoms_sorted, symbol_count=vasp.symbol_count, vasp5=True)
-  struct = read_poscar.poscar('POSCAR')
+  #Remove pylada-light dependency
+  #struct = read_poscar.poscar('POSCAR')
   spg = spglib.get_spacegroup(ats, 0.1)
   sym = spglib.get_symmetry(ats)
   print 'Space Group: ', spg
@@ -129,7 +126,6 @@ def decorate_interface(write_file=True):
   #relabel atom ids for plotting in ovito
   for i in frange(len(ats)):
     ats.id[i] = i
-
   if write_file:
     ats.write('hydrogenated_grain.xyz')
   return ats

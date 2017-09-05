@@ -30,18 +30,18 @@ def before_request():
 
 @app.route('/')
 def home_page():
-  """
-  :method: Overview of imeall database. Links to material specific
+  """Overview of imeall database. Links to material specific
   databases and the synchronization log.
   """
+
   materials = os.listdir(g.gb_dir)
   return render_template('imeall.html', materials=materials)
 
 @app.route('/<material>/')
 def material(material):
+  """Orientation axes for a particular material.
   """
-  :method: Orientation axes for a particular material.
-  """
+
   path         = os.path.join(app.config['GRAIN_DATABASE'], material)
   url_path     = material
   orientations = []
@@ -55,9 +55,9 @@ def material(material):
 
 @app.route('/orientation/<path:url_path>/<orientation>/')
 def orientations(url_path, orientation):
+  """View to list different orientation axes in the material database.
   """
-  :method:`orientations` List different orientation axes in the material database.
-  """
+
 #can only handle three digit or_axis atm.
   url_path = url_path+'/'+orientation
   path     = os.path.join(g.gb_dir, url_path)
@@ -84,10 +84,10 @@ def orientations(url_path, orientation):
 
 @app.route('/grain/<path:url_path>/<gbid>/')
 def grain_boundary(url_path, gbid):
-  """
-  :method:`grain_boundary` Top view for a canonical grain boundary. CSL 
+  """Top view for a canonical grain boundary. CSL 
   lattice, and list of subgrain directories, energies, etc.
   """
+
   url_path  = url_path+'/'+gbid
   path      = os.path.join(g.gb_dir, url_path)
   with open(os.path.join(path, 'gb.json'),'r') as json_file:
@@ -116,9 +116,9 @@ def grain_boundary(url_path, gbid):
 
 @app.route("/db_sync/")
 def synchronization():
+  """View of db_log synchronization file.
   """
-  :method:`db_sync` view of db_log synchronization file.
-  """
+
   with open('./imeall/db_synclog','r') as f:
     db_log = f.read().split('\n\n')
   db_log.reverse()
@@ -126,11 +126,10 @@ def synchronization():
 
 @app.route('/analysis/')
 def analysis():
-  """
-  :method:`analysis` 
-  This view collates data from the grainboundary database
+  """This view collates data from the grainboundary database
   and forwards it to d3 database.
   """
+
 # User chooses what orientation angle to look at via a GET argument:
 # This should be a separate Table.
   pot_param = PotentialParameters()
@@ -178,9 +177,9 @@ def analysis():
   return render_template('analysis.html', gbdat=json.dumps(gbdat))
 
 def make_tree(path):
+  """Recurse through subgrain directories collecting json and png files.
   """
-  :method:`make_tree` recurse through subgrain directories collecting json and png files.
-  """
+
   tree = dict(name=os.path.basename(path), children=[], fullpath='')
   try: 
     lst = os.listdir(path)
@@ -214,13 +213,14 @@ def extract_json(path, json_files):
 
 #check for Ovito in different paths.
 def run_ovito(filename):
-  """ 
-  :method:`run_ovito` launches the Ovito application with the
+  """Launches the Ovito application with the
   associated grain boundary trajectory file loaded, the os command should
   ensure we are in the working directory so that any modifications, or
   videos generated will be saved in the correct place. ovito must be set
-  in environment.
+  in environment can only be used if running server locally with a
+  local copy of the database.
   """
+
   try:
     ovito = os.environ["OVITO"]
   except KeyError:
@@ -231,6 +231,8 @@ def run_ovito(filename):
 
 @app.route('/struct/<path:filename>/<path:textpath>')
 def serve_struct(filename, textpath=None):
+  """View for serving structure files to clients.
+  """
   if textpath.endswith('xyz'):
     run_ovito(os.path.join(app.config['GRAIN_DATABASE'], textpath))
     flash('running ovito')
@@ -248,9 +250,9 @@ def serve_struct(filename, textpath=None):
 
 @app.route('/img/<path:filename>/<gbid>/<img_type>')
 def serve_img(filename, gbid, img_type):
+  """Serve image_file to the browser.
   """
-  :method:`serve_img` serve image_file to the browser.
-  """
+
   img = os.path.join(filename,'{0}.png'.format(gbid))
   if img_type =='struct':
     img  = app.config['GRAIN_DATABASE']+'/'+filename+'/{0}.png'.format(gbid)
@@ -267,10 +269,9 @@ def serve_img(filename, gbid, img_type):
 
 @app.route('/servefile/')
 def serve_file(textpath):
+  """Serve different common file types to the browser.
   """
-  :method:`serve_file` serve different common file types to the browser.
-  """
-  #textpath = request.args.get('textpath')
+
   with open('{0}'.format(textpath), 'r') as text_file:
     text = text_file.read()
   if textpath.endswith('xyz'):
@@ -308,8 +309,7 @@ def serve_file(textpath):
 
 @app.route('/eam_pot/<path:filename>')
 def eam_pot(filename):
-  """
-  :method:`eam_pot` Matplotlib to inspect xml potential files in the database.
+  """Matplotlib to inspect xml potential files in the database.
   Based on gist at https://gist.github.com/wilsaj/862153.
   """
   import random

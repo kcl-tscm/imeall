@@ -15,22 +15,16 @@ from quippy  import set_fortran_indexing
 
 set_fortran_indexing(False)
 
-def compare_latt_vecs(cell_a, cell_b):
-  """
-  :method:`compare_latt_vecs` Returns the vector with components 
-  that are ratios of each component of two input vectors
-  useful for finding lcm of two vectors. This method works 
-  for orthorhombic cells.
-  """
-  ratios = [a[0]/a[1] for a in zip(np.diag(cell_a), np.diag(cell_a))]
-  return ratios
-
 def rotate_plane_z(grain, miller):
-  """ 
-  :method:`rotate_plane_z` Rotates atoms in grain 
-  so that planes parallel to plane
-  defined by miller index n are parallel to the xy 
-  plotting plane.
+  """Rotates atoms in grain so that planes parallel to the plane defined by the vector 
+  miller are parallel to the xy plotting plane.
+
+  Args:
+    grain(:py:class:`Atoms`): grain structure to be rotated.
+    miller(numpy array): 3x1 vector defining plane.
+
+  Returns:
+    rotation_quaternion to achieve this rotation.
   """
   z = np.array([0.,0., 1.])
   p = np.cross(miller, z)
@@ -49,31 +43,48 @@ def rotate_plane_z(grain, miller):
   grain = rotate_grain(grain, q=rotation_quaternion)
   return rotation_quaternion
 
-def build_tilt_sym_gb(gbid='', bp = [3,3,2], v=[1,1,0],
-                      c_space=None, target_dir=None, rbt = None):
-  """ 
-  :method:`build_tilt_sym_gb` Generate symmetric tilt grain boundary 
-  with appropriate configurations: boundary
+
+def build_tilt_sym_gb(gbid='', bp = [3,3,2], v=[1,-1,0],
+                      c_space=None, target_dir=None, rbt=None, alat=2.83):
+  """Generate symmetric tilt grain boundary with appropriate configurations: boundary
   plane (bp) oriented along z axis and orthogonal directions in the 
   the other two planes given the orientation axis (v) and an orthogonal vector
   bpxv so we have a proper cube. If rbt is not None then rigid body
   translations are present, this is passed as a list of two numbers
-  abs(rbt[0]) < 1. The cell is then displaced as a fxn of these numbers. 
+  abs(rbt[0]) < 1. The cell is then displaced as a fxn of these numbers.
+  This routing should work for any BCC crystal with the appropriate modification
+  to alat.
+
+  Args:
+    gbid(str):id label for the grain boundary.
+    bp(list, int): boundary plane normal.
+    v(list,int):orientation axis.
+    c_space(float,optional):inter-planar spacing if not passed this is calculated automatically.
+    target_dir(str):string specifying grain boundary target directory.
+    rbt(list,float):rigid body translations.
+    alat(float):Lattice constant of the unit cell.
+
+  Returns:
+    if target_dir:
+      returns [z_planes, len(dups), n_grain_unit, grain_c] i.e the location of the 
+      interfacial planes, the number of duplicate atoms when the grain is built, the
+      number of grains in the unit cell, the bicrystal `Atoms` object.
+    else:
+      returns the bicrystal `Atoms` object.
   """
+  #bpxv boundary planeX orientation axis vector. Gives y orientation of bicrystal.
   bpxv = [(bp[1]*v[2]-v[1]*bp[2]),(bp[2]*v[0]-bp[0]*v[2]),(bp[0]*v[1]- v[0]*bp[1])]
   grain_a = BodyCenteredCubic(directions = [v, bpxv, bp],
                               size = (1,1,1), symbol='Fe', pbc=(1,1,1),
-                              latticeconstant = 2.83)
+                              latticeconstant = alat)
 
   n_grain_unit = len(grain_a)
-# For the Chamati EAM potential the cutoff radius is 5.67 A
-# We want to separate the grain boundaries by at least this much, A safe
-# minimum value is 12 A. 
+  #A safe minimum value is 12 A, in most cases should be at least 2*r_cut of potential 
   n = 2
   while(grain_a.get_cell()[2,2]< 12.0 and n < 10):
     grain_a = BodyCenteredCubic(directions = [v, bpxv, bp],
                               size = (1,1,n), symbol='Fe', pbc=(1,1,1),
-                              latticeconstant = 2.83)
+                              latticeconstant = alat)
     n += 1
   print '\t {0} repeats in z direction'.format(n)
   grain_b = grain_a.copy()
@@ -83,7 +94,7 @@ def build_tilt_sym_gb(gbid='', bp = [3,3,2], v=[1,1,0],
   print '\t', '{0} {1} {2}'.format(bp[0], bp[1], bp[2])
   if c_space==None:
     s1 = surface('Fe', (map(int, bp)), 1)
-    c_space = 2.83/np.sqrt(float(bp[0]**2+bp[1]**2 + bp[2]**2)) #-s1.positions[:,2].max()
+    c_space = alat/np.sqrt(float(bp[0]**2+bp[1]**2 + bp[2]**2)) #-s1.positions[:,2].max()
     print s1.get_cell()
     s2 = surface('Fe', (map(int, v)), 1)
     x_space = s2.get_cell()[0,0] #-s1.positions[:,2].max()
@@ -137,7 +148,7 @@ def build_tilt_sym_gb(gbid='', bp = [3,3,2], v=[1,1,0],
 #Grain was explicitly set to 2*grain A before so we need 
 #to space out an additional layer.
   if sum([int(n)%2 for n in bp])%2 == 0 :
-	  grain_c.center(vacuum=c_space/2., axis=2)
+    grain_c.center(vacuum=c_space/2., axis=2)
   else:
     grain_c.center(vacuum=c_space/4., axis=2)
 # if we specify a target directory take a picture and
@@ -151,10 +162,16 @@ def build_tilt_sym_gb(gbid='', bp = [3,3,2], v=[1,1,0],
     return grain_c
 
 def rotate_plane_y(grain, miller):
-  """
-  :method:`rotate_plane_y` Rotates atoms in grain so that the miller plane 
+  """Rotates atoms in grain so that the miller plane 
   in grain is parallel to the y axis. Returns the quaternion 
   characterizing the rotation which accomplishes this.
+
+  Args:
+    grain(:py:class:`Atoms`): grain atoms object.
+    miller(list,int): Vector specifying grain boundary interfacial plane.
+
+  Returns:
+    quaternion which accomplishes this rotation.
   """
   y = np.array([0., 1., 0.])
   p = np.cross(miller, y)
@@ -175,23 +192,18 @@ def rotate_plane_y(grain, miller):
   grain = rotate_grain(grain, q = rotation_quaternion)
   return rotation_quaternion
 
-def generate_mirror(grain, point, miller):
-  """
-  :method:`generate_mirror` Reflect atoms through 
-  plane around point with miller index as normal to that plane.
-  """
-  M = quat.reflection_matrix(point, miller) 
-  print 'mirror plane', M
-  for atom in grain:
-    p = atom.position
-    p_prime = M[:3,:3].dot(p)
-    atom.position = p_prime
-
 def gnu_plot_gb(boundary_plane, m, invm, gbid, mb=0.0, invmb=0.0,target_dir='./'):
+  """Generate coincident site lattice plots on the fly in svg format for web based visualization.
+  Args:
+    boundary_plane(list): vector defining interfacial plane.
+    m(float): slope of line separating red and blue crystal.
+    invm(float): slope of line perpendicular to m.
+    gbid(str):grain boundary id.
+    mb(float,optional):deprecated.
+    invmb(float,optional):deprecated.
+    target_dir(str, optional):location to write plotting script.
   """
-  :method:`gnu_plot_gb` Generate coincident 
-  site lattice plots on the fly in svg format for web based visualization.
-  """
+
   f = open(os.path.join(target_dir, 'plot.gnu'), 'w')
   script = " \
   h(x) = {3}*x   \n \
@@ -224,14 +236,14 @@ def gnu_plot_twist_gb(gbid="000000000", target_dir='./'):
   f.close()
 
 def bcc_csl_nn0(m, n, grain):
-  """
-  Rotate grain according to rotation matrix generated from a 
-  quaternion.
-  e.g.:
-  (m,n,n,0) := \psi = \arccos(\frac{m^{2} - 2n^{2}}{m^{2} + 2n^{2}}), [110]
-  once m and n have been chosen according to some scheme we generate the rotation
+  """Rotate grain according to a rotation matrix generated from a 
+  quaternion. Example for [1 1 0] orientation axis the angle of rotation 
+  is given by:
+  (m,n,n,0) := \psi = \arccos(\frac{m^{2} - 2n^{2}}{m^{2} + 2n^{2}}), 
+  Once m and n have been chosen according to some scheme we generate the rotation
   matrix.
   """
+
   R = zeiner_matrix(np.array([m,n,n,0]))
 #project down to 3x3:
   for i in range(len(grain)):
@@ -255,26 +267,8 @@ def zeiner_matrix(q):
   return R
 
 def csl_lattice_vecs(m,n):
-  """
-	Rational Orthogonal matrices can be parameterized
-	by integral quaternions, i.e. by quaternions with integral coefficients or
-	a quaternion with integral coefficients + 1/2(1 1 1 1).
-	an integral quaternion is primitive if the greatest divisor of its integral components is 1.
-	for a primitive quaternion \mathbf{r} = (r_0,r_1,r_2,r_3)
-	r^{0} = [ r_{1}, r_{2}, r_{3}]
-	r^{1} = [r_{0}, r_{3}, -r_{2}]
-	r^{2} = [-r_{3}, r_{0}, r_{1}]
-	r^{3} = [r_{2}, -r_{1}, r_{0}]
-	Given a bcc lattice (Zeiner05) we can define the
-	lattice vectors of the coincident site lattice as
-	r^{0}, r^{1}, r^{2}, r^{3}, 1/2(r^{0} + r^{1} + r^{2} + r^{3}),  if |r|^{2} is odd
-	r^{0}, 1/2(r^{0}+r^{1}), 1/2(r^{0} + r^{2}), 1/2(r^{0} + r^{3}), if 2 divides |r|^2
-	and 4 does not divide |r|^{2}
-	1/2 r^{0}, 1/2 r^{1}, 1/2r^{2}, 1/2 r^{3} if 4 divides |r|^2
-	There is then a straight forward procedure to obtain a 2d lattice
-	for the grain boundary. Just take the miller plane defining the boundary
-  and pick a set of independent vectors from the lattice vectors of the 
-  coincident site lattice (CSL).
+  """Returns lattice vectors from quaternion
+  following Zeiner(05).
   """
   r = np.array([m,n,n,0])
   r0 = np.array([r[1], r[2],  r[3]])
@@ -302,9 +296,12 @@ def csl_lattice_vecs(m,n):
   return np.array([a,b,c,d])
 
 def rotate_vec(q, vec):
-  """
-  :method:`rotate_vec` Rotate 3 vector with quaternion.
-  return 3 vector.
+  """Rotate 3 vector with quaternion qvq^{-1}.
+  Args:
+    q(quaternion)
+    vec(3x1 list): vector to rotate. 
+  Returns: 
+    rotated 3 vector.
   """
   vec = np.array([0., vec[0], vec[1], vec[2]])
   qm = quat.quaternion_conjugate(q)
@@ -314,8 +311,7 @@ def rotate_vec(q, vec):
   return vec
 
 def rotate_grain(grain, theta=0., x=[0.,0.,0.], q=[]):
-  """
-  :method: Rotate the grain according to quaternion=[Theta, u,v,w]=[w,x,y,z]
+  """Rotate the grain according to quaternion=[Theta, u,v,w]=[w,x,y,z]
   Standard routine is passed angle and vector this generates the quaternion to do the rotation 
   however if a quaternion, q!=None, is passed to routine the plane is rotated using q.
   """
@@ -340,7 +336,7 @@ def print_points(atoms, f):
 
 def find_densest_plane(grain_dict):
   """
-  :method:`find_densest_plane` Return the indices for a set of
+  :py:func:`find_densest_plane` Return the indices for a set of
   adjacent planes with the largest number of points.
   """
   maxx     = max([len(a) for a in grain_dict.values()])
@@ -355,8 +351,7 @@ def find_densest_plane(grain_dict):
   return key1, key2
 
 def simplify_csl(m, b=0.0, target_dir='./'):
-  """ 
-  :method:`simplify_csl` Simplify the dat files of the CSL so that atoms in grain_a are below the line
+  """Simplify the dat files of the CSL so that atoms in grain_a are below the line
   defined by the boundary plane in the current projection and atoms from grain_b
   are above.
   """
@@ -384,8 +379,7 @@ def simplify_csl(m, b=0.0, target_dir='./'):
     f.close()
 
 def gen_csl(orientation_axis, gb, target_dir='./', gbid='0000000000', gb_type="tilt"):
-  """
-  Print vectors.
+  """Generate the coincident site lattice.
   """
   a  = 2.834
   fe = crystal('Fe', [(0,0,0)], spacegroup=229,
