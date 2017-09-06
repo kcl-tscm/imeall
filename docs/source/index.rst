@@ -24,10 +24,10 @@ Contents
 
    intro.rst
    imeall.rst
-   interstitials.rst
-   slabmaker.rst
    models.rst
    views.rst
+   slabmaker.rst
+   interstitials.rst
    calculators.rst
 
 

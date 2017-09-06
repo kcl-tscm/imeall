@@ -177,6 +177,8 @@ texinfo_documents = [
 #intersphinx_mapping = {'https://docs.python.org/': None}
 intersphinx_mapping = {'python':('https://docs.python.org/2.7', None),
                        'ase':('https://wiki.fysik.dtu.dk/ase/', None),
+                       'flask':('http://flask.pocoo.org/docs/0.12/', None),
+                       'quippy':('https://libatoms.github.io/QUIP/', None),
                        'numpy':('https://docs.scipy.org/doc/numpy/', None),
                        'peewee':('http://docs.peewee-orm.com/en/latest/', None)}
 

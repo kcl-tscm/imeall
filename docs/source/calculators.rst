@@ -18,6 +18,3 @@ and quantities relating to impurities present at boundaries.
 .. automodule:: imeall.calc_gap
   :members:
 
-.. automodule:: imeall.calc_phonon
-  :members:
-
