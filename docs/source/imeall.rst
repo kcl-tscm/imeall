@@ -6,11 +6,5 @@
 
 Imeall Package
 ==============
+  Overview.
 
-.. automodule:: imeall
-  :synopsis: Imeall package 
-  :members:
-
-.. automodule:: imeall.slabmaker
-  :synopsis: Grain boundary builder
-  :members:

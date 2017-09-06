@@ -204,7 +204,7 @@ def gb_check_path(material='alphaFe', or_axis='001', modify_db=False):
 
   Args:
     material(str): material.
-    or_aixs(str): orientation axis.
+    or_axis(str): orientation axis.
     modify_db(bool): If True database will be updated.
   """
 

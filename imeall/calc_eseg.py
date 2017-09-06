@@ -21,7 +21,7 @@ def nearest_to_unique(at, unique_sites):
     unique_sites(list): list of position vectors.
 
   Returns:
-    equiv_site (bool): whether or not atom position is identical to a site
+    bool: Whether or not atom position is identical to a site
     in the unique_sites list.
   """
   equiv_site = False
@@ -42,7 +42,7 @@ def gen_interface():
   on each side. 
 
   Returns:
-    interface (:py:class:`Atoms`): Atoms object of the interfacial slab in same 
+    :py:class:`Atoms`: Atoms object of the interfacial slab in same 
     coordinates as original bicrystal.
   """
   #output.xyz must have structure_type property attached.

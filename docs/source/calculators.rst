@@ -12,10 +12,7 @@ and quantities relating to impurities present at boundaries.
 .. automodule:: imeall.calc_elast_dipole
   :members:
 
-.. automodule:: imeall.calc_eseg
-  :members:
-
-.. automodule:: imeall.calc_inter_ener
+.. autoclass:: ElasticDipole
   :members:
 
 .. automodule:: imeall.calc_gap

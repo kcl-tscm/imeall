@@ -5,3 +5,6 @@ and enumerating likely interstitial sites.
 
 .. automodule:: imeall.calc_eseg
   :members:
+
+.. automodule:: imeall.calc_inter_ener
+  :members:

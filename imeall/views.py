@@ -30,8 +30,7 @@ def before_request():
 
 @app.route('/')
 def home_page():
-  """Overview of imeall database. Links to material specific
-  databases and the synchronization log.
+  """Overview of imeall database. Links to material views.
   """
 
   materials = os.listdir(g.gb_dir)
@@ -39,7 +38,7 @@ def home_page():
 
 @app.route('/<material>/')
 def material(material):
-  """Orientation axes for a particular material.
+  """View of available orientation axes for a particular material.
   """
 
   path         = os.path.join(app.config['GRAIN_DATABASE'], material)
@@ -85,7 +84,7 @@ def orientations(url_path, orientation):
 @app.route('/grain/<path:url_path>/<gbid>/')
 def grain_boundary(url_path, gbid):
   """Top view for a canonical grain boundary. CSL 
-  lattice, and list of subgrain directories, energies, etc.
+  lattice, and list of subgrain directories, and energies.
   """
 
   url_path  = url_path+'/'+gbid
@@ -112,22 +111,20 @@ def grain_boundary(url_path, gbid):
   return render_template('grain_boundary.html', gbid=gbid, url_path=url_path,
                           gb_info=gb_info, flare_root=json.dumps(tree), subgrains=subgrains, 
                           subgrainsj=json.dumps(subgrainsj), gam_dict=gam_dict)
-
-
-@app.route("/db_sync/")
-def synchronization():
-  """View of db_log synchronization file.
-  """
-
-  with open('./imeall/db_synclog','r') as f:
-    db_log = f.read().split('\n\n')
-  db_log.reverse()
-  return render_template('synchronization.html', db_log=db_log)
+#@app.route("/db_sync/")
+#def synchronization():
+#  """View of db_log synchronization file.
+#  """
+#
+#  with open('./imeall/db_synclog','r') as f:
+#    db_log = f.read().split('\n\n')
+#  db_log.reverse()
+#  return render_template('synchronization.html', db_log=db_log)
 
 @app.route('/analysis/')
 def analysis():
-  """This view collates data from the grainboundary database
-  and forwards it to d3 database.
+  """This view collates data from the grain boundary database
+  and forwards it to d3 analysis tools.
   """
 
 # User chooses what orientation angle to look at via a GET argument:
@@ -214,11 +211,10 @@ def extract_json(path, json_files):
 #check for Ovito in different paths.
 def run_ovito(filename):
   """Launches the Ovito application with the
-  associated grain boundary trajectory file loaded, the os command should
-  ensure we are in the working directory so that any modifications, or
-  videos generated will be saved in the correct place. ovito must be set
-  in environment can only be used if running server locally with a
-  local copy of the database.
+  associated grain boundary trajectory file loaded. 
+  The alias 'ovito' must be set in environment. 
+  This function can only be used if running server 
+  locally with a local copy of the database.
   """
 
   try:
@@ -233,6 +229,7 @@ def run_ovito(filename):
 def serve_struct(filename, textpath=None):
   """View for serving structure files to clients.
   """
+
   if textpath.endswith('xyz'):
     run_ovito(os.path.join(app.config['GRAIN_DATABASE'], textpath))
     flash('running ovito')
@@ -309,9 +306,9 @@ def serve_file(textpath):
 
 @app.route('/eam_pot/<path:filename>')
 def eam_pot(filename):
-  """Matplotlib to inspect xml potential files in the database.
-  Based on gist at https://gist.github.com/wilsaj/862153.
+  """Uses matplotlib to inspect xml potential files in the database.
   """
+
   import random
   import datetime
   import StringIO
@@ -327,6 +324,7 @@ def eam_pot(filename):
   FVR = []
   pot_dir  = '/Users/lambert/pymodules/imeall/imeall/potentials'
   pot_xml  = pot_dir+'/'+filename
+#Based on gist at https://gist.github.com/wilsaj/862153.
   with open(pot_xml, 'r') as f:
     tree = ET.parse(f)
   root = tree.getroot()

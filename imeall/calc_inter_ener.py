@@ -51,6 +51,16 @@ def get_interface_bounds(ats):
   return gb_min, gb_max, z_width, at_min
 
 def apply_strain(ats, mode, st_num):
+  """Apply a deformation mode to :py:class:`Atoms` object. 
+
+  Args:
+    mode(str): Options are shear, stretch, hydrostatic.
+    st_num(float): Strain applied as a percentage.
+
+  Returns:
+   :py:class:`Atoms` object. 
+
+  """
   e1 = np.array([1,0,0])
   e2 = np.array([0,1,0])
   e3 = np.array([0,0,1])

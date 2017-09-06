@@ -1,3 +1,7 @@
+checkout_structures:
+  Demonstrates how to checkout all minimum energy structures for [001] alphaFe 
+  grain boundaries for subsequent analysis.
+
 query_test:
   Demonstrates a simple query to the database to pull the 
   minimum energy values for a user chosen potential 

@@ -9,12 +9,11 @@ from imeall.models import PotentialParameters
 
 set_fortran_indexing(False)
 def strain_energy(ats, cursor_step=0.2):
-  """
-  method:`strain_energy` create an array tracking the accumulation of energy above the bulk.
-          For interfacial structures this has pronounced speakes in the region of the interface.
+  """Create an array tracking the accumulation of energy above the bulk energy along the z-axis.
+  For interfacial structures this has pronounced speakes in the region of the interface.
 
   Args: 
-    ats `Atoms` object with a potential calculator attached.
+    ats(:py:class:`Atoms`) object with a potential calculator attached.
     cursor_step(float): step distance along z to add atomic energies to the cumulative energy.
 
   Returns: 
@@ -38,15 +37,18 @@ def strain_energy(ats, cursor_step=0.2):
   return elastic_energy
 
 def calc_chemomechanical(ats):
-  """
-  method:`calc_chemomechanical` requires atoms object with a potential capable of return a per atom energy.
-         `Atoms` object must have at least structure_type and local_energy properties. For a bcc lattice structure_type=3. 
+  """Calculate elastic and chemical contributions to the total energy.
+  Requires :py:class:`Atoms` object with a :py:class:`Potential` capable of returning a per atom energy.
+  :py:class:`Atoms` object must have at least structure_type and 
+  local_energy properties. For a bcc lattice structure_type=3. 
+
   Args: 
-    ats `Atoms` object.
+    ats(:py:class:`Atoms`):  
 
   Returns: 
     A list of [(chemical_energy/total_energy)*gb_energy, (elastic_energy/total_energy)*gb_energy, gb_energy]
   """
+
 #case quip types to numpy arrays stack and transpose
   loc_en = np.array(ats.properties['local_energy'])
   struct_type = np.array(ats.properties['structure_type'])
@@ -70,8 +72,8 @@ def calc_chemomechanical(ats):
   return [(chemical_energy/total_energy)*gb_energy, (elastic_energy/total_energy)*gb_energy, gb_energy]
 
 def calc_chemoelast(input_file):
-  """
-  method: Adds the structure type using ovitos script to the atoms object and calculates the breakdown of energy contributions.
+  """Adds the structure type using an ovitos script to the :py:class:`Atoms` object
+  and calculates the breakdown of the energy contributions.
 
   Args:
     input_file(str):Relaxed grain boundary structure file.

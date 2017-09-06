@@ -1,12 +1,14 @@
 import os
-import re
 import sys
+import argparse
 import glob
 import json
 import logging
-import argparse
 import numpy as np
+import re
+import shutil
 import slabmaker.slabmaker as slabmaker
+
 from  quippy import Atoms
 from  scipy.spatial import Voronoi, voronoi_plot_2d
 
@@ -76,7 +78,7 @@ class PotentialParameters(object):
     """Dictionary Mapping directory names to quip xml files.
 
     Returns: 
-      paramfile(dict): {potential_directory:potential_file}
+      dict: {potential_directory:potential_file}
     """
 
     paramfile      = {'DFT':'dft_vasp_pbe',
@@ -93,7 +95,7 @@ class PotentialParameters(object):
     directory mapping.
 
     Returns: 
-      potdir(dict): {potential_file:potential_directory}
+      dict: {potential_file:potential_directory}
     """
 
     paramfile_dict = self.paramfile_dict()
@@ -106,7 +108,7 @@ class PotentialParameters(object):
     """Calculate grain boundary energy relative to bulk value.
 
     Returns:
-      E_gb(float): grain boundary energy J/m^{2}
+      float: E_gb grain boundary energy J/m^{2}
     """
 
     cell = at.get_cell()
@@ -126,8 +128,8 @@ class GBQuery(object):
 
   def copy_gb_dirtree(self, material="alphaFe", or_axis="0,0,1", pots=['PotBH.xml'], 
                       target_dir='./'):
-    """Pull all min energy structures from database for an orientation 
-    axis and copy them to target_dir. Useful for 'checking out' 
+    """Pull all minimum energy structures, using :py:function:`pull_minen_structs` 
+    from database for an orientation axis and copy them to target_dir. Useful for checking out
     structures into a unique directory for specialized analysis.
 
     Args:
@@ -135,6 +137,10 @@ class GBQuery(object):
       or_axis(str): csv serialized vector of orientation axis
       pots: list of potential parameter files.
       target_dir: Location to copy files to  (Default: './').
+
+    Todo:
+      * Add kwargs to pull_minen_structs to provide additional selection criteria.
+      
     """
 
     grain_dicts = self.pull_minen_structs(material=material, or_axis=or_axis, pots=pots)
@@ -151,16 +157,17 @@ class GBQuery(object):
     #grab the gb.json file path.
       gb_path = gd['path']
       gb_path = '/'.join(gb_path.split('/')[0:3])+'/gb.json'
-      gb_path = os.path.join(GBDATABASE, gb_path)
+      print gb_path
+      gb_path = os.path.join(app.config['GRAIN_DATABASE'], gb_path)
     #grab the struct file and the subgb.json path.
-      dir_path = os.path.join(GBDATABASE, dir_path)
+      dir_path = os.path.join(app.config['GRAIN_DATABASE'], dir_path)
       struct_path = os.path.join(dir_path, struct_name)
       subgb_path = os.path.join(dir_path, 'subgb.json')
       shutil.copy(struct_path, new_dir_name)
       shutil.copy(subgb_path, new_dir_name)
       shutil.copy(gb_path, new_dir_name)
 
-  def pull_minen_structs(material="alphaFe", or_axis="1,1,1", pots=['PotBH.xml']):
+  def pull_minen_structs(self, material="alphaFe", or_axis="1,1,1", pots=['PotBH.xml']):
     """Grab the minimum energy structure json dictionaries
     for a given material, orientation_axis, and potential(s) parameter filenames.
 
@@ -170,7 +177,7 @@ class GBQuery(object):
       pots(list): list of potentials.
 
     Returns:
-      list: :py:class:SubGrainBoundary :py:class:Models represented as dictionaries.
+      list: py:class:`SubGrainBoundary` :py:class:`Models` represented as dictionaries.
     """
 
     from gb_models import database, GrainBoundary, SubGrainBoundary
@@ -328,7 +335,7 @@ class GBMaintenance(object):
       dict_type(str, optional): Type of json dict 'subgb.json' or 'gb.json'.
 
     Returns:
-      updated json dictionary.
+      dict: Updated json dictionary.
     """
 
     os.path.join(dirname, dict_type)
@@ -349,6 +356,9 @@ class GBMaintenance(object):
       new_values(list): list of new values
       dryrun(bool):If False json file is over written with new keys.
 
+    Returns:
+      dict: Updated json dictionary.
+
     """
 
     assert len(new_keys)==len(new_values)
@@ -364,10 +374,11 @@ class GBMaintenance(object):
     else:
       with open(json_path,'w') as json_new_file:
         json.dump(new_json, json_new_file, indent=2)
+    return new_json
 
   def fix_json(self, path):
-    """If .json file is corrupted and contains two {}{} dictionaries
-    this function selects the second of the two dictionaries and rewrites it.
+    """If json file is corrupted and contains two {}{} dictionaries,
+    this function selects the second of the two dictionaries and overwrites json file.
 
     Args:
       path(str): path to corrupted dictionary.
@@ -440,8 +451,9 @@ class GBAnalysis(object):
       gb_type(str): tilt or twist boundary.
 
     Returns:
-      list: A list of dictionaries with each dictionary contains values gbid, orientation_axis, 
-            angle, boundary_plane, param_file, and energies.
+      list: A list of dictionaries. Each dictionary contains keys
+      gbid, orientation_axis, angle, boundary_plane, param_file, 
+      and energies.
     """
 
     pot_param     = PotentialParameters()
