@@ -62,7 +62,7 @@ class GrainBoundary(BaseModel):
 
 class SubGrainBoundary(BaseModel):
   """
-  SubGrainBoundary Model
+  SubGrainBoundary Model.
 
   Attributes:
     path(str): relative to the grainboundary database root.
@@ -171,7 +171,8 @@ def gb_check_dir_integrity(material='alphaFe', or_axis='001'):
   """
   analyze  = GBAnalysis()
   gb_files = []
-  analyze.find_gb_json('{0}'.format(os.path.join(GRAIN_DATABASE, os.path.join(material, or_axis))), gb_files, 'gb.json')
+  analyze.find_gb_json('{0}'.format(os.path.join(GRAIN_DATABASE, 
+                                    os.path.join(material, or_axis))), gb_files, 'gb.json')
   for gb in gb_files:
     with open(gb[1], 'r') as f:
       gb_json = json.load(f)
@@ -210,7 +211,8 @@ def gb_check_path(material='alphaFe', or_axis='001', modify_db=False):
 
   analyze  = GBAnalysis()
   gb_files = []
-  analyze.find_gb_json('{0}'.format(os.path.join(GRAIN_DATABASE, os.path.join(material, or_axis))), gb_files, 'gb.json')
+  analyze.find_gb_json('{0}'.format(os.path.join(GRAIN_DATABASE, os.path.join(material, or_axis))),
+                                    gb_files, 'gb.json')
   no_struct_file = open('no_struct.txt','a')
   for gb_num, gb in enumerate(gb_files[:]):
     with open(gb[1], 'r') as f:
@@ -235,10 +237,11 @@ def gb_check_path(material='alphaFe', or_axis='001', modify_db=False):
 
       print subgb_dict_path
       query = (GB_model.subgrains
-                       .where((SubGrainBoundary.gbid == subgb_dict['name']) & (SubGrainBoundary.potential==subgb_dict['param_file'])))
+                       .where((SubGrainBoundary.gbid == subgb_dict['name']) & 
+                              (SubGrainBoundary.potential==subgb_dict['param_file'])))
       subgb_model = query.get()
-      json_path  = '/'.join(subgb[0].split('/')[7:])
-      model_path  = subgb_model.path
+      json_path = '/'.join(subgb[0].split('/')[7:])
+      model_path = subgb_model.path
       try:
         assert json_path == model_path
       except AssertionError:
@@ -262,12 +265,14 @@ def gb_check_conv(material='alphaFe', or_axis='001', modify_db=False):
   Args:
     material: Which material to do check json/database convergence consistency on.
     or_axis: Which orientation axis to check.
-    modify_db: Boolean. If True updates gb_model in database otherwise just prints inconsistent grain json/database value.
+    modify_db: Boolean. If True updates gb_model in database otherwise 
+    just prints inconsistent grain json/database value.
   """
 
   analyze  = GBAnalysis()
   gb_files = []
-  analyze.find_gb_json('{0}'.format(os.path.join(GRAIN_DATABASE, os.path.join(material, or_axis))), gb_files, 'gb.json')
+  analyze.find_gb_json('{0}'.format(os.path.join(GRAIN_DATABASE, os.path.join(material, or_axis))), 
+                                    gb_files, 'gb.json')
   no_struct_file = open('no_struct.txt','a')
   for gb_num, gb in enumerate(gb_files[:]):
     with open(gb[1], 'r') as f:
@@ -373,7 +378,8 @@ def gb_check_force(material='alphaFe', or_axis='001', force_tol=0.05, modify_db=
 
   analyze  = GBAnalysis()
   gb_files = []
-  analyze.find_gb_json('{0}'.format(os.path.join(GRAIN_DATABASE, os.path.join(material, or_axis))), gb_files, 'gb.json')
+  analyze.find_gb_json('{0}'.format(os.path.join(GRAIN_DATABASE, os.path.join(material, or_axis))), 
+                                                 gb_files, 'gb.json')
   no_struct_file = open('no_struct.txt','a')
   for gb_num, gb in enumerate(gb_files[gb_start:]):
     with open(gb[1], 'r') as f:
@@ -397,7 +403,9 @@ def gb_check_force(material='alphaFe', or_axis='001', force_tol=0.05, modify_db=
       else:  
         print gb_num+gb_start, subgb_num+sub_start, struct_path
         try:
-          forces = [np.sqrt(x**2+y**2+z**2) for x,y,z, in zip(ats.properties['force'][0], ats.properties['force'][1], ats.properties['force'][2])]
+          forces = [np.sqrt(x**2+y**2+z**2) for x,y,z, in zip(ats.properties['force'][0], 
+                                                              ats.properties['force'][1], 
+                                                              ats.properties['force'][2])]
         except KeyError:
           print gb_num+gb_start, struct_path
           print 'No Force in atoms object'
@@ -412,7 +420,8 @@ def gb_check_force(material='alphaFe', or_axis='001', force_tol=0.05, modify_db=
       if modify_db:
         if conv_check != subgb_dict['converged']:
           print struct_path
-          print 'Force from .xyz: ', conv_check, 'json: ', subgb_dict['converged'], 'Model: ', subgb_model.converged
+          print 'Force from .xyz: ', conv_check, 'json: ', subgb_dict['converged']
+          print 'Model: ', subgb_model.converged
           subgb_dict['converged'] = conv_check
           with open(subgb_dict_path, 'w') as f:
             json.dump(subgb_dict, f, indent=2)
@@ -422,7 +431,8 @@ def gb_check_force(material='alphaFe', or_axis='001', force_tol=0.05, modify_db=
         try:
           if conv_check != subgb_dict['converged']:
             print struct_path
-            print 'Force from .xyz: ', conv_check, 'json: ', subgb_dict['converged'], 'Model: ', subgb_model.converged
+            print 'Force from .xyz: ', conv_check, 'json: ', subgb_dict['converged']
+            print 'Model: ', subgb_model.converged
           else:
             pass
         except KeyError:
@@ -442,7 +452,8 @@ def change_json_key(material='alphaFe', or_axis='001'):
 
   analyze  = GBAnalysis()
   gb_files = []
-  analyze.find_gb_json('{0}'.format(os.path.join(GRAIN_DATABASE, os.path.join(material, or_axis))), gb_files, 'gb.json')
+  analyze.find_gb_json('{0}'.format(os.path.join(GRAIN_DATABASE, os.path.join(material, or_axis))), 
+                                                 gb_files, 'gb.json')
   for gb in gb_files:
     with open(gb[1], 'r') as f:
       gb_json = json.load(f)
@@ -467,9 +478,12 @@ def change_json_key(material='alphaFe', or_axis='001'):
 
 def insert_subgrain(material='alphaFe', or_axis='110', gbid='1108397110', json_path='/'):
   GB_model = GrainBoundary.select().where(GrainBoundary.gbid==gbid).get()
+
   with open(os.path.join(GRAIN_DATABASE, json_path)+'/subgb.json','r') as f:
     json_dict = json.load(f)
-  model_vars = ['canonical_grain', 'converged', 'E_gb_init', 'potential', 'rbt', 'path', 'area', 'rcut', 'n_at', 'E_gb', 'notes', 'gbid']
+
+  model_vars = ['canonical_grain', 'converged', 'E_gb_init', 'potential', 
+                'rbt', 'path', 'area', 'rcut', 'n_at', 'E_gb', 'notes', 'gbid']
 
   converged = json_dict['converged']
   E_gb_init = json_dict['E_gb_init']
@@ -551,7 +565,7 @@ def populate_db(material='alphaFe', or_axis='001', gbid='', modify=False):
                "height"           : gb_json['H'],
                "area"             : gb_json['A'],
                "notes"            : "",
-               "path"             : os.path.relpath(gb[0], "/home/lambert/pymodules/imeall/imeall/grain_boundaries/"),
+               "path"             : os.path.relpath(gb[0], app.config["GRAIN_DATABASE"]),
                "gbid"             : gb_json['gbid']
               }
 
@@ -601,7 +615,7 @@ def populate_db(material='alphaFe', or_axis='001', gbid='', modify=False):
                     "E_gb_init"       : E_gb_init, 
                     "potential"       : subgb_json["param_file"],
                     "rbt"             : serialize_vector(subgb_json['rbt']),
-                    "path"            : os.path.relpath(subgb[0], "/home/lambert/pymodules/imeall/imeall/grain_boundaries/"),
+                    "path"            : os.path.relpath(subgb[0], app.config["GRAIN_DATABASE"]),
                     "area"            : area,
                     "rcut"            : subgb_json["rcut"],
                     "n_at"            : subgb_json['n_at'],

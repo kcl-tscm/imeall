@@ -63,10 +63,9 @@ class ElasticDipole(object):
 
     Args: 
       defect (:py:class:`Atom`): Atom object of defect atom.
-      ats (:py:class:`Atoms`): If forces are required to be calculated 
-      atoms object must have defect, otherwise it is absent.
-      pot (:py:class:`Potential`, optional): Potential for calculating interatomic forces if required,
-      forces(:py:class:`array`, optional): numpy array of forces if already available.
+      ats (:py:class:`Atoms`): If forces are absent the :py:class:Atoms object must have defect present.
+      pot (:py:class:`Potential`, optional): Potential for calculating interatomic forces if required.
+      forces(:py:class:`numpy.array`, optional): numpy array of forces if already available.
 
     Returns: 
       3x3 numpy array of G the dipole tensor.
@@ -99,10 +98,10 @@ class ElasticDipole(object):
 
 
 def find_h_atom(ats):
-  """Finds the hydrogen atom in .xyz file and returns its `Atom` object.
+  """Finds the hydrogen atom in .xyz file and returns its :py:class:`Atom` object.
   
   Args:
-    ats(:py:class:`Atoms`) object.
+    ats(:py:class:`Atoms`)
 
   Returns: 
     :py:class:`Atom` object.

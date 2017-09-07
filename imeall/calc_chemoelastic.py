@@ -17,7 +17,7 @@ def strain_energy(ats, cursor_step=0.2):
     cursor_step(float): step distance along z to add atomic energies to the cumulative energy.
 
   Returns: 
-    Cumulative energy distribution along the z-axis.
+    list: Cumulative energy distribution along the z-axis.
   """
   cell = ats.get_cell()
   A = cell[0][0]*cell[1][1]
@@ -46,7 +46,7 @@ def calc_chemomechanical(ats):
     ats(:py:class:`Atoms`):  
 
   Returns: 
-    A list of [(chemical_energy/total_energy)*gb_energy, (elastic_energy/total_energy)*gb_energy, gb_energy]
+    list:[(chemical_energy/total_energy)*gb_energy, (elastic_energy/total_energy)*gb_energy, gb_energy]
   """
 
 #case quip types to numpy arrays stack and transpose
@@ -79,7 +79,7 @@ def calc_chemoelast(input_file):
     input_file(str):Relaxed grain boundary structure file.
 
   Returns: 
-    a list of [(chemical_energy/total_energy)*gb_energy, (elastic_energy/total_energy)*gb_energy, gb_energy]
+    list(float):[(chemical_energy/total_energy)*gb_energy, (elastic_energy/total_energy)*gb_energy, gb_energy]
   """
   potparam = PotentialParameters()
   ener_bulk_dict = potparam.gs_ener_per_atom()

@@ -128,7 +128,7 @@ class GBQuery(object):
 
   def copy_gb_dirtree(self, material="alphaFe", or_axis="0,0,1", pots=['PotBH.xml'], 
                       target_dir='./'):
-    """Pull all minimum energy structures, using :py:function:`pull_minen_structs` 
+    """Pull all minimum energy structures, using :py:func:`pull_minen_structs`,
     from database for an orientation axis and copy them to target_dir. Useful for checking out
     structures into a unique directory for specialized analysis.
 
@@ -174,10 +174,11 @@ class GBQuery(object):
     Args:
       material(str,optional): Material to investigate.
       or_axis(str,optional): Orientation axis "1,1,1".
-      pots(list): list of potentials.
+      pots(list): list of potentials parameter files.
 
     Returns:
-      list: py:class:`SubGrainBoundary` :py:class:`Models` represented as dictionaries.
+      list[:py:class:`SubGrainBoundary`]: List of :py:class:`SubGrainBoundary` :py:class:`Model` 
+      represented as dictionaries.
     """
 
     from gb_models import database, GrainBoundary, SubGrainBoundary
@@ -548,7 +549,7 @@ class GBAnalysis(object):
       potential(str): Name of potential directory.
 
     Returns:
-      gam_dict = {'max_en':float, 'min_en':float,'min_coords':list,'max_coords':list, 'path':str}
+      dictionary: {'max_en':float, 'min_en':float,'min_coords':list,'max_coords':list, 'path':str}
     """
 
     potparams = PotentialParameters()

@@ -12,8 +12,7 @@ from ase.lattice.cubic       import BodyCenteredCubic
 
 def calc_band_paths(band_paths, npoints=100): 
   """
-  Given a list of special points calculates the
-  q-path between them.
+  Given a list of special points calculates the q-path between them.
   """
   bands = []
   nd = len(band_paths)
@@ -28,8 +27,6 @@ def calc_band_paths(band_paths, npoints=100):
       band.append(band_paths[i] + q)
     bands.append(band)
   return bands
-
-
 
 if __name__=='__main__':
   #CHOOSE POTENTIAL

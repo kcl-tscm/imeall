@@ -7,6 +7,7 @@ import logging
 import argparse
 import numpy as np
 import logging
+
 from   pprint import pprint
 from   cStringIO           import StringIO
 from   ase.optimize.sciopt import SciPyFminCG
@@ -18,14 +19,18 @@ from   ase.optimize        import BFGS, FIRE, LBFGS, MDMin, QuasiNewton
 set_fortran_indexing(False)
 
 def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200, force_tol = 0.05):
-  """
-  :method:`relax_gb` function definition to relax a grain_boundary.
-    gb_file     = gbid or subgbid.
-    traj_steps  = number of steps between print trajectories.
-    total_steps = total number of force relaxation steps.
+  """Method to relax a grain_boundary bicrystal structure.
+  
+  Args:
+    gb_file(str): gbid.
+    traj_steps(int): number of steps between print trajectories.
+    total_steps(int): total number of force relaxation steps.
+    force_tol(float): Force relaxation criterion in ev/A. 
+
+  Returns:
+    :class:`ase.Atoms` Object
   """
   def converged(grain, smax, fmax):
-
     maxstress = max(grain.get_stress().ravel())
     rmsforces = np.sum(grain.get_forces()**2, axis=1)**0.5
     maxforce  = max(rmsforces)
@@ -38,7 +43,7 @@ def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200, force_tol = 
   try:
     POT_DIR     = os.environ['POTDIR']
   except KeyError:
-    sys.exit("PLEASE SET export POTDIR='path/to/potfiles/'")
+    sys.exit("Please set POTDIR in os environment. `export POTDIR='path/to/potfiles/`")
   try: 
     param_file = j_dict['param_file']
     if param_file == 'iron_mish.xml':
@@ -66,7 +71,7 @@ def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200, force_tol = 
       print 'No paramfile found!'
       sys.exit()
   except KeyError:
-    print 'No EAM pot relax failed!'
+    print 'No EAM potential file with that name. Relax failed.'
     sys.exit()
   
   print 'Using: ', eam_pot
@@ -132,6 +137,7 @@ def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200, force_tol = 
     json.dump(j_dict, outfile, indent=2)
   os.remove(param_file)
   os.remove(sparse_file)
+  return grain
 
 if __name__ == '__main__':
 #Command line tool for relaxing grainboundary structure

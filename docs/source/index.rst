@@ -27,9 +27,9 @@ Contents
    models.rst
    views.rst
    slabmaker.rst
+   generators.rst
    interstitials.rst
    calculators.rst
-
 
 Indices and tables
 ==================

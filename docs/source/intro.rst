@@ -25,8 +25,21 @@ Add the location of the ``imeall`` directory to your ``PYTHONPATH`` variable:
 
 Installation from Docker Image
 ------------------------------
-Alternatively if you don't wish to do any development a docker image 
-is available from `Docker Image <https://github.com/kcl-tscm/imeall-docker>`_.
+Alternatively if you don't wish to do any development a 
+`Docker Image <https://github.com/kcl-tscm/imeall-docker>`_ is available.
 
 
+Environment
+-----------
+  In order to use imeall effectively the following modifications should be made.
+The configuration file for the imeall package is located at ~/$HOME/imeall/instance/config.py.
+The standard location for the imeall grain boundary directory tree database is in the
+``imeall`` module (i.e. the directory with ``__init__.py``). If your local directory 
+tree is in a non-standard location modify the appropriate configuration variable:
+  ``GRAIN_DATABASE= /path/to/grain_database/``
+
+A `representative subset <https://imeall.co.uk>`_ of the grain boundary database to download for 
+testing is available from the ``imeall`` website hosted on the `NOMAD <https://nomad-coe.eu>`_ server.
+
+As previously mentioned the imeall module location should be appended to your ``PYTHONPATH`` variable.
 

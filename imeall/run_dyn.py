@@ -16,14 +16,12 @@ from quippy import Atoms, Potential
 from quippy import set_fortran_indexing, fzeros, frange
 from quippy.io import AtomsWriter, AtomsReader, write
 from relax import relax_gb
-from slabmaker.slabmaker import build_tilt_sym_gb
-from slabmaker.twist import build_twist_sym_gb
+from slabmaker.slabmaker import build_tilt_sym_gb, build_twist_sym_gb
 
 set_fortran_indexing(False)
 
 class Capturing(list):
-  """
-  :class:`Capturing` wraps a function to capture output for redirection.
+  """:class:`Capturing` wraps a function to capture output for redirection.
   """
   def __enter__(self):
     self._stdout = sys.stdout
@@ -35,12 +33,10 @@ class Capturing(list):
     sys.stdout = self._stdout
 
 class ImeallIO(object):
-  """
-  :class:`Primary` IO Object for searching Imeall Directory tree
-  creating new grains, and subgrain directories. 
-  Sub-Grain directory supercells of the grain count as subgrains 
-  finally a subdirectory of defects is included for 
-  vacancies and interstitials.
+  """:class:`ImeallIO` contains methods for searching the Imeall Directory tree,
+  and creating new :class:`imeall.gb_models.GrainBoundary` and :class:`imeall.gb_models.SubGrainBoundary` directories. 
+  Each :class:`SubGrainBoundary` directory contains supercells of the parent canonical 
+  :class:`GrainBoundary`.
   """
   def __init__(self):
 #IO variables for VASP Calculations. 
@@ -52,16 +48,15 @@ class ImeallIO(object):
     self.runsh             = {'nodes':512, 'time':360}
 
   def make_dir(self, target_dir, dir_name):
-    """
-    Create grain boundary directory if it does not exit and
+    """Create :class:`GrainBoundary` directory if it does not exist and
     return the concatenated string name.
 
     Args:
-      target_dir(str) :
-      dir_name(str) :
+      target_dir(str): target directory.
+      dir_name(str): name of new directory in target directory.
 
     Returns:
-      target_subdir(str)
+      str: target directory name.
     """
     target_subdir = os.path.join(target_dir, dir_name)
     if not os.path.isdir(target_subdir):
@@ -73,18 +68,28 @@ class ImeallIO(object):
 
   def load_json(self, json_file):
     """Helper function to return gb_data as dict.
+
     Args:
-      json_file(str): name of gb.json file.
+      json_file(str): name of gb.json or subgb.json file.
 
     Returns:
-      gb_data(dict): grain boundary data dictionary.
+      dict: grain boundary data dictionary.
     """
   
-		with open(json_file, 'r') as datfile:
-			gb_data = json.load(datfile)
-		return gb_data
+    with open(json_file, 'r') as datfile:
+      gb_data = json.load(datfile)
+    return gb_data
 
   def find_subdir(self, target_dir, calc_suffix):
+    """
+    Find if named directory is in target directory.
+    Args:
+      target_dir(str): directory to search.
+      calc_suffix(str): name of directory to look for.
+
+    Returns:
+      directory location and name.
+    """
     for _dir in os.listdir(target_dir):
       if calc_suffix in _dir:
         from_dir = os.path.join(target_dir, _dir)
@@ -97,22 +102,16 @@ class GBRelax(object):
   def __init__(self, grain_dir='./', gbid='0000000000', calc_type='EAM',
                potential = 'IP EAM_ErcolAd', param_file = 'iron_mish.xml',
                traj_file='traj.xyz'):
-    """
-    :class:`GBRelax` is responsible for generating the 
-    initial configuration of the grain boundary before relaxation occurs.
-    Here we Initialize some naming conventions, the calculation type, and
-    necessary input files. grain_dir is the overarching grain directory,
-    the target dir is the subdirectory depending on the
-    calculation type,  at the highest level and then the
-    variations (deletions, translation, substitutions, vacancies).
+    """:class:`GBRelax` is responsible for generating the 
+    initial configuration of the :class:`SubGrainBoundary` before relaxation occurs.
 
     Args: 
       grain_dir (str, optional): root directory to build grain boundary tree.
       gbid (str,optional): gbid of grain boundary root.
       calc_type(str,optional): Type of calculation: EAM, DFT, TB, GAP.
-      potential(str,optional): Quippy potential class string.
+      potential(str,optional): String specifying the :class:`quippy.potential` type.
       param_file(str,optional): Name of interatomic potential file.
-      traj_file(str, optional):
+      traj_file(str, optional): Name of target structure file.
     """
 
     self.gbid        =  gbid
@@ -133,7 +132,7 @@ class GBRelax(object):
 
   def gen_super_rbt(self, bp=[],v=[], rbt=[0.0, 0.0], sup_v=6, sup_bxv=2, rcut=2.0, gb_type="tilt"):
     """
-    Create a grain boundary supercell with rigid body translations (rbt).
+    Create a :class:`SubGrainBoundary` supercell with rigid body translations (rbt).
 
     Args:
       bp (list): Boundary plane normal.
@@ -192,16 +191,15 @@ class GBRelax(object):
     f.close()
 
   def gen_super(self, grain=None, rbt=None, sup_v=6, sup_bxv=2, rcut=2.0):
-    """ 
-    :method:`gen_super` to create a grain boundary super cell we use the parameters of
-    Rittner and Seidman (PRB 54 6999).
+    """ :method:`gen_super` Creates a :class:SubGrainBoundary super cell according to 
+    conventions described in Rittner and Seidman (PRB 54 6999).
 
     Args:
-      grain(:obj:`Atoms`): atoms object passed from gen_super_rbt.
+      grain(:class:`ase.Atoms`): atoms object passed from gen_super_rbt.
       rbt (list): rigid body translation as fractional translations of the supercell.
       sup_v(int): Size of supercell along v.
       sup_bxv(int): Size of supercell along boundary_plane_normal crossed with v.
-      rcut(float): Atom deletion criterion angstrom.
+      rcut(float): Atom deletion criterion in angstrom.
     """
     io = ImeallIO()
     if rbt == None:
@@ -258,12 +256,11 @@ class GBRelax(object):
     Delete atoms below a certain distance threshold.
 
     Args:
-      grain(:obj:`Atoms`): Atoms object of the grain.
+      grain(:class:`quippy.Atoms`): Atoms object of the grain.
       rcut(float): Atom deletion criterion.
 
     Returns:
-      Atoms object with atoms nearer than deletion criterion
-      removed.
+      :class:`quippy.Atoms` object with atoms nearer than deletion criterion removed.
     """ 
     io = ImeallIO()
     if grain == None:
@@ -294,15 +291,16 @@ class GBRelax(object):
     else:
       return x
 
-  def gen_pbs(self, time='02:30:00', queue='serial.q'):
+  def gen_pbs(self, time='02:30:00', queue='serial.q', template_str='/users/k1511981/pymodules/templates/calc_ada.pbs'):
     """ 
     :method:`gen_pbs` generates job pbs file.
 
     Args:
       time(str): length of job time in string format.
-      queue(str): string
+      queue(str): name of queue to generate submission script for
+      template_str(str): Name of location for pbs template file (example templates in imeall directory).
     """
-    pbs_str = open('/users/k1511981/pymodules/templates/calc_ada.pbs','r').read()
+    pbs_str = open(template_str, 'r').read()
     pbs_str = pbs_str.format(jname='fe'+self.name, xyz_file='{0}.xyz'.format(self.name), 
                              time=time, queue=queue)
     print os.path.join(self.subgrain_dir, 'fe{0}.pbs'.format(self.name))
@@ -310,7 +308,6 @@ class GBRelax(object):
       print >> pbs_file, pbs_str
 
 if __name__=='__main__':
-# run_dyn a command line tool for generating grain boundary supercells
   parser = argparse.ArgumentParser() 
   parser.add_argument("-p", "--prefix", help="Subsequent commands will act on all \
                                                 subdirectories with first characters matching prefix.", default='001')

@@ -12,12 +12,12 @@ import argparse
 import numpy as np
 
 def nearest_to_unique(at, unique_sites):
-  """Given an :py:class:`Atom` object and an array of site vectors finds
+  """Given an :class:`ase.Atom` object and an array of site vectors finds
   whether there is a correspondence between the atom position
   and one of the sites.
 
   Args:
-    at(:py:class:`Atom`): atom object. 
+    at(:class:`ase.Atom`): atom object. 
     unique_sites(list): list of position vectors.
 
   Returns:
@@ -42,7 +42,7 @@ def gen_interface():
   on each side. 
 
   Returns:
-    :py:class:`Atoms`: Atoms object of the interfacial slab in same 
+    :class:`ase.Atoms`: Atoms object of the interfacial slab in same 
     coordinates as original bicrystal.
   """
   #output.xyz must have structure_type property attached.
@@ -90,7 +90,7 @@ def decorate_interface(write_file=True):
     write_file (bool, optional) : If True, generates `hydrogenated_grain.xyz` file.
 
   Returns:
-    :py:class:`Atoms`: Interface atoms decorated with hydrogen.
+    :class:`ase.Atoms`: Interface atoms decorated with hydrogen.
   """
   ats = Atoms('interface.xyz')
   vasp_args = dict(xc='PBE', amix=0.01, amin=0.001, bmix=0.001, amix_mag=0.01, bmix_mag=0.001,
