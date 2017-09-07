@@ -85,6 +85,9 @@ def orientations(url_path, orientation):
 def grain_boundary(url_path, gbid):
   """Top view for a canonical grain boundary. CSL 
   lattice, and list of subgrain directories, and energies.
+
+  Todo: 
+    Replace make_tree with an SQL query.
   """
 
   url_path  = url_path+'/'+gbid
@@ -101,7 +104,6 @@ def grain_boundary(url_path, gbid):
     subgrains.append([json.load(open(gb_path,'r')), i])
     subgrainsj.append(json.load(open(gb_path,'r')))
 #find lowest energy structure for every potential in the database
-#TODO replace with SQL query.
   analyze  = GBAnalysis()
   potparams = PotentialParameters()
   paramfile_dict = potparams.paramfile_dict()
@@ -111,15 +113,6 @@ def grain_boundary(url_path, gbid):
   return render_template('grain_boundary.html', gbid=gbid, url_path=url_path,
                           gb_info=gb_info, flare_root=json.dumps(tree), subgrains=subgrains, 
                           subgrainsj=json.dumps(subgrainsj), gam_dict=gam_dict)
-#@app.route("/db_sync/")
-#def synchronization():
-#  """View of db_log synchronization file.
-#  """
-#
-#  with open('./imeall/db_synclog','r') as f:
-#    db_log = f.read().split('\n\n')
-#  db_log.reverse()
-#  return render_template('synchronization.html', db_log=db_log)
 
 @app.route('/analysis/')
 def analysis():
@@ -252,14 +245,14 @@ def serve_img(filename, gbid, img_type):
 
   img = os.path.join(filename,'{0}.png'.format(gbid))
   if img_type =='struct':
-    img  = app.config['GRAIN_DATABASE']+'/'+filename+'/{0}.png'.format(gbid)
+    img = app.config['GRAIN_DATABASE']+'/'+filename+'/{0}.png'.format(gbid)
   elif img_type =='csl':
-    img  = app.config['GRAIN_DATABASE']+'/'+filename+'/csl_{0}.svg'.format(gbid)
+    img = app.config['GRAIN_DATABASE']+'/'+filename+'/csl_{0}.svg'.format(gbid)
   elif img_type =='pot':
-    pot_dir = '/Users/lambert/pymodules/imeall/imeall/potentials'
-    img     = pot_dir+'/'+filename
-  elif img_type =='gen':
-    img  = app.config['GRAIN_DATABASE']+'/'+filename
+    pot_dir = os.path.join(app.root_path, 'potentials')
+    img = pot_dir+'/'+filename
+  elif img_type == 'gen':
+    img = app.config['GRAIN_DATABASE']+'/'+filename
   else:
     img = 'NO IMAGE'
   return send_file(img)
@@ -322,7 +315,7 @@ def eam_pot(filename):
   fig = Figure()
   ax = fig.add_subplot(111)
   FVR = []
-  pot_dir  = '/Users/lambert/pymodules/imeall/imeall/potentials'
+  pot_dir  = os.path.join(app.root, 'potentials')
   pot_xml  = pot_dir+'/'+filename
 #Based on gist at https://gist.github.com/wilsaj/862153.
   with open(pot_xml, 'r') as f:

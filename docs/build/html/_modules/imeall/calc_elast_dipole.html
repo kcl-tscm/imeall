@@ -1,0 +1,299 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>imeall.calc_elast_dipole &#8212; Imeall 0.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for imeall.calc_elast_dipole</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">quippy</span> <span class="k">import</span> <span class="n">Atoms</span><span class="p">,</span> <span class="n">set_fortran_indexing</span><span class="p">,</span> <span class="n">Potential</span>
+<span class="kn">from</span> <span class="nn">ase.constraints</span> <span class="k">import</span> <span class="n">UnitCellFilter</span><span class="p">,</span> <span class="n">StrainFilter</span>
+
+<span class="n">set_fortran_indexing</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ElasticDipole"><a class="viewcode-back" href="../../calculators.html#imeall.calc_elast_dipole.ElasticDipole">[docs]</a><span class="k">class</span> <span class="nc">ElasticDipole</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Contains methods for computing</span>
+<span class="sd">    the elastic dipole tensor of a point defect in a material.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">strain_tensor</span> <span class="o">=</span> <span class="p">[</span><span class="o">-</span><span class="mf">0.01</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.005</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.005</span><span class="p">,</span> <span class="mf">0.01</span><span class="p">]</span>
+
+<span class="c1">#  def defect_force_method(self, ats, defect, rcut=None):</span>
+<span class="c1">#    &quot;&quot;&quot;</span>
+<span class="c1">#    Requires an interatomic potential that can calculate</span>
+<span class="c1">#    the distinct contribution of a force from a particular atom,</span>
+<span class="c1">#    i.e. EAM or Tightbinding model.</span>
+<span class="c1">#</span>
+<span class="c1">#    Args:</span>
+<span class="c1">#      ats (:py:class:`Atoms`): Atoms object of structure.</span>
+<span class="c1">#      defect(:py:class:`Atom`): Specifies the defect atom.</span>
+<span class="c1">#      rcut (float): Cutoff radius to consider forces.</span>
+<span class="c1">#</span>
+<span class="c1">#    Todo:</span>
+<span class="c1">#      Implement this method</span>
+<span class="c1">#    &quot;&quot;&quot;</span>
+<span class="c1">#    alpha_ij = self.calc_interatomic_force(defect_atom.index, ats)</span>
+<span class="c1">#    return alpha_ij</span>
+    
+<div class="viewcode-block" id="ElasticDipole.relax_defect_cell"><a class="viewcode-back" href="../../calculators.html#imeall.calc_elast_dipole.ElasticDipole.relax_defect_cell">[docs]</a>  <span class="k">def</span> <span class="nf">relax_defect_cell</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ats</span><span class="p">,</span> <span class="n">output_name</span><span class="o">=</span><span class="s1">&#39;defect_cell_relaxed.xyz&#39;</span><span class="p">,</span> <span class="n">force_tol</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">,</span> <span class="n">relax_cell</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Accepts atoms object with an attached calculator.Minimize forces.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      ats (:obj:`Atoms`): Atoms with defect to relax.</span>
+<span class="sd">      output_name (str, optional): Filename to print relaxed atoms structure to.</span>
+<span class="sd">      force_tol (float, optional): Force tolerance to stop relaxation.</span>
+<span class="sd">      relax_cell (bool, optional): Relax lattice parameters.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">      :class:`Atoms`: A relaxed Atoms object.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">ase.optimize</span> <span class="k">import</span> <span class="n">FIRE</span>
+    <span class="k">if</span> <span class="n">relax_cell</span><span class="p">:</span>
+      <span class="n">strain_mask</span>  <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
+      <span class="n">ucf</span> <span class="o">=</span> <span class="n">UnitCellFilter</span><span class="p">(</span><span class="n">ats</span><span class="p">,</span> <span class="n">strain_mask</span><span class="p">)</span>
+      <span class="n">opt</span> <span class="o">=</span> <span class="n">FIRE</span><span class="p">(</span><span class="n">ucf</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">strain_mask</span>  <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
+      <span class="n">ucf</span> <span class="o">=</span> <span class="n">UnitCellFilter</span><span class="p">(</span><span class="n">ats</span><span class="p">,</span> <span class="n">strain_mask</span><span class="p">)</span>
+      <span class="n">opt</span> <span class="o">=</span> <span class="n">FIRE</span><span class="p">(</span><span class="n">ucf</span><span class="p">)</span>
+    <span class="n">opt</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">fmax</span> <span class="o">=</span> <span class="n">force_tol</span><span class="p">)</span>
+    <span class="n">ats</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">output_name</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ats</span></div>
+  
+<div class="viewcode-block" id="ElasticDipole.compute_vacancy_dipole"><a class="viewcode-back" href="../../calculators.html#imeall.calc_elast_dipole.ElasticDipole.compute_vacancy_dipole">[docs]</a>  <span class="k">def</span> <span class="nf">compute_vacancy_dipole</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">defect</span><span class="p">,</span> <span class="n">ats</span><span class="p">,</span> <span class="n">pot</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">forces</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([])):</span>
+    <span class="sd">&quot;&quot;&quot;Compute dipole tensor from induced forces.</span>
+
+<span class="sd">    Args: </span>
+<span class="sd">      defect (:py:class:`Atom`): Atom object of defect atom.</span>
+<span class="sd">      ats (:py:class:`Atoms`): If forces are absent the :py:class:Atoms object must have defect present.</span>
+<span class="sd">      pot (:py:class:`Potential`, optional): Potential for calculating interatomic forces if required.</span>
+<span class="sd">      forces(:py:class:`numpy.array`, optional): numpy array of forces if already available.</span>
+
+<span class="sd">    Returns: </span>
+<span class="sd">      3x3 numpy array of G the dipole tensor.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">forces</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+      <span class="nb">print</span> <span class="nb">len</span><span class="p">(</span><span class="n">ats</span><span class="p">)</span> 
+      <span class="n">ats</span><span class="o">.</span><span class="n">remove_atoms</span><span class="p">([</span><span class="n">defect</span><span class="o">.</span><span class="n">index</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span>
+      <span class="k">for</span> <span class="n">at</span> <span class="ow">in</span> <span class="n">ats</span><span class="p">:</span>
+        <span class="nb">print</span> <span class="n">at</span>
+      <span class="nb">print</span> <span class="nb">len</span><span class="p">(</span><span class="n">ats</span><span class="p">)</span>
+      <span class="n">ats</span><span class="o">.</span><span class="n">set_calculator</span><span class="p">(</span><span class="n">pot</span><span class="p">)</span>
+      <span class="n">forces</span> <span class="o">=</span> <span class="n">ats</span><span class="o">.</span><span class="n">get_forces</span><span class="p">()</span>
+      <span class="n">ats</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;relaxed_cell_removed_defect.xyz&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="c1">#force array has been passed (e.g. read from OUTCAR)</span>
+      <span class="k">pass</span>
+    <span class="n">alpha_ij</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">defect_force</span><span class="p">,</span> <span class="n">at</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">forces</span><span class="p">,</span> <span class="n">ats</span><span class="p">):</span>
+      <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">defect</span><span class="o">.</span><span class="n">position</span><span class="o">-</span><span class="n">at</span><span class="o">.</span><span class="n">position</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="s1">&#39;Inf&#39;</span><span class="p">:</span> 
+        <span class="n">alpha_ij</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="n">defect_force</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="n">defect</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">at</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">alpha_ij</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="n">defect_force</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="n">defect</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">at</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">alpha_ij</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">+=</span> <span class="n">defect_force</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="n">defect</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="n">at</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+        <span class="n">alpha_ij</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="n">defect_force</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="n">defect</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">at</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">alpha_ij</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="n">defect_force</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="n">defect</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">at</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">alpha_ij</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">+=</span> <span class="n">defect_force</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="n">defect</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="n">at</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+        <span class="n">alpha_ij</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="n">defect_force</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="n">defect</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">at</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">alpha_ij</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="n">defect_force</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="n">defect</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">at</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">alpha_ij</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">+=</span> <span class="n">defect_force</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="n">defect</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="n">at</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">alpha_ij</span></div></div>
+
+
+<div class="viewcode-block" id="find_h_atom"><a class="viewcode-back" href="../../calculators.html#imeall.calc_elast_dipole.find_h_atom">[docs]</a><span class="k">def</span> <span class="nf">find_h_atom</span><span class="p">(</span><span class="n">ats</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Finds the hydrogen atom in .xyz file and returns its :py:class:`Atom` object.</span>
+<span class="sd">  </span>
+<span class="sd">  Args:</span>
+<span class="sd">    ats(:py:class:`Atoms`)</span>
+
+<span class="sd">  Returns: </span>
+<span class="sd">    :py:class:`Atom` object.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">h_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">at</span> <span class="k">for</span> <span class="n">at</span> <span class="ow">in</span> <span class="n">ats</span> <span class="k">if</span> <span class="n">at</span><span class="o">.</span><span class="n">number</span><span class="o">==</span><span class="mi">1</span><span class="p">]</span>
+  <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">h_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="s1">&#39;too many hydrogens in unit cell.&#39;</span><span class="p">)</span>
+  <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">h_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="s1">&#39;No hydrogen in unit cell.&#39;</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">defect</span> <span class="o">=</span> <span class="n">h_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+  <span class="k">return</span> <span class="n">defect</span></div>
+
+<div class="viewcode-block" id="calc_elast_dipole_eam"><a class="viewcode-back" href="../../calculators.html#imeall.calc_elast_dipole.calc_elast_dipole_eam">[docs]</a><span class="k">def</span> <span class="nf">calc_elast_dipole_eam</span><span class="p">(</span><span class="n">input_file</span><span class="p">,</span> <span class="n">force_tol</span><span class="p">,</span> <span class="n">relax_cell</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">  Calculate elastic dipole using an Embedded Atom Potential.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    input_file (str): Name of .xyz file contains unitcell with defect.</span>
+<span class="sd">    force_tol (float): Force tolerance to stop relaxation.</span>
+<span class="sd">    relax_cell (bool): Relax lattice vectors.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    Elastic Dipole Tensor 3x3 numpy array.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">try</span><span class="p">:</span>
+    <span class="n">POT_DIR</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;POTDIR&#39;</span><span class="p">]</span>
+  <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="s2">&quot;PLEASE SET export POTDIR=&#39;path/to/potfiles/&#39;&quot;</span><span class="p">)</span>
+
+  <span class="n">elastic</span> <span class="o">=</span> <span class="n">ElasticDipole</span><span class="p">()</span>  
+
+  <span class="n">eam_pot</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">POT_DIR</span><span class="p">,</span> <span class="s1">&#39;PotBH.xml&#39;</span><span class="p">)</span>
+  <span class="n">pot</span> <span class="o">=</span> <span class="n">Potential</span><span class="p">(</span><span class="s1">&#39;IP EAM_ErcolAd do_rescale_r=T r_scale=</span><span class="si">{0}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="mf">1.00894848312</span><span class="p">),</span> <span class="n">param_filename</span><span class="o">=</span><span class="n">eam_pot</span><span class="p">)</span>
+
+  <span class="n">ats</span> <span class="o">=</span> <span class="n">Atoms</span><span class="p">(</span><span class="n">input_file</span><span class="p">)</span>
+  <span class="n">ats</span><span class="o">.</span><span class="n">set_calculator</span><span class="p">(</span><span class="n">pot</span><span class="p">)</span>
+
+  <span class="n">init_vol</span> <span class="o">=</span> <span class="n">ats</span><span class="o">.</span><span class="n">get_volume</span><span class="p">()</span>
+  <span class="nb">print</span> <span class="s1">&#39;Initial Vol.&#39;</span><span class="p">,</span> <span class="n">init_vol</span>
+  <span class="n">elastic</span><span class="o">.</span><span class="n">relax_defect_cell</span><span class="p">(</span><span class="n">ats</span><span class="p">,</span> <span class="n">force_tol</span><span class="o">=</span><span class="n">force_tol</span><span class="p">,</span> <span class="n">relax_cell</span><span class="o">=</span><span class="n">relax_cell</span><span class="p">)</span>
+  <span class="n">final_vol</span> <span class="o">=</span> <span class="n">ats</span><span class="o">.</span><span class="n">get_volume</span><span class="p">()</span>
+  <span class="nb">print</span> <span class="s1">&#39;Final Vol.&#39;</span><span class="p">,</span> <span class="n">final_vol</span>
+  <span class="nb">print</span> <span class="s1">&#39;Volume Diff.&#39;</span><span class="p">,</span> <span class="n">final_vol</span><span class="o">-</span><span class="n">init_vol</span>
+  <span class="n">ats</span> <span class="o">=</span> <span class="n">Atoms</span><span class="p">(</span><span class="s1">&#39;defect_cell_relaxed.xyz&#39;</span><span class="p">)</span>
+  <span class="n">defect</span> <span class="o">=</span> <span class="n">find_h_atom</span><span class="p">(</span><span class="n">ats</span><span class="p">)</span>
+  <span class="nb">print</span> <span class="s1">&#39;Defect index&#39;</span><span class="p">,</span> <span class="n">defect</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="s1">&#39;Position&#39;</span><span class="p">,</span> <span class="n">defect</span><span class="o">.</span><span class="n">position</span><span class="p">,</span> <span class="s1">&#39;Type: &#39;</span><span class="p">,</span> <span class="n">defect</span><span class="o">.</span><span class="n">number</span>
+  <span class="n">ats</span><span class="o">.</span><span class="n">set_calculator</span><span class="p">(</span><span class="n">pot</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">elastic</span><span class="o">.</span><span class="n">compute_vacancy_dipole</span><span class="p">(</span><span class="n">defect</span><span class="p">,</span> <span class="n">ats</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="n">pot</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="calc_elast_dipole_dft"><a class="viewcode-back" href="../../calculators.html#imeall.calc_elast_dipole.calc_elast_dipole_dft">[docs]</a><span class="k">def</span> <span class="nf">calc_elast_dipole_dft</span><span class="p">(</span><span class="n">input_file</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Reads OUTCAR file in the same directory with one shot forces </span>
+<span class="sd">  induced by removal of defect. Reads defect position </span>
+<span class="sd">  from .xyz file (which contains the defect) defined by `input_file` </span>
+<span class="sd">  calculates and returns the elastic dipole tensor of the defect.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    input_file(str): name of input .xyz file containing defect cell.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    Elastic Dipole Tensor 3x3 numpy array.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="kn">import</span> <span class="nn">ase.io.vasp</span> <span class="k">as</span> <span class="nn">vs</span>
+  <span class="n">elastic</span> <span class="o">=</span> <span class="n">ElasticDipole</span><span class="p">()</span>
+  <span class="n">ats_def</span> <span class="o">=</span> <span class="n">Atoms</span><span class="p">(</span><span class="n">input_file</span><span class="p">)</span>
+  <span class="n">defect</span> <span class="o">=</span> <span class="n">find_h_atom</span><span class="p">(</span><span class="n">ats_def</span><span class="p">)</span>
+  <span class="n">ats_pos</span> <span class="o">=</span> <span class="n">vs</span><span class="o">.</span><span class="n">read_vasp</span><span class="p">()</span>
+  <span class="n">ats</span> <span class="o">=</span> <span class="n">vs</span><span class="o">.</span><span class="n">read_vasp_out</span><span class="p">()</span>
+  <span class="n">ats</span> <span class="o">=</span> <span class="n">Atoms</span><span class="p">(</span><span class="n">ats</span><span class="p">)</span>
+  <span class="nb">print</span> <span class="s1">&#39;Defect index&#39;</span><span class="p">,</span> <span class="n">defect</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="s1">&#39;Position&#39;</span><span class="p">,</span> <span class="n">defect</span><span class="o">.</span><span class="n">position</span><span class="p">,</span> <span class="s1">&#39;Type: &#39;</span><span class="p">,</span> <span class="n">defect</span><span class="o">.</span><span class="n">number</span>
+  <span class="n">ats</span><span class="o">.</span><span class="n">get_forces</span><span class="p">()</span>
+  <span class="n">ats</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;force.xyz&#39;</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">elastic</span><span class="o">.</span><span class="n">compute_vacancy_dipole</span><span class="p">(</span><span class="n">defect</span><span class="p">,</span> <span class="n">ats_pos</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="n">forces</span><span class="o">=</span><span class="n">ats</span><span class="o">.</span><span class="n">get_forces</span><span class="p">())</span></div>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+  <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
+  <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-ct&#39;</span><span class="p">,</span> <span class="s1">&#39;--calc_type&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Can use &#39;EAM&#39; or &#39;DFT&#39; potential. If DFT then script requires OUTCAR with single shot </span><span class="se">\</span>
+<span class="s2">                                                  forces for defectless cell and xyz input for cell with defect.&quot;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+  <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-rc&#39;</span><span class="p">,</span> <span class="s1">&#39;--relax_cell&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Relax defect super cell.&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">)</span>
+  <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-f&#39;</span><span class="p">,</span> <span class="s1">&#39;--force_tol&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;force_tolerance.&quot;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">)</span>
+  <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-i&#39;</span><span class="p">,</span> <span class="s1">&#39;--input_file&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Structure file of system with defect. (.xyz format)&quot;</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+  <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+
+  <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">calc_type</span> <span class="o">==</span> <span class="s1">&#39;EAM&#39;</span><span class="p">:</span>
+    <span class="nb">print</span> <span class="n">calc_elast_dipole_eam</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">input_file</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">force_tol</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">relax_cell</span><span class="p">)</span>
+  <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">calc_type</span> <span class="o">==</span> <span class="s1">&#39;DFT&#39;</span><span class="p">:</span>
+    <span class="nb">print</span> <span class="n">calc_elast_dipole_dft</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">input_file</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="s1">&#39;Invalid potential type chosen. Please select DFT or EAM.&#39;</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Imeall</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../intro.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../imeall.html">Imeall Package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../models.html">Models and Queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../views.html">Views</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../slabmaker.html">Slabmaker</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../generators.html">Generators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../interstitials.html">Interstitials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../calculators.html">Calculators</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Henry Lambert, Adam Fekete, James Kermode, Alessandro De Vita.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

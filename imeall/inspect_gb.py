@@ -10,8 +10,8 @@ from   models   import GBAnalysis, PotentialParameters
 from   gb_models import GrainBoundary, SubGrainBoundary
 
 
-GRAIN_DATABASE = "/home/lambert/pymodules/imeall/imeall/grain_boundaries/"
-DATABASE       = "/home/lambert/pymodules/imeall/imeall/gb_database.db"
+GRAIN_DATABASE = app.config["GRAIN_DATABASE"]
+DATABASE       = app.config["GRAIN_DATABASE_SQL"]
 database       = SqliteDatabase(DATABASE)
 
 class Inspector(object):

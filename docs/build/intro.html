@@ -1,0 +1,157 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Installation &#8212; Imeall 0.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Imeall Package" href="imeall.html" />
+    <link rel="prev" title="Imeall" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="installation">
+<h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="manual-installation">
+<h2>Manual Installation<a class="headerlink" href="#manual-installation" title="Permalink to this headline">¶</a></h2>
+<p>The following dependencies can be installed using <a class="reference external" href="https://pypi.python.org/pypi/pip">pip</a>.</p>
+<div class="line-block">
+<div class="line"><a class="reference external" href="https://wiki.fysik.dtu.dk/ase/">ASE</a></div>
+<div class="line"><a class="reference external" href="http://flask.pocoo.org/">Flask</a></div>
+<div class="line"><a class="reference external" href="http://docs.peewee-orm.com/en/latest/index.html">peewee</a></div>
+</div>
+<p>Follow the installation instructions for the <a class="reference external" href="https://libatoms.github.io/QUIP/install.html">QUIP</a> package.</p>
+<dl class="docutils">
+<dt>To use the imeall package to perform calculations with the mixed Fe-H EAM potential you must checkout the appropriate branch of QUIP.</dt>
+<dd><code class="docutils literal"><span class="pre">git</span> <span class="pre">checkout</span> <span class="pre">mod_eam</span></code></dd>
+</dl>
+<p>The above should be sufficient to run the imeall package.</p>
+<p>To install the Imeall package clone the github repository:</p>
+<blockquote>
+<div><code class="docutils literal"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/Montmorency/imeall.git</span></code></div></blockquote>
+<p>Add the location of the <code class="docutils literal"><span class="pre">imeall</span></code> directory to your <code class="docutils literal"><span class="pre">PYTHONPATH</span></code> variable:</p>
+<blockquote>
+<div><code class="docutils literal"><span class="pre">export</span> <span class="pre">PYTHONPATH=$HOME/imeall::$PYTHONPATH</span></code></div></blockquote>
+</div>
+<div class="section" id="installation-from-docker-image">
+<h2>Installation from Docker Image<a class="headerlink" href="#installation-from-docker-image" title="Permalink to this headline">¶</a></h2>
+<p>Alternatively if you don’t wish to do any development a <a class="reference external" href="https://github.com/kcl-tscm/imeall-docker">Docker Image</a> is available.</p>
+</div>
+<div class="section" id="environment">
+<h2>Environment<a class="headerlink" href="#environment" title="Permalink to this headline">¶</a></h2>
+<p>In order to use imeall effectively the following modifications should be made. The configuration file for the imeall package is located at</p>
+<blockquote>
+<div><code class="docutils literal"><span class="pre">~/$HOME/imeall/instance/config.py.</span></code></div></blockquote>
+<p>The standard location for the imeall grain boundary directory tree database is in the
+<code class="docutils literal"><span class="pre">imeall</span></code> module (i.e. the directory with <code class="docutils literal"><span class="pre">__init__.py</span></code>). If your local directory
+tree and the sql database are in non-standard locations modify the appropriate configuration variable:</p>
+<blockquote>
+<div><code class="docutils literal"><span class="pre">GRAIN_DATABASE</span> <span class="pre">=</span> <span class="pre">/path/to/grain_database/</span></code>
+<code class="docutils literal"><span class="pre">GRAIN_DATABASE_SQL</span> <span class="pre">=</span> <span class="pre">/path/to/gb_database.db</span></code></div></blockquote>
+<p>A <a class="reference external" href="https://imeall.co.uk">representative subset</a> of the grain boundary database to download for
+testing is available from the <code class="docutils literal"><span class="pre">imeall</span></code> website hosted on the <a class="reference external" href="https://nomad-coe.eu">NOMAD</a> server.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Imeall</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#manual-installation">Manual Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#installation-from-docker-image">Installation from Docker Image</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#environment">Environment</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="imeall.html">Imeall Package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Models and Queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="views.html">Views</a></li>
+<li class="toctree-l1"><a class="reference internal" href="slabmaker.html">Slabmaker</a></li>
+<li class="toctree-l1"><a class="reference internal" href="generators.html">Generators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interstitials.html">Interstitials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="calculators.html">Calculators</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Imeall</a></li>
+      <li>Next: <a href="imeall.html" title="next chapter">Imeall Package</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Henry Lambert, Adam Fekete, James Kermode, Alessandro De Vita.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/intro.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

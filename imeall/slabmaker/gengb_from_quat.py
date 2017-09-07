@@ -7,28 +7,26 @@ import transformations as quat
 from fractions import gcd
 
 class QuaternionGB(object):
-  """:class:`QuaternionGB` contains routines to generate lists of valid 
-  grain boundary orientations (i.e. the boundary planes of 
+  """:class:`imeall.slabmaker.gengb_from_quat.QuaternionGB` contains routines to generate lists of valid
+  grain boundary orientations (i.e. the boundary planes of
   grains for different orientation axes and misorientation angles) using
-  quaternion algebra. Current routines for symmetric tilt grain
-  boundaries and twist boundaries.
+  quaternion algebra. Currently supports routines for symmetric tilt grain boundaries and twist boundaries.
   """
 
   def __init__(self):
     pass
 
-  def gen_sym_tilt(self, orientation_axis=[0.,0.,1.]):
-    """Generate symmetric tilt grain boundary list.
-
-    Args: 
-      orientation_axis: 3d array of floats defining orientation axis.
+  def or_axis_to_quat(orientation_axis):
+    """Given an orientation axis converts the vector to quaternion
+    representation defining the orientation axis and a second quaternion
+    giving the 0 of the angle.
+    
+    Args:
+      orientation_axis(list): orientation axis.
 
     Returns:
-      A printed list of the misorientation angle for the given orientation axis
-      and the relevant tilt boundary plane so the grain
-      boundary bicrystal can be generated with :func:`imeall.slabmaker.build_tilt_sym_gb`.
+      quaternion, quaternion: planequat_1, planequat_2
     """
-
     #001 axis
     if (np.array(orientation_axis) == np.array([0.,0.,1])).all():
       planequat_1      = np.array([0,0,1,0])
@@ -45,6 +43,49 @@ class QuaternionGB(object):
     elif (np.array(orientation_axis) == np.array([1.,1.,-2])).all():
       planequat_1      = np.array([0,1,-1,0])
       planequat_2      = np.array([0,1,1,1])
+    else:
+      sys.exit('Orientation axis not supported please add defining quaternions.')
+    return planequat_1, planequat_2
+
+  def or_axis_to_angle(m, n, orientation_axis):
+    """To generate an approximate spanning set of angles iterate
+    over integers m and n and determine the angle from a combination
+    of these integers according to the chosen orientation axis.
+
+    Args:
+      m(int): Integer rotation 
+      n(int): Integer rotation
+
+    Returns:
+      float: misorientation angle from integers and orientation axis.
+    """
+
+    if (np.array(orientation_axis) == np.array([0.,0.,1])).all():
+      angle = np.arccos((m**2-n**2)/(m**2+n**2))
+    elif (np.array(orientation_axis) == np.array([1.,1.,0])).all():
+      angle = np.arccos((m**2-2*n**2)/(m**2+2*n**2))
+    elif (np.array(orientation_axis) == np.array([1.,1.,1])).all():
+      angle = np.arccos((m**2-3*n**2)/(m**2+3*n**2))
+    elif (np.array(orientation_axis) == np.array([1.,1.,-2])).all():
+      angle = np.arccos((m**2-n**2 -(2*n)**2)/(m**2+n**2+(2*n)**2))
+    else:
+      sys.exit()
+    return angle
+
+  def gen_sym_tilt(self, orientation_axis=[0.,0.,1.]):
+    """Generate symmetric tilt grain boundary list.
+    A printed list of the misorientation angle for the given orientation axis
+    and the relevant tilt boundary plane so the grain
+    boundary bicrystal can be generated with :func:`imeall.slabmaker.build_tilt_sym_gb`.
+
+    Args: 
+      orientation_axis: 3d array of floats defining orientation axis.
+
+    Returns:
+      dict: Dictionary of 'x' axis co-ordinates keyed by angle rounded to two floating point numbers.
+    """
+
+    planequat_1, planequat_2 = or_axis_to_quat(orientation_axis)
     deg_list = []
 #Generate a list of (angle, boundary plane) pairs for
 #the chosen orientation axis.
@@ -52,14 +93,8 @@ class QuaternionGB(object):
       for m in np.arange(1,20):
         n = float(n)
         m = float(m)
-        if (np.array(orientation_axis) == np.array([0.,0.,1])).all() :
-          angle = np.arccos((m**2-n**2)/(m**2+n**2))
-        elif (np.array(orientation_axis) == np.array([1.,1.,0])).all() :
-          angle = np.arccos((m**2-2*n**2)/(m**2+2*n**2))
-        elif (np.array(orientation_axis) == np.array([1.,1.,1])).all() :
-          angle = np.arccos((m**2-3*n**2)/(m**2+3*n**2))
-        elif (np.array(orientation_axis) == np.array([1.,1.,-2])).all() :
-          angle = np.arccos((m**2-n**2 -(2*n)**2)/(m**2+n**2+(2*n)**2))
+
+        angle = or_axis_to_angle(m, n, orientation_axis)
     #The quaternion characterizing the rotation matrix:
         rotquat = quat.quaternion_about_axis(angle, orientation_axis)
         #rotm = quat.rotation_matrix(angle, orientation_axis)
@@ -104,10 +139,11 @@ class QuaternionGB(object):
 
     Args:
       or_axis(list[ints]): orientation axis in ints.
+
+    Returns:
+      dict: Dictionary of 'x' axis co-ordinates keyed by angle rounded to two floating point numbers.
     """
-    if (np.array(or_axis) == np.array([0,0,1])).all():
-      planequat_1      = np.array([0,0,1,0])
-      planequat_2      = np.array([0,1,0,0])
+    planequat_1, planequat_2 = or_axis_to_quat(or_axis)
 
     print planequat_1
     print planequat_2
@@ -117,11 +153,7 @@ class QuaternionGB(object):
         print n,m
         n = float(n)
         m = float(m)
-        if (np.array(or_axis) == np.array([0,0,1])).all() :
-          angle = np.arccos((m**2-n**2)/(m**2+n**2))
-        else:
-          print '{} not implemented'.format(or_axis)
-          sys.exit()
+        angle = or_axis_to_angle(m, n, or_axis)
         rotm     = quat.rotation_matrix(angle, map(float,or_axis))
         rotquat  = quat.quaternion_from_matrix(rotm).round(8)
         rotmquat = (1./(np.array([a for a in rotquat if a!=0.]).min())*rotquat).round(5)
@@ -133,15 +165,24 @@ class QuaternionGB(object):
   #only print unique boundaries
     for deg in deg_list:
       try:
-        x = deg_dict[round(deg[0],2)]
+        x = deg_dict[round(deg[0], 2)]
       except KeyError:
        deg_dict[round(deg[0],2)]=deg[1][0]
        print deg[1][0]
+    return deg_dict
 
 if __name__=='__main__':
   parser = argparse.ArgumentParser()
+  parser.add_argument('--gb_type','-gbt', help='grain boundary type (tilt, twist).', default='tilt')
   parser.add_argument('--or_axis','-or', help='orientation axis', nargs='+', default=[1,1,0])
   args = parser.parse_args()
   or_axis = map(int, args.or_axis)
   quatgb = QuaternionGB()
-  quatgb.gen_sym_tilt(orientation_axis=or_axis)
+
+  if args.gb_type=='tilt':
+    quatgb.gen_sym_tilt(orientation_axis=or_axis)
+  elif args.gb_type=='twist':
+    quatgb.gen_sym_twist(orientation_axis=or_axis)
+  else:
+    print 'grain boundary type not recognized.'
+

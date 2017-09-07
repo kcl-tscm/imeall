@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import logging
 logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
+from imeall import app
 import os
 import sys
 import glob
@@ -95,7 +96,7 @@ for job_tract in chunker(jobdirs, args.tranchsize):
       print 'Running in Serial'
       gb_args = '-ct {calc_type} -rc {rc} -i_v {i_v} -i_bxv {i_bxv} -gbt {gb_type}'.format(rc=job[1], i_v=job[2], i_bxv=job[3],
                 gb_type=args.gb_type, calc_type=args.calc_type)
-      gb_args = "python /Users/lambert/pymodules/imeall/imeall/run_dyn.py {}".format(gb_args)
+      gb_args = "python {imeall_path}/run_dyn.py {gb_args}".format(imeall_path=app.root_path, gb_args=gb_args)
       print job, gb_args
       job = subprocess.Popen(gb_args.split())
       job.wait()

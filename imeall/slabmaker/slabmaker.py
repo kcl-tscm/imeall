@@ -46,14 +46,14 @@ def rotate_plane_z(grain, miller):
 
 def build_tilt_sym_gb(gbid='', bp = [3,3,2], v=[1,-1,0],
                       c_space=None, target_dir=None, rbt=None, alat=2.83):
-  """Generate symmetric tilt grain boundary with appropriate configurations: boundary
+  """Generate symmetric tilt grain boundary with appropriate configurations boundary
   plane (bp) oriented along z axis and orthogonal directions in the 
   the other two planes given the orientation axis (v) and an orthogonal vector
   bpxv so we have a proper cube. If rbt is not None then rigid body
   translations are present, this is passed as a list of two numbers
   abs(rbt[0]) < 1. The cell is then displaced as a function of these numbers.
   This routine should work for any BCC crystal with the appropriate modification
-  to :arg:`alat`.
+  to ``alat``.
 
   Args:
     gbid(str):id label for the grain boundary.
@@ -163,9 +163,23 @@ def build_tilt_sym_gb(gbid='', bp = [3,3,2], v=[1,-1,0],
 
 def build_twist_sym_gb(gbid='', bp =[0,0,1], v=[3,5,0],
                       c_space=None, target_dir=None, rbt = None):
-  """the or_axis is the boundary plane in this case.
-  the X axis of the grain.
+  """Builder for twist boundary structures. For the twist boundaries the orientation 
+  axis (or_axis) also defines the boundary plane normal.
+
+  Args:
+    gbid(str): :class:`imeall.gb_models.SubGrainBoundary` id.
+    bp(list[int]): Boundary plane.
+    v(list[int]): Defines the 'x' axis of the orthorhombic bicrystal.
+    c_space(float): Interplanar spacing of boundary planes.
+    target_dir(str): Path str of where to deposit grain boundary.
+    rbt(list[float]): Rigid body translations.
+
+  Returns:
+    if target_dir==None returns list [z_planes, sigma_csl, n_grain_unit, grain_c]
+    else returns :class:`ase.Atoms`.
+
   """
+
   bpxv    = [(bp[1]*v[2]-v[1]*bp[2]), (bp[2]*v[0]-bp[0]*v[2]), (bp[0]*v[1]- v[0]*bp[1])]
   print "Symmetry Axis", v, "Orientation Axis", bp
   print "bpxv", bpxv
@@ -348,6 +362,7 @@ def bcc_csl_nn0(m, n, grain):
     n(int): Integer for vector part.
     grain(:class:`ase.Atoms`): grain boundary structure.
   """
+
 # Angle from zeiner
 # 100, \psi = (m**2 - n**2)/(m**2-n**2)
 # 110, \psi = (m**2 - 2*n**2)/(m**2-n**2)
@@ -365,6 +380,7 @@ def zeiner_matrix(q):
   Returns: 
     Rotation matrix generated from a quaternion.
   """
+
   r2 = q.dot(q)
   k = q[0]
   l = q[1]
@@ -1108,18 +1124,3 @@ if __name__=='__main__':
     with open(os.path.join(target_dir, 'gb.json'), 'w') as outfile:
       json.dump(gb_dict, outfile, indent=2)
 
-    ovito = "~/ovito-2.6.1-x86_64/bin/ovito"
-    if(not True):
-      if os.path.isfile(ovito):
-        os.system("{0} {1}.xyz".format(ovito, os.path.join(target_dir, gbid)))
-        variable = raw_input('Continue?')
-      elif os.path.isfile('/Users/lambert/Ovito.app/Contents/MacOS/ovito'):
-        os.system('/Users/lambert/Ovito.app/Contents/MacOS/ovito {0}.xyz'.format(os.path.join(target_dir, gbid)))
-        variable = raw_input('Continue?')
-      else:
-        print 'ovito is in non-standard place cannot display crystal structure'
-        variable = raw_input('Continue?')
-      if variable == 'y':
-        pass
-      elif variable =='n':
-        break

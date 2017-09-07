@@ -1,0 +1,634 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Models and Queries &#8212; Imeall 0.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Views" href="views.html" />
+    <link rel="prev" title="Imeall Package" href="imeall.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="models-and-queries">
+<h1>Models and Queries<a class="headerlink" href="#models-and-queries" title="Permalink to this headline">¶</a></h1>
+<p>These modules define the data models for <a class="reference internal" href="#imeall.gb_models.GrainBoundary" title="imeall.gb_models.GrainBoundary"><code class="xref py py-class docutils literal"><span class="pre">imeall.gb_models.GrainBoundary</span></code></a>
+and <a class="reference internal" href="#imeall.gb_models.SubGrainBoundary" title="imeall.gb_models.SubGrainBoundary"><code class="xref py py-class docutils literal"><span class="pre">imeall.gb_models.SubGrainBoundary</span></code></a> structures and
+the SQL and directory tree database. They also contains classes
+for performing maintenance of the grain boundary database and
+querying and copying structures from the directory tree.</p>
+<div class="section" id="maintenance">
+<h2>Maintenance<a class="headerlink" href="#maintenance" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference internal" href="#imeall.models.GBMaintenance" title="imeall.models.GBMaintenance"><code class="xref py py-class docutils literal"><span class="pre">imeall.models.GBMaintenance</span></code></a> contains methods for performing
+maintenance and query operations on the directory tree structure and
+modifying <cite>gb.json</cite> and <cite>subgb.json</cite> files.</p>
+<dl class="class">
+<dt id="imeall.models.GBMaintenance">
+<em class="property">class </em><code class="descclassname">imeall.models.</code><code class="descname">GBMaintenance</code><a class="reference internal" href="_modules/imeall/models.html#GBMaintenance"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.models.GBMaintenance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Collection of maintenance routines for the GB database.
+Methods include routines to regenerate all the csl lattices in the database,
+take a new grain boundary profile picture for multiple directories,
+update the gb.json information if a new grain boundary property is desired.</p>
+<dl class="method">
+<dt id="imeall.models.GBMaintenance.add_key_to_dict">
+<code class="descname">add_key_to_dict</code><span class="sig-paren">(</span><em>dirname</em>, <em>new_key</em>, <em>new_value</em>, <em>dict_type='subgb.json'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/models.html#GBMaintenance.add_key_to_dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.models.GBMaintenance.add_key_to_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add single key to .json dictionary.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>dirname</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – directory name with json dictionary.</li>
+<li><strong>new_key</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – key to add to dictionary.</li>
+<li><strong>new_value</strong> (<em>generic</em>) – value to add to dictionary.</li>
+<li><strong>dict_type</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a><em>, </em><em>optional</em>) – Type of json dict ‘subgb.json’ or ‘gb.json’.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Updated json dictionary.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/2.7/library/stdtypes.html#dict" title="(in Python v2.7)">dict</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="imeall.models.GBMaintenance.fix_json">
+<code class="descname">fix_json</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/models.html#GBMaintenance.fix_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.models.GBMaintenance.fix_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>If json file is corrupted and contains two {}{} dictionaries,
+this function selects the second of the two dictionaries and overwrites json file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>path</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – path to corrupted dictionary.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="imeall.models.GBMaintenance.remove_eo_files">
+<code class="descname">remove_eo_files</code><span class="sig-paren">(</span><em>path</em>, <em>num_deleted_files</em>, <em>dryrun=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/models.html#GBMaintenance.remove_eo_files"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.models.GBMaintenance.remove_eo_files" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove files with pattern matching jobname.[eo][0-9]+.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – root path to start walking downwards from.</li>
+<li><strong>num_deleted_files</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) – Number of job files deleted.</li>
+<li><strong>dryrun</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) – (Default: True).</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Number of deleted files.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="imeall.models.GBMaintenance.retake_pic">
+<code class="descname">retake_pic</code><span class="sig-paren">(</span><em>fname</em>, <em>translate=False</em>, <em>toggle=False</em>, <em>confirm=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/models.html#GBMaintenance.retake_pic"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.models.GBMaintenance.retake_pic" title="Permalink to this definition">¶</a></dt>
+<dd><p>DEPRECATED If using AtomEye take grain boundary profile pic in directory
+requires gb directory with gbid.xyz file in it. Set confirm=False
+to not prompt for overwrite. In future versions OVITO will be default image generator.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="imeall.models.GBMaintenance.update_json">
+<code class="descname">update_json</code><span class="sig-paren">(</span><em>json_path</em>, <em>new_keys=[]</em>, <em>new_values=[]</em>, <em>dryrun=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/models.html#GBMaintenance.update_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.models.GBMaintenance.update_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update or add multiple keys to json dictionaries.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>json_path</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – directory name where gb.json file needs to be updated.</li>
+<li><strong>new_keys</strong> (<em>list</em>) – list of new keys.</li>
+<li><strong>new_values</strong> (<em>list</em>) – list of new values</li>
+<li><strong>dryrun</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) – If False json file is over written with new keys.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Updated json dictionary.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/2.7/library/stdtypes.html#dict" title="(in Python v2.7)">dict</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="queries">
+<h2>Queries<a class="headerlink" href="#queries" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference internal" href="#imeall.models.GBQuery" title="imeall.models.GBQuery"><code class="xref py py-class docutils literal"><span class="pre">imeall.models.GBQuery</span></code></a> contains methods for checking out and
+copying structure files and json dictionaries from the
+directory tree grain boundary database.</p>
+<dl class="class">
+<dt id="imeall.models.GBQuery">
+<em class="property">class </em><code class="descclassname">imeall.models.</code><code class="descname">GBQuery</code><a class="reference internal" href="_modules/imeall/models.html#GBQuery"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.models.GBQuery" title="Permalink to this definition">¶</a></dt>
+<dd><p>Routines for grabbing desired .xyz files and paths.</p>
+<dl class="method">
+<dt id="imeall.models.GBQuery.copy_gb_dirtree">
+<code class="descname">copy_gb_dirtree</code><span class="sig-paren">(</span><em>material='alphaFe', or_axis='0,0,1', pots=['PotBH.xml'], target_dir='./'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/models.html#GBQuery.copy_gb_dirtree"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.models.GBQuery.copy_gb_dirtree" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pull all minimum energy structures, using <code class="xref py py-func docutils literal"><span class="pre">pull_minen_structs()</span></code>,
+from database for an orientation axis and copy them to target_dir. Useful for checking out
+structures into a unique directory for specialized analysis.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>material</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – material name</li>
+<li><strong>or_axis</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – csv serialized vector of orientation axis</li>
+<li><strong>pots</strong> – list of potential parameter files.</li>
+<li><strong>target_dir</strong> – Location to copy files to  (Default: ‘./’).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition-todo admonition" id="index-0">
+<p class="first admonition-title">Todo</p>
+<ul class="last simple">
+<li>Add kwargs to pull_minen_structs to provide additional selection criteria.</li>
+</ul>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="imeall.models.GBQuery.pull_minen_structs">
+<code class="descname">pull_minen_structs</code><span class="sig-paren">(</span><em>material='alphaFe', or_axis='1,1,1', pots=['PotBH.xml']</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/models.html#GBQuery.pull_minen_structs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.models.GBQuery.pull_minen_structs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Grab the minimum energy structure json dictionaries
+for a given material, orientation_axis, and potential(s) parameter filenames.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>material</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a><em>,</em><em>optional</em>) – Material to investigate.</li>
+<li><strong>or_axis</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a><em>,</em><em>optional</em>) – Orientation axis “1,1,1”.</li>
+<li><strong>pots</strong> (<em>list</em>) – list of potentials parameter files.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">List of <code class="xref py py-class docutils literal"><span class="pre">SubGrainBoundary</span></code> <a class="reference external" href="http://docs.peewee-orm.com/en/latest/peewee/api.html#Model" title="(in peewee v2.10.1)"><code class="xref py py-class docutils literal"><span class="pre">Model</span></code></a>
+represented as dictionaries.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">list[<code class="xref py py-class docutils literal"><span class="pre">SubGrainBoundary</span></code>]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="sql-models">
+<h2>SQL Models<a class="headerlink" href="#sql-models" title="Permalink to this headline">¶</a></h2>
+<p>These classes define the data models for the <a class="reference internal" href="#imeall.gb_models.GrainBoundary" title="imeall.gb_models.GrainBoundary"><code class="xref py py-class docutils literal"><span class="pre">imeall.gb_models.GrainBoundary</span></code></a>
+and <code class="xref py py-class docutils literal"><span class="pre">imeall.gb_models.SubGrainBoundary</span> <span class="pre">models</span></code>.</p>
+<dl class="class">
+<dt id="imeall.gb_models.GrainBoundary">
+<em class="property">class </em><code class="descclassname">imeall.gb_models.</code><code class="descname">GrainBoundary</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/gb_models.html#GrainBoundary"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.gb_models.GrainBoundary" title="Permalink to this definition">¶</a></dt>
+<dd><p>GrainBoundary is a peewee <a class="reference external" href="http://docs.peewee-orm.com/en/latest/peewee/api.html#Model" title="(in peewee v2.10.1)"><code class="xref py py-class docutils literal"><span class="pre">Model</span></code></a> of the canonical parent grain.
+Model is connected to the SQL database of the grain boundaries. All vectors
+are serialized to csv string for storage.</p>
+<dl class="attribute">
+<dt id="GrainBoundary.orientation_axis">
+<code class="descname">orientation_axis</code><a class="headerlink" href="#GrainBoundary.orientation_axis" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>str</em> – orientation axis defining the grain.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="GrainBoundary.angle">
+<code class="descname">angle</code><a class="headerlink" href="#GrainBoundary.angle" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>str</em> – misorientation angle for defining the grain.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="GrainBoundary.boundary_plane">
+<code class="descname">boundary_plane</code><a class="headerlink" href="#GrainBoundary.boundary_plane" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>str</em> – boundary plane normal defining the grain.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="GrainBoundary.path">
+<code class="descname">path</code><a class="headerlink" href="#GrainBoundary.path" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>str</em> – Full directory string relative to the grain boundary database root.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="GrainBoundary.gb_type">
+<code class="descname">gb_type</code><a class="headerlink" href="#GrainBoundary.gb_type" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>str</em> – Grain boundary type (tilt, twist, general).</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="GrainBoundary.z_planes">
+<code class="descname">z_planes</code><a class="headerlink" href="#GrainBoundary.z_planes" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>list</em> – Location of center of interfacial planes.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="GrainBoundary.n_at">
+<code class="descname">n_at</code><a class="headerlink" href="#GrainBoundary.n_at" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>int</em> – Number of grains in parent.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="imeall.gb_models.SubGrainBoundary">
+<em class="property">class </em><code class="descclassname">imeall.gb_models.</code><code class="descname">SubGrainBoundary</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/gb_models.html#SubGrainBoundary"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.gb_models.SubGrainBoundary" title="Permalink to this definition">¶</a></dt>
+<dd><p>SubGrainBoundary Model.</p>
+<dl class="attribute">
+<dt id="SubGrainBoundary.path">
+<code class="descname">path</code><a class="headerlink" href="#SubGrainBoundary.path" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>str</em> – relative to the grainboundary database root.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">canonical_grain(</code></dt>
+<dd><p>py:class:GrainBoundary): every :py:class:SubGrainBoundary</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">is a subgrain of a</code></dt>
+<dd><p>py:class:GrainBoundary.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="SubGrainBoundary.rbt">
+<code class="descname">rbt</code><a class="headerlink" href="#SubGrainBoundary.rbt" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>str</em> – rigid body translations.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="SubGrainBoundary.potential">
+<code class="descname">potential</code><a class="headerlink" href="#SubGrainBoundary.potential" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>str</em> – Potential parameter file.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="SubGrainBoundary.rcut">
+<code class="descname">rcut</code><a class="headerlink" href="#SubGrainBoundary.rcut" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>float</em> – atom deletion criterion.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="SubGrainBoundary.area">
+<code class="descname">area</code><a class="headerlink" href="#SubGrainBoundary.area" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>float</em> – grain boundary interfacial area.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="SubGrainBoundary.n_at">
+<code class="descname">n_at</code><a class="headerlink" href="#SubGrainBoundary.n_at" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>int</em> – number of atoms in subgrain structure.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="SubGrainBoundary.E_gb">
+<code class="descname">E_gb</code><a class="headerlink" href="#SubGrainBoundary.E_gb" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>float</em> – grain boundary energies.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="SubGrainBoundary.E_gb_init">
+<code class="descname">E_gb_init</code><a class="headerlink" href="#SubGrainBoundary.E_gb_init" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>float</em> – Energy of initial unrelaxed structure.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="SubGrainBoundary.notes">
+<code class="descname">notes</code><a class="headerlink" href="#SubGrainBoundary.notes" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>str</em> – Special notes of interest about this boundary.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="SubGrainBoundary.gbid">
+<code class="descname">gbid</code><a class="headerlink" href="#SubGrainBoundary.gbid" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>str</em> – SubGrainBoundary id.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="imeall.gb_models.Fracture">
+<em class="property">class </em><code class="descclassname">imeall.gb_models.</code><code class="descname">Fracture</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/gb_models.html#Fracture"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.gb_models.Fracture" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fracture data <a class="reference external" href="http://docs.peewee-orm.com/en/latest/peewee/api.html#Model" title="(in peewee v2.10.1)"><code class="xref py py-class docutils literal"><span class="pre">Model</span></code></a>.</p>
+<dl class="attribute">
+<dt id="Fracture.fracture_system">
+<code class="descname">fracture_system</code><a class="headerlink" href="#Fracture.fracture_system" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>str</em> – Serialized string in form [crack direction](crack plane).</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="Fracture.G">
+<code class="descname">G</code><a class="headerlink" href="#Fracture.G" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>float</em> – stress energy release rate.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="Fracture.strain_rate">
+<code class="descname">strain_rate</code><a class="headerlink" href="#Fracture.strain_rate" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>float</em> – time incremental rate of strain increase fs^{-1}</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="Fracture.sim_T">
+<code class="descname">sim_T</code><a class="headerlink" href="#Fracture.sim_T" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>float</em> – simulation temperature.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="serialization-methods">
+<h2>Serialization Methods<a class="headerlink" href="#serialization-methods" title="Permalink to this headline">¶</a></h2>
+<p>These methods flip vector or list data back and forth
+between comma separated value strings which can be stored
+in the SQL database.</p>
+<span class="target" id="module-imeall.gb_models"></span><p>This module contains key grain boundary data models for the
+SQL database. Also operates as a command line tool to populate
+local versions of the database.</p>
+<dl class="function">
+<dt id="imeall.gb_models.create_tables">
+<code class="descclassname">imeall.gb_models.</code><code class="descname">create_tables</code><span class="sig-paren">(</span><em>database</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/gb_models.html#create_tables"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.gb_models.create_tables" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create GrainBoundary, and SubGrainBoundary Tables.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>database</strong><strong>(</strong> – py:class:SqliteDatabase)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="sql-database-methods">
+<h2>SQL Database Methods<a class="headerlink" href="#sql-database-methods" title="Permalink to this headline">¶</a></h2>
+<p>Methods for updating and checking the integrity of the SQL database. These methods ensure
+the directory tree and the SQL database remain normalized and synchronized.</p>
+<span class="target" id="module-imeall.gb_models"></span><p>This module contains key grain boundary data models for the
+SQL database. Also operates as a command line tool to populate
+local versions of the database.</p>
+<dl class="function">
+<dt id="imeall.gb_models.add_conv_key">
+<code class="descclassname">imeall.gb_models.</code><code class="descname">add_conv_key</code><span class="sig-paren">(</span><em>material='alphaFe'</em>, <em>or_axis='001'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/gb_models.html#add_conv_key"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.gb_models.add_conv_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if subgb.json dictionary contains a convergence
+key. If not add key to subgb.json file and default to false.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>material</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – name of material to search.</li>
+<li><strong>or_axis</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – orientation axis.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.gb_models.gb_check_dir_integrity">
+<code class="descclassname">imeall.gb_models.</code><code class="descname">gb_check_dir_integrity</code><span class="sig-paren">(</span><em>material='alphaFe'</em>, <em>or_axis='001'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/gb_models.html#gb_check_dir_integrity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.gb_models.gb_check_dir_integrity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if directory in directory tree contains
+a grain boundary json file, and update sql database to include the
+parent grain if it is missing.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.gb_models.gb_check_path">
+<code class="descclassname">imeall.gb_models.</code><code class="descname">gb_check_path</code><span class="sig-paren">(</span><em>material='alphaFe'</em>, <em>or_axis='001'</em>, <em>modify_db=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/gb_models.html#gb_check_path"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.gb_models.gb_check_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compare consistency between location of subgb.json
+paths and the paths in the closure tree. If path is missing
+from directory tree delete from the SQL database.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>material</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – material.</li>
+<li><strong>or_axis</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – orientation axis.</li>
+<li><strong>modify_db</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) – If True database will be updated.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.gb_models.gb_check_conv">
+<code class="descclassname">imeall.gb_models.</code><code class="descname">gb_check_conv</code><span class="sig-paren">(</span><em>material='alphaFe'</em>, <em>or_axis='001'</em>, <em>modify_db=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/gb_models.html#gb_check_conv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.gb_models.gb_check_conv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scans through grainboundary directory tree,
+inspecting the subgrain dictionary and the <a class="reference internal" href="#imeall.gb_models.SubGrainBoundary" title="imeall.gb_models.SubGrainBoundary"><code class="xref py py-class docutils literal"><span class="pre">SubGrainBoundary</span></code></a> to test if
+the grain boundary energy, number of atoms, gb_area,
+and convergence flag are consistent. If modify_db is True the SQLite model
+will be updated.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>material</strong> – Which material to do check json/database convergence consistency on.</li>
+<li><strong>or_axis</strong> – Which orientation axis to check.</li>
+<li><strong>modify_db</strong> – Boolean. If True updates gb_model in database otherwise</li>
+<li><strong>prints inconsistent grain json/database value.</strong> (<em>just</em>) – </li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.gb_models.gb_check_force">
+<code class="descclassname">imeall.gb_models.</code><code class="descname">gb_check_force</code><span class="sig-paren">(</span><em>material='alphaFe'</em>, <em>or_axis='001'</em>, <em>force_tol=0.05</em>, <em>modify_db=False</em>, <em>gb_start=0</em>, <em>sub_start=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/gb_models.html#gb_check_force"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.gb_models.gb_check_force" title="Permalink to this definition">¶</a></dt>
+<dd><p>Recurse through directory tree, loading the structure file, json dict
+and the model for each subgrain. Check that the force tolerance in the structure
+file has actually been met for convergence.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>material</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – material string.</li>
+<li><strong>or_axis</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – orientation axis.</li>
+<li><strong>force_tol</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Max force magnitude on the relaxed structures.</li>
+<li><strong>modify_db</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) – If True <a class="reference internal" href="#imeall.gb_models.SubGrainBoundary" title="imeall.gb_models.SubGrainBoundary"><code class="xref py py-class docutils literal"><span class="pre">SubGrainBoundary</span></code></a> will be updated.</li>
+<li><strong>gb_start</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) – Start from this grain boundary in list.</li>
+<li><strong>sub_start</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) – Start from this subgrainboundary in list.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.gb_models.change_json_key">
+<code class="descclassname">imeall.gb_models.</code><code class="descname">change_json_key</code><span class="sig-paren">(</span><em>material='alphaFe'</em>, <em>or_axis='001'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/gb_models.html#change_json_key"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.gb_models.change_json_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Replace ‘_traj’ string in subgb_dict[‘gbid’] method.
+Can be modified to update or correct database/subgb strings in json files.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>material</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – material to select.</li>
+<li><strong>or_axis</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – orientation axis to select.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.gb_models.populate_db">
+<code class="descclassname">imeall.gb_models.</code><code class="descname">populate_db</code><span class="sig-paren">(</span><em>material='alphaFe'</em>, <em>or_axis='001'</em>, <em>gbid=''</em>, <em>modify=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/gb_models.html#populate_db"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.gb_models.populate_db" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add canonical grains to SQLite database, and all SubGrainBoundaries
+that can be found below it in the directory tree from their subgb.json files.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>material</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – material.</li>
+<li><strong>or_axis</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – orientation axis.</li>
+<li><strong>gbid</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a><em>, </em><em>optional</em>) – To add a specific canonical grain from its id.</li>
+<li><strong>modify</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) – If True database will be updated.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Imeall</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="imeall.html">Imeall Package</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Models and Queries</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#maintenance">Maintenance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#queries">Queries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#sql-models">SQL Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#serialization-methods">Serialization Methods</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#sql-database-methods">SQL Database Methods</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="views.html">Views</a></li>
+<li class="toctree-l1"><a class="reference internal" href="slabmaker.html">Slabmaker</a></li>
+<li class="toctree-l1"><a class="reference internal" href="generators.html">Generators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interstitials.html">Interstitials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="calculators.html">Calculators</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="imeall.html" title="previous chapter">Imeall Package</a></li>
+      <li>Next: <a href="views.html" title="next chapter">Views</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Henry Lambert, Adam Fekete, James Kermode, Alessandro De Vita.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/models.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -4,8 +4,11 @@ import argparse
 import subprocess
 import numpy as np
 import ase.units as units
-from quippy import Atoms, Potential, AtomsReader, set_fortran_indexing
+
+
+from imeall import app
 from imeall.models import PotentialParameters
+from quippy import Atoms, Potential, AtomsReader, set_fortran_indexing
 
 set_fortran_indexing(False)
 def strain_energy(ats, cursor_step=0.2):
@@ -19,6 +22,7 @@ def strain_energy(ats, cursor_step=0.2):
   Returns: 
     list: Cumulative energy distribution along the z-axis.
   """
+
   cell = ats.get_cell()
   A = cell[0][0]*cell[1][1]
   z_height = cell[2][2]
@@ -81,6 +85,7 @@ def calc_chemoelast(input_file):
   Returns: 
     list(float):[(chemical_energy/total_energy)*gb_energy, (elastic_energy/total_energy)*gb_energy, gb_energy]
   """
+
   potparam = PotentialParameters()
   ener_bulk_dict = potparam.gs_ener_per_atom()
   r_scale_dict = potparam.eam_rscale()
@@ -103,7 +108,8 @@ def calc_chemoelast(input_file):
     for x in elastic_energy:
       print >> f, x[0], x[1]
 #generates output.xyz
-  args_str =  'ovitos /Users/lambert/pymodules/imeall/imeall/ovito_scripts/attach_cna.py -i {input_file}'.format(input_file='full.xyz').split()
+  imeall_root = os.path.join(app.root_path, 'ovito_scripts/attach_cna.py')
+  args_str =  'ovitos {imeall_root} -i {input_file}'.format(imeall_root=app.root_path, input_file='full.xyz').split()
   job = subprocess.Popen(args_str)
   job.wait()
   ats = Atoms('output.xyz')
