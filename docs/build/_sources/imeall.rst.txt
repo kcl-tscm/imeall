@@ -1,7 +1,6 @@
 Imeall Package
 ==============
-
-  The Imeall computational package has been developed for the calculation and indexing of atomistic properties 
+The Imeall computational package has been developed for the calculation and indexing of atomistic properties 
 of grain boundaries in materials. The package provides a structured database for the storage of atomistic structures and 
 their associated properties, equipped with an interface to interatomic potential calculators. 
 
