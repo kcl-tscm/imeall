@@ -220,6 +220,7 @@ class GBQuery(object):
         except IndexError:
           print 'No subgbs for: ', gb.gbid, potential
       print '{:.3f}'.format(180.0/np.pi*gb.angle), ' '.join(['{:.3f}'.format(x) for x in pot_dict.values()])
+    database.close()
     return dict_list
 
 class Job(object):
