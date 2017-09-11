@@ -127,7 +127,7 @@ class GBQuery(object):
     self.__repr__=="FetchStructure"
 
   def copy_gb_dirtree(self, material="alphaFe", or_axis="0,0,1", pots=['PotBH.xml'], 
-                      target_dir='./'):
+                      target_dir='./', gb_type='tilt'):
     """Pull all minimum energy structures, using :py:func:`pull_minen_structs`,
     from database for an orientation axis and copy them to target_dir. Useful for checking out
     structures into a unique directory for specialized analysis.
@@ -137,13 +137,14 @@ class GBQuery(object):
       or_axis(str): csv serialized vector of orientation axis
       pots: list of potential parameter files.
       target_dir: Location to copy files to  (Default: './').
+      gb_type(str): Options 'tilt' or 'twist'.
 
     Todo:
       * Add kwargs to pull_minen_structs to provide additional selection criteria.
       
     """
 
-    grain_dicts = self.pull_minen_structs(material=material, or_axis=or_axis, pots=pots)
+    grain_dicts = self.pull_minen_structs(material=material, or_axis=or_axis, pots=pots, gb_type=gb_type)
     for gd in grain_dicts:
       gbid = gd['gbid']
       new_dir_name = gbid.split('_')[0]
@@ -167,7 +168,7 @@ class GBQuery(object):
       shutil.copy(subgb_path, new_dir_name)
       shutil.copy(gb_path, new_dir_name)
 
-  def pull_minen_structs(self, material="alphaFe", or_axis="1,1,1", pots=['PotBH.xml']):
+  def pull_minen_structs(self, material="alphaFe", or_axis="1,1,1", pots=['PotBH.xml'], gb_type='tilt'):
     """Grab the minimum energy structure json dictionaries
     for a given material, orientation_axis, and potential(s) parameter filenames.
 
@@ -175,6 +176,7 @@ class GBQuery(object):
       material(str,optional): Material to investigate.
       or_axis(str,optional): Orientation axis "1,1,1".
       pots(list): list of potentials parameter files.
+      gb_type(str): Options 'tilt' or 'twist'.
 
     Returns:
       list[:py:class:`SubGrainBoundary`]: List of :py:class:`SubGrainBoundary` :py:class:`Model` 
@@ -187,9 +189,18 @@ class GBQuery(object):
     database.connect()
     pot_param     = PotentialParameters()
     ener_per_atom = pot_param.gs_ener_per_atom()
-    gbs = (GrainBoundary.select()
+
+    if gb_type=='tilt':
+      gbs = (GrainBoundary.select()
                         .where(GrainBoundary.orientation_axis == or_axis)
                         .where(GrainBoundary.boundary_plane != or_axis))
+    elif gb_type=='twist':
+      gbs = (GrainBoundary.select()
+                        .where(GrainBoundary.orientation_axis == or_axis)
+                        .where(GrainBoundary.boundary_plane == or_axis))
+    else:
+      sys.exit("Unsupported gb_type. Options:'tilt' or 'twist'")
+
     dict_list = []
     for gb in gbs.order_by(GrainBoundary.angle):
       pot_dict = OrderedDict({})

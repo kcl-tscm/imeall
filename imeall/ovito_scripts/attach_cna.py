@@ -10,5 +10,6 @@ args = parser.parse_args()
 node = import_file(args.input_file)
 cna = CommonNeighborAnalysisModifier()
 node.modifiers.append(cna)
+node.compute()
 export_file(node, "output.xyz", "xyz", columns = ["Particle Identifier", "Particle Type", "Position.X", "Position.Y", "Position.Z",
                                                   "Potential Energy", "Structure Type"])
