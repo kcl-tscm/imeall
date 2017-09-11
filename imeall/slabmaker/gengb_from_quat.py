@@ -7,19 +7,20 @@ import transformations as quat
 from fractions import gcd
 
 class QuaternionGB(object):
-  """:class:`imeall.slabmaker.gengb_from_quat.QuaternionGB` contains routines to generate lists of valid
-  grain boundary orientations (i.e. the boundary planes of
+  """:class:`imeall.slabmaker.gengb_from_quat.QuaternionGB` contains routines to generate 
+  lists of valid grain boundary orientations (i.e. the boundary planes of
   grains for different orientation axes and misorientation angles) using
-  quaternion algebra. Currently supports routines for symmetric tilt grain boundaries and twist boundaries.
+  quaternion algebra. Currently supports routines for symmetric tilt 
+  grain boundaries and twist boundaries.
   """
 
   def __init__(self):
     pass
 
-  def or_axis_to_quat(orientation_axis):
+  def or_axis_to_quat(self, orientation_axis):
     """Given an orientation axis converts the vector to quaternion
     representation defining the orientation axis and a second quaternion
-    giving the 0 of the angle.
+    giving the 0 of the angle. :
     
     Args:
       orientation_axis(list): orientation axis.
@@ -47,7 +48,7 @@ class QuaternionGB(object):
       sys.exit('Orientation axis not supported please add defining quaternions.')
     return planequat_1, planequat_2
 
-  def or_axis_to_angle(m, n, orientation_axis):
+  def or_axis_to_angle(self, m, n, orientation_axis):
     """To generate an approximate spanning set of angles iterate
     over integers m and n and determine the angle from a combination
     of these integers according to the chosen orientation axis.
@@ -79,33 +80,28 @@ class QuaternionGB(object):
     boundary bicrystal can be generated with :func:`imeall.slabmaker.build_tilt_sym_gb`.
 
     Args: 
-      orientation_axis: 3d array of floats defining orientation axis.
+      orientation_axis(list[int]): 3d array of floats defining orientation axis.
 
     Returns:
       dict: Dictionary of 'x' axis co-ordinates keyed by angle rounded to two floating point numbers.
     """
 
-    planequat_1, planequat_2 = or_axis_to_quat(orientation_axis)
+    planequat_1, planequat_2 = self.or_axis_to_quat(orientation_axis)
     deg_list = []
-#Generate a list of (angle, boundary plane) pairs for
-#the chosen orientation axis.
+    deg_list_py_tmp = []
+    #Generate a list of (angle, boundary plane) pairs for the chosen orientation axis.
     for n  in np.arange(1,20):
       for m in np.arange(1,20):
         n = float(n)
         m = float(m)
 
-        angle = or_axis_to_angle(m, n, orientation_axis)
-    #The quaternion characterizing the rotation matrix:
+        angle = self.or_axis_to_angle(m, n, orientation_axis)
+        #The quaternion characterizing the rotation matrix:
         rotquat = quat.quaternion_about_axis(angle, orientation_axis)
-        #rotm = quat.rotation_matrix(angle, orientation_axis)
-        #rotquat = quat.quaternion_from_matrix(rotm).round(8)
-        #print rotquat
         rotmquat = (1./(np.array([a for a in rotquat if a!=0.]).min())*rotquat).round(8)
-        #print rotmquat
         n1 = quat.quaternion_multiply(planequat_1, rotmquat)
         n2 = quat.quaternion_multiply(planequat_2, rotmquat)
         comm_denom = []
-        print n1
         for a in n1:
           if (a%1).round(1) != 0:
              comm_denom.append(1./(np.abs(a)%1))
@@ -121,18 +117,23 @@ class QuaternionGB(object):
         bp1 = bp1/grcd
         rad = '\t [{0}, np.array([{1} {2} {3}])],'.format(round(angle, 2),bp1[1].round(0), bp1[2].round(0), bp1[3].round(0))
         deg = '\t [np.pi*({0}/180.), np.array([{1}, {2}, {3}])],'.format(round(180.*angle/np.pi,2), bp1[1].round(2), bp1[2].round(2), bp1[3].round(2))
-        if all(bp1 < 1e3):#where grcd 
+        if all(bp1 < 1e3):#handles floating point errors
           deg_list.append([round(180.*angle/np.pi, 2),  [deg]])
+          deg_list_py_tmp.append([round(180.*angle/np.pi,2), np.array([bp1[1].round(2), bp1[2].round(2), bp1[3].round(2)])])
     deg_list = sorted(deg_list, key=lambda x: x[0])
+    deg_list_py_tmp = sorted(deg_list_py_tmp, key=lambda x: x[0])
     deg_redun =  [] 
     deg_dict  = {}
     #Build a dictionary of unique angles:
-    for deg in deg_list:
+    deg_list_py = []
+    for deg, deg_py in zip(deg_list, deg_list_py_tmp):
       try:
         x = deg_dict[round(deg[0],2)]
       except KeyError:
        deg_dict[round(deg[0],2)] = deg[1][0]
-       print deg[1][0]
+       deg_list_py.append(deg_py)
+       #print deg[1][0]
+    return deg_list_py
 
   def gen_sym_twist_gb(self, or_axis=[0,0,1]):
     """Generate symmetric twist grain boundary list.
@@ -143,7 +144,7 @@ class QuaternionGB(object):
     Returns:
       dict: Dictionary of 'x' axis co-ordinates keyed by angle rounded to two floating point numbers.
     """
-    planequat_1, planequat_2 = or_axis_to_quat(or_axis)
+    planequat_1, planequat_2 = self.or_axis_to_quat(or_axis)
 
     print planequat_1
     print planequat_2
@@ -153,7 +154,7 @@ class QuaternionGB(object):
         print n,m
         n = float(n)
         m = float(m)
-        angle = or_axis_to_angle(m, n, or_axis)
+        angle = self.or_axis_to_angle(m, n, or_axis)
         rotm     = quat.rotation_matrix(angle, map(float,or_axis))
         rotquat  = quat.quaternion_from_matrix(rotm).round(8)
         rotmquat = (1./(np.array([a for a in rotquat if a!=0.]).min())*rotquat).round(5)
@@ -168,8 +169,8 @@ class QuaternionGB(object):
         x = deg_dict[round(deg[0], 2)]
       except KeyError:
        deg_dict[round(deg[0],2)]=deg[1][0]
-       print deg[1][0]
-    return deg_dict
+       #print deg[1][0]
+    return deg_list
 
 if __name__=='__main__':
   parser = argparse.ArgumentParser()
