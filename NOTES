@@ -163,8 +163,8 @@ To set up an ssh port:
 
 
 
-
-
+#The docker logs print to stderr.
+docker logs c631c5dccd91 >stdout.log 2>stderr.log
 
 
 
