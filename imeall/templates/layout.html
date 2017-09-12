@@ -12,11 +12,11 @@
     <div class=flash>{{ message }} </div>
   {% endfor %}
   <div class=navigation>
-    <li> 
-			<a href="{{url_for('home_page')}}">Home</a>
-			<a href="{{url_for('material', material='alphaFe')}}">alpha-Fe</a>
-			<a href="{{url_for('analysis')}}">Analysis</a>
-		</li>
+		<ul>
+			<li><a href="{{url_for('home_page')}}">Home</a> </li>
+			<li><a href="{{url_for('material', material='alphaFe')}}">alpha-Fe</a></li>
+			<li><a href="{{url_for('analysis')}}">Analysis</a></li>
+		</ul>
   </div>
   {% block body %}{% endblock %}
 </div>
