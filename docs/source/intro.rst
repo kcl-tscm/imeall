@@ -32,7 +32,8 @@ Alternatively if you don't wish to do any development a `Docker Image <https://g
 
 Environment
 -----------
-In order to use imeall effectively the following modifications should be made. The configuration file for the imeall package is located at
+In order to use imeall effectively the following modifications should be made. 
+The configuration file for the imeall package is located at
 
   ``~/$HOME/imeall/instance/config.py.``
 
@@ -40,10 +41,19 @@ The standard location for the imeall grain boundary directory tree database is i
 ``imeall`` module (i.e. the directory with ``__init__.py``). If your local directory 
 tree and the sql database are in non-standard locations modify the appropriate configuration variable:
 
-  ``GRAIN_DATABASE = /path/to/grain_database/``
-  ``GRAIN_DATABASE_SQL = /path/to/gb_database.db``
+.. code:: python
+
+  GRAIN_DATABASE = '/path/to/grain_database/'
+  GRAIN_DATABASE_SQL = '/path/to/gb_database.db'
+  MATERIALS = ['alphaFe']
+  RUN_OVITO = False
+  SECRET_KEY = 'mostsecret'
+  DEBUG = True
+
+Additional keys to set are ``RUN_OVITO`` which determines whether xyz files selected
+from the web interface are downloadable or should be launched directly in the ovito viewer,
+and the ``Materials`` list with the materials in the local database.
 
 A `representative subset <https://imeall.co.uk>`_ of the grain boundary database to download for 
 testing is available from the ``imeall`` website hosted on the `NOMAD <https://nomad-coe.eu>`_ server.
-
 

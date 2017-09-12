@@ -33,7 +33,8 @@ def home_page():
   """Overview of imeall database. Links to material views.
   """
 
-  materials = os.listdir(g.gb_dir)
+  #materials = os.listdir(g.gb_dir)
+  materials = app.config["MATERIALS"]
   return render_template('imeall.html', materials=materials)
 
 @app.route('/<material>/')
@@ -60,21 +61,24 @@ def orientations(url_path, orientation):
 #can only handle three digit or_axis atm.
   url_path = url_path+'/'+orientation
   path     = os.path.join(g.gb_dir, url_path)
+
 #load serialized grain data
   with open(os.path.join(path, 'or_axis.json'), 'r') as json_file:
     oraxis = json.load(json_file)
   oraxis = oraxis['oraxis']
   gb_type = request.args.get('gb_type', 'tilt')
+
   if gb_type == 'tilt':
     gbs   = (GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis)
-              .where(GrainBoundary.boundary_plane !=oraxis)
-              .order_by(GrainBoundary.angle))
+                          .where(GrainBoundary.boundary_plane !=oraxis)
+                          .order_by(GrainBoundary.angle))
   elif gb_type == 'twist':
     gbs   = (GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis)
                           .where(GrainBoundary.boundary_plane == oraxis)
                           .order_by(GrainBoundary.angle))
   else:
     gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).order_by(GrainBoundary.angle)
+
 #only valid directories beginning with orientation axis will be shown.
   grains = []
   for gb in gbs:
@@ -158,10 +162,9 @@ def analysis():
                       'angle'      : subgbs[0][1]['angle']*(180./(3.14159)),
                       'min_en'     : subgbs[0][0],
                       'bp'         : ' '.join(map(str, map(int, deserialize_vector_int(subgbs[0][1]['boundary_plane'])))),
-                      #'url'        : 'http://137.73.5.224:5000/grain/alphaFe/'
                       'url'        : 'http://127.0.0.1:5000/grain/alphaFe/'
-                                    +''.join(map(str, deserialize_vector_int(subgbs[0][1]['orientation_axis'])))
-                                    +'/' + gb.gbid})
+                                    + ''.join(map(str, deserialize_vector_int(subgbs[0][1]['orientation_axis'])))
+                                    + '/' + gb.gbid})
       else:
         pass
   return render_template('analysis.html', gbdat=json.dumps(gbdat))
@@ -265,8 +268,11 @@ def serve_file(textpath):
   with open('{0}'.format(textpath), 'r') as text_file:
     text = text_file.read()
   if textpath.endswith('xyz'):
-    run_ovito(textpath)
-    return render_template('text.html', text=text)
+    if app.config["RUN_OVITO"]:
+      run_ovito(textpath)
+      return render_template('text.html', text=text)
+    else:
+      return send_file(textpath)
   elif textpath.endswith('json'):
     with open(textpath, 'r') as f:
       j_file = json.load(f)

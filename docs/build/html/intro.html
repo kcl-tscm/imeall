@@ -69,15 +69,21 @@
 </div>
 <div class="section" id="environment">
 <h2>Environment<a class="headerlink" href="#environment" title="Permalink to this headline">¶</a></h2>
-<p>In order to use imeall effectively the following modifications should be made. The configuration file for the imeall package is located at</p>
+<p>In order to use imeall effectively the following modifications should be made.
+The configuration file for the imeall package is located at</p>
 <blockquote>
 <div><code class="docutils literal"><span class="pre">~/$HOME/imeall/instance/config.py.</span></code></div></blockquote>
 <p>The standard location for the imeall grain boundary directory tree database is in the
 <code class="docutils literal"><span class="pre">imeall</span></code> module (i.e. the directory with <code class="docutils literal"><span class="pre">__init__.py</span></code>). If your local directory
 tree and the sql database are in non-standard locations modify the appropriate configuration variable:</p>
-<blockquote>
-<div><code class="docutils literal"><span class="pre">GRAIN_DATABASE</span> <span class="pre">=</span> <span class="pre">/path/to/grain_database/</span></code>
-<code class="docutils literal"><span class="pre">GRAIN_DATABASE_SQL</span> <span class="pre">=</span> <span class="pre">/path/to/gb_database.db</span></code></div></blockquote>
+<div class="code python highlight-default"><div class="highlight"><pre><span></span><span class="n">GRAIN_DATABASE</span> <span class="o">=</span> <span class="s1">&#39;/path/to/grain_database/&#39;</span>
+<span class="n">GRAIN_DATABASE_SQL</span> <span class="o">=</span> <span class="s1">&#39;/path/to/gb_database.db&#39;</span>
+<span class="n">SECRET_KEY</span> <span class="o">=</span> <span class="s1">&#39;mostsecret&#39;</span>
+<span class="n">MATERIALS</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;alphaFe&#39;</span><span class="p">]</span>
+<span class="n">RUN_OVITO</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="n">DEBUG</span> <span class="o">=</span> <span class="kc">True</span>
+</pre></div>
+</div>
 <p>A <a class="reference external" href="https://imeall.co.uk">representative subset</a> of the grain boundary database to download for
 testing is available from the <code class="docutils literal"><span class="pre">imeall</span></code> website hosted on the <a class="reference external" href="https://nomad-coe.eu">NOMAD</a> server.</p>
 </div>

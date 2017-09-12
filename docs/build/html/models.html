@@ -170,7 +170,7 @@ directory tree grain boundary database.</p>
 <dd><p>Routines for grabbing desired .xyz files and paths.</p>
 <dl class="method">
 <dt id="imeall.models.GBQuery.copy_gb_dirtree">
-<code class="descname">copy_gb_dirtree</code><span class="sig-paren">(</span><em>material='alphaFe', or_axis='0,0,1', pots=['PotBH.xml'], target_dir='./'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/models.html#GBQuery.copy_gb_dirtree"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.models.GBQuery.copy_gb_dirtree" title="Permalink to this definition">¶</a></dt>
+<code class="descname">copy_gb_dirtree</code><span class="sig-paren">(</span><em>material='alphaFe', or_axis='0,0,1', pots=['PotBH.xml'], target_dir='./', gb_type='tilt'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/models.html#GBQuery.copy_gb_dirtree"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.models.GBQuery.copy_gb_dirtree" title="Permalink to this definition">¶</a></dt>
 <dd><p>Pull all minimum energy structures, using <code class="xref py py-func docutils literal"><span class="pre">pull_minen_structs()</span></code>,
 from database for an orientation axis and copy them to target_dir. Useful for checking out
 structures into a unique directory for specialized analysis.</p>
@@ -183,6 +183,7 @@ structures into a unique directory for specialized analysis.</p>
 <li><strong>or_axis</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – csv serialized vector of orientation axis</li>
 <li><strong>pots</strong> – list of potential parameter files.</li>
 <li><strong>target_dir</strong> – Location to copy files to  (Default: ‘./’).</li>
+<li><strong>gb_type</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Options ‘tilt’ or ‘twist’.</li>
 </ul>
 </td>
 </tr>
@@ -198,7 +199,7 @@ structures into a unique directory for specialized analysis.</p>
 
 <dl class="method">
 <dt id="imeall.models.GBQuery.pull_minen_structs">
-<code class="descname">pull_minen_structs</code><span class="sig-paren">(</span><em>material='alphaFe', or_axis='1,1,1', pots=['PotBH.xml']</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/models.html#GBQuery.pull_minen_structs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.models.GBQuery.pull_minen_structs" title="Permalink to this definition">¶</a></dt>
+<code class="descname">pull_minen_structs</code><span class="sig-paren">(</span><em>material='alphaFe', or_axis='1,1,1', pots=['PotBH.xml'], gb_type='tilt'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/models.html#GBQuery.pull_minen_structs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.models.GBQuery.pull_minen_structs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Grab the minimum energy structure json dictionaries
 for a given material, orientation_axis, and potential(s) parameter filenames.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -209,6 +210,7 @@ for a given material, orientation_axis, and potential(s) parameter filenames.</p
 <li><strong>material</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a><em>,</em><em>optional</em>) – Material to investigate.</li>
 <li><strong>or_axis</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a><em>,</em><em>optional</em>) – Orientation axis “1,1,1”.</li>
 <li><strong>pots</strong> (<em>list</em>) – list of potentials parameter files.</li>
+<li><strong>gb_type</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Options ‘tilt’ or ‘twist’.</li>
 </ul>
 </td>
 </tr>
