@@ -32,8 +32,6 @@ def before_request():
 def home_page():
   """Overview of imeall database. Links to material views.
   """
-
-  #materials = os.listdir(g.gb_dir)
   materials = app.config["MATERIALS"]
   return render_template('imeall.html', materials=materials)
 
@@ -41,7 +39,6 @@ def home_page():
 def material(material):
   """View of available orientation axes for a particular material.
   """
-
   path         = os.path.join(app.config['GRAIN_DATABASE'], material)
   url_path     = material
   orientations = []
@@ -95,7 +92,7 @@ def grain_boundary(url_path, gbid):
   """
 
   url_path  = url_path+'/'+gbid
-  path      = os.path.join(g.gb_dir, url_path)
+  path      = os.path.join(app.config["GRAIN_DATABASE"], url_path)
   with open(os.path.join(path, 'gb.json'),'r') as json_file:
     gb_info = json.load(json_file)
   stuff = []
@@ -105,8 +102,9 @@ def grain_boundary(url_path, gbid):
   subgrains  = []  
   subgrainsj = []
   for i, gb_path in enumerate(json_files):
-    subgrains.append([json.load(open(gb_path,'r')), i])
-    subgrainsj.append(json.load(open(gb_path,'r')))
+    subgrains.append([json.load(open(gb_path, 'r')), i])
+    subgrainsj.append(json.load(open(gb_path, 'r')))
+
 #find lowest energy structure for every potential in the database
   analyze  = GBAnalysis()
   potparams = PotentialParameters()
@@ -187,9 +185,10 @@ def make_tree(path):
       else:
 #append file if it is a relevant with its route:
         extension = name.split(".")[-1]
-        filename = os.path.relpath(filename, app.config['GRAIN_DATABASE'])
+        #print filename
+        filename = os.path.relpath(filename, app.root_path)
         if (name in vasp_files) or (extension in valid_extensions):
-          tree['children'].append(dict(name=name, fullpath=url_for('serve_struct', filename='apathtoafile', textpath=filename)))
+          tree['children'].append(dict(name=name, fullpath = url_for('serve_struct', filename='apathtoafile', textpath=filename)))
   return tree
 
 def extract_json(path, json_files):
@@ -227,9 +226,13 @@ def serve_struct(filename, textpath=None):
   """
 
   if textpath.endswith('xyz'):
-    run_ovito(os.path.join(app.config['GRAIN_DATABASE'], textpath))
-    flash('running ovito')
-    return redirect(request.referrer)
+    if app.config["RUN_OVITO"]:
+      run_ovito(os.path.join(app.config['GRAIN_DATABASE'], textpath))
+      flash('running ovito')
+      return redirect(request.referrer)
+    else:
+      return send_file(textpath)
+
   elif textpath.endswith('json'):
     with open(os.path.join(app.config['GRAIN_DATABASE'], textpath),'r') as f:
       json_dict = json.load(f)
