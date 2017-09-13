@@ -7,13 +7,13 @@ from ase.calculators.vasp import Vasp
 set_fortran_indexing(False)
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-i', '--input_file', help="Structure file of system with defect. (xyz)", required=True)
+parser.add_argument('-i', '--input_file', help="Structure file of system (xyz)", required=True)
 args = parser.parse_args()
 
 ats = Atoms(args.input_file)
 vasp_args=dict(xc='PBE', amix=0.01, amin=0.001, bmix=0.001, amix_mag=0.01, bmix_mag=0.001, ediff=1.0e-8,
                kpts=[3, 3, 3], kpar=9, lreal='auto', ibrion=-1, nsw=0, nelmdl=-15, ispin=2, prec='Accurate',
-               nelm=100, algo='VeryFast', npar=24, lplane=False, lwave=False, lcharg=False, istart=0,
+               nelm=100, algo='VeryFast', npar=4, lplane=False, lwave=False, lcharg=False, istart=0,
                voskown=0, ismear=1, sigma=0.1, isym=2) # possibly try iwavpr=12, should be faster if it works
 
 vasp = Vasp(**vasp_args)

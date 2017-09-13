@@ -1,0 +1,234 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>imeall.calc_chemoelastic &#8212; Imeall 0.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for imeall.calc_chemoelastic</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">ase.units</span> <span class="k">as</span> <span class="nn">units</span>
+
+
+<span class="kn">from</span> <span class="nn">imeall</span> <span class="k">import</span> <span class="n">app</span>
+<span class="kn">from</span> <span class="nn">imeall.models</span> <span class="k">import</span> <span class="n">PotentialParameters</span>
+<span class="kn">from</span> <span class="nn">quippy</span> <span class="k">import</span> <span class="n">Atoms</span><span class="p">,</span> <span class="n">Potential</span><span class="p">,</span> <span class="n">AtomsReader</span><span class="p">,</span> <span class="n">set_fortran_indexing</span>
+
+<span class="n">set_fortran_indexing</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+<div class="viewcode-block" id="strain_energy"><a class="viewcode-back" href="../../calculators.html#imeall.calc_chemoelastic.strain_energy">[docs]</a><span class="k">def</span> <span class="nf">strain_energy</span><span class="p">(</span><span class="n">ats</span><span class="p">,</span> <span class="n">cursor_step</span><span class="o">=</span><span class="mf">0.2</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Create an array tracking the accumulation of energy above the bulk energy along the z-axis.</span>
+<span class="sd">  For interfacial structures this has pronounced speakes in the region of the interface.</span>
+
+<span class="sd">  Args: </span>
+<span class="sd">    ats(:py:class:`Atoms`) object with a potential calculator attached.</span>
+<span class="sd">    cursor_step(float): step distance along z to add atomic energies to the cumulative energy.</span>
+
+<span class="sd">  Returns: </span>
+<span class="sd">    list: Cumulative energy distribution along the z-axis.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="n">cell</span> <span class="o">=</span> <span class="n">ats</span><span class="o">.</span><span class="n">get_cell</span><span class="p">()</span>
+  <span class="n">A</span> <span class="o">=</span> <span class="n">cell</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">cell</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+  <span class="n">z_height</span> <span class="o">=</span> <span class="n">cell</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span>
+  <span class="n">ener_z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">ats</span><span class="o">.</span><span class="n">get_potential_energies</span><span class="p">(),</span> <span class="p">[</span><span class="n">at</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="k">for</span> <span class="n">at</span> <span class="ow">in</span> <span class="n">ats</span><span class="p">])))</span>
+  <span class="n">ener_z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">ener_z</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+  <span class="n">cursor</span> <span class="o">=</span> <span class="n">cursor_step</span>
+  <span class="n">elastic_energy</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="k">while</span> <span class="n">cursor</span> <span class="o">&lt;</span> <span class="p">(</span><span class="n">z_height</span> <span class="o">+</span> <span class="n">cursor_step</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+      <span class="n">cum_energy</span> <span class="o">=</span> <span class="mf">16.02</span><span class="o">*</span><span class="nb">sum</span><span class="p">([</span><span class="n">x</span><span class="o">+</span><span class="mf">4.01298214176</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">&lt;=</span> <span class="n">cursor</span><span class="p">,</span> <span class="n">ener_z</span><span class="p">))[:,</span><span class="mi">0</span><span class="p">]])</span><span class="o">/</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+      <span class="n">cursor</span> <span class="o">+=</span> <span class="n">cursor_step</span> <span class="c1">#initial step doesn&#39;t capture atoms</span>
+      <span class="k">continue</span> 
+    <span class="n">elastic_energy</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">cursor</span><span class="p">,</span> <span class="n">cum_energy</span><span class="p">))</span>
+    <span class="n">cursor</span> <span class="o">+=</span> <span class="n">cursor_step</span>
+  <span class="k">return</span> <span class="n">elastic_energy</span></div>
+
+<div class="viewcode-block" id="calc_chemomechanical"><a class="viewcode-back" href="../../calculators.html#imeall.calc_chemoelastic.calc_chemomechanical">[docs]</a><span class="k">def</span> <span class="nf">calc_chemomechanical</span><span class="p">(</span><span class="n">ats</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Calculate elastic and chemical contributions to the total energy.</span>
+<span class="sd">  Requires :py:class:`Atoms` object with a :py:class:`Potential` capable of returning a per atom energy.</span>
+<span class="sd">  :py:class:`Atoms` object must have at least structure_type and </span>
+<span class="sd">  local_energy properties. For a bcc lattice structure_type=3. </span>
+
+<span class="sd">  Args: </span>
+<span class="sd">    ats(:py:class:`Atoms`):  </span>
+
+<span class="sd">  Returns: </span>
+<span class="sd">    list:[(chemical_energy/total_energy)*gb_energy, (elastic_energy/total_energy)*gb_energy, gb_energy]</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+<span class="c1">#case quip types to numpy arrays stack and transpose</span>
+  <span class="n">loc_en</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">ats</span><span class="o">.</span><span class="n">properties</span><span class="p">[</span><span class="s1">&#39;local_energy&#39;</span><span class="p">])</span>
+  <span class="n">struct_type</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">ats</span><span class="o">.</span><span class="n">properties</span><span class="p">[</span><span class="s1">&#39;structure_type&#39;</span><span class="p">])</span>
+  <span class="n">joined</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">loc_en</span><span class="p">,</span> <span class="n">struct_type</span><span class="p">))</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span>
+  <span class="n">cell</span> <span class="o">=</span> <span class="n">ats</span><span class="o">.</span><span class="n">get_cell</span><span class="p">()</span>
+  <span class="n">A</span> <span class="o">=</span> <span class="n">cell</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">cell</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+<span class="c1">#compute relative total energy contributions of the two types</span>
+  <span class="n">gs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">joined</span><span class="p">))</span>
+<span class="c1">#zero energies</span>
+  <span class="n">gs</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">4.01298</span>
+  <span class="n">joined</span> <span class="o">=</span> <span class="n">joined</span><span class="o">-</span><span class="n">gs</span>
+<span class="c1">#select bcc and non_bcc</span>
+  <span class="n">non_bcc</span> <span class="o">=</span> <span class="n">joined</span><span class="p">[</span><span class="n">joined</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span><span class="o">==</span><span class="mi">3</span><span class="p">]</span>
+  <span class="n">bcc</span> <span class="o">=</span> <span class="n">joined</span><span class="p">[</span><span class="n">joined</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">]</span>
+  <span class="n">chemical_energy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">non_bcc</span><span class="p">[:,</span><span class="mi">0</span><span class="p">])</span>
+  <span class="n">elastic_energy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">bcc</span><span class="p">[:,</span><span class="mi">0</span><span class="p">])</span>
+  <span class="n">total_energy</span> <span class="o">=</span> <span class="n">chemical_energy</span> <span class="o">+</span> <span class="n">elastic_energy</span>
+  <span class="n">gb_energy</span> <span class="o">=</span> <span class="mf">16.02</span><span class="o">*</span><span class="p">(</span><span class="n">total_energy</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="mf">2.</span><span class="o">*</span><span class="n">A</span><span class="p">)</span>
+  <span class="nb">print</span> <span class="s1">&#39;Chemical </span><span class="si">{}</span><span class="s1">%, Elastic </span><span class="si">{}</span><span class="s1">%&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="mi">100</span><span class="o">*</span><span class="n">chemical_energy</span><span class="o">/</span><span class="n">total_energy</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> 
+                                           <span class="nb">round</span><span class="p">(</span><span class="mi">100</span><span class="o">*</span><span class="n">elastic_energy</span><span class="o">/</span><span class="n">total_energy</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+  <span class="k">return</span> <span class="p">[(</span><span class="n">chemical_energy</span><span class="o">/</span><span class="n">total_energy</span><span class="p">)</span><span class="o">*</span><span class="n">gb_energy</span><span class="p">,</span> <span class="p">(</span><span class="n">elastic_energy</span><span class="o">/</span><span class="n">total_energy</span><span class="p">)</span><span class="o">*</span><span class="n">gb_energy</span><span class="p">,</span> <span class="n">gb_energy</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="calc_chemoelast"><a class="viewcode-back" href="../../calculators.html#imeall.calc_chemoelastic.calc_chemoelast">[docs]</a><span class="k">def</span> <span class="nf">calc_chemoelast</span><span class="p">(</span><span class="n">input_file</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Adds the structure type using an ovitos script to the :py:class:`Atoms` object</span>
+<span class="sd">  and calculates the breakdown of the energy contributions.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    input_file(str):Relaxed grain boundary structure file.</span>
+
+<span class="sd">  Returns: </span>
+<span class="sd">    list(float):[(chemical_energy/total_energy)*gb_energy, (elastic_energy/total_energy)*gb_energy, gb_energy]</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="n">potparam</span> <span class="o">=</span> <span class="n">PotentialParameters</span><span class="p">()</span>
+  <span class="n">ener_bulk_dict</span> <span class="o">=</span> <span class="n">potparam</span><span class="o">.</span><span class="n">gs_ener_per_atom</span><span class="p">()</span>
+  <span class="n">r_scale_dict</span> <span class="o">=</span> <span class="n">potparam</span><span class="o">.</span><span class="n">eam_rscale</span><span class="p">()</span>
+  <span class="n">r_scale</span> <span class="o">=</span> <span class="n">r_scale_dict</span><span class="p">[</span><span class="s1">&#39;PotBH.xml&#39;</span><span class="p">]</span>
+  <span class="n">E_bulk</span> <span class="o">=</span> <span class="n">ener_bulk_dict</span><span class="p">[</span><span class="s1">&#39;PotBH.xml&#39;</span><span class="p">]</span>
+  <span class="k">try</span><span class="p">:</span>
+    <span class="n">POT_DIR</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span> <span class="p">[</span><span class="s1">&#39;POTDIR&#39;</span><span class="p">]</span>
+  <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="s2">&quot;PLEASE SET export POTDIR=&#39;path/to/potfiles/&#39;&quot;</span><span class="p">)</span>
+  <span class="n">eam_pot</span> <span class="o">=</span> <span class="s1">&#39;PotBH.xml&#39;</span>
+  <span class="n">eam_pot</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">POT_DIR</span><span class="p">,</span> <span class="n">eam_pot</span><span class="p">)</span>
+  <span class="n">pot</span> <span class="o">=</span> <span class="n">Potential</span><span class="p">(</span><span class="s1">&#39;IP EAM_ErcolAd do_rescale_r=T r_scale=</span><span class="si">{0}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">r_scale</span><span class="p">),</span> <span class="n">param_filename</span><span class="o">=</span><span class="n">eam_pot</span><span class="p">)</span>
+  <span class="n">ats</span> <span class="o">=</span> <span class="n">AtomsReader</span><span class="p">(</span><span class="n">input_file</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+  <span class="n">ats</span><span class="o">.</span><span class="n">set_calculator</span><span class="p">(</span><span class="n">pot</span><span class="p">)</span>
+  <span class="n">gb_energy</span> <span class="o">=</span> <span class="n">potparam</span><span class="o">.</span><span class="n">calc_e_gb</span><span class="p">(</span><span class="n">ats</span><span class="p">,</span> <span class="n">E_bulk</span><span class="p">)</span>
+  <span class="nb">print</span> <span class="n">gb_energy</span><span class="p">,</span> <span class="s1">&#39;J/^2m&#39;</span>
+  <span class="n">ats</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;full.xyz&#39;</span><span class="p">)</span>
+  <span class="n">elastic_energy</span> <span class="o">=</span> <span class="n">strain_energy</span><span class="p">(</span><span class="n">ats</span><span class="p">)</span>
+  <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;elast.dat&#39;</span><span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">elastic_energy</span><span class="p">:</span>
+      <span class="nb">print</span> <span class="o">&gt;&gt;</span> <span class="n">f</span><span class="p">,</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="c1">#generates output.xyz</span>
+  <span class="n">imeall_root</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">root_path</span><span class="p">,</span> <span class="s1">&#39;ovito_scripts/attach_cna.py&#39;</span><span class="p">)</span>
+  <span class="n">args_str</span> <span class="o">=</span>  <span class="s1">&#39;ovitos </span><span class="si">{imeall_root}</span><span class="s1"> -i </span><span class="si">{input_file}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">imeall_root</span><span class="o">=</span><span class="n">app</span><span class="o">.</span><span class="n">root_path</span><span class="p">,</span> <span class="n">input_file</span><span class="o">=</span><span class="s1">&#39;full.xyz&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+  <span class="n">job</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span><span class="n">args_str</span><span class="p">)</span>
+  <span class="n">job</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+  <span class="n">ats</span> <span class="o">=</span> <span class="n">Atoms</span><span class="p">(</span><span class="s1">&#39;output.xyz&#39;</span><span class="p">)</span>
+<span class="c1">#print the three contributions</span>
+  <span class="n">x</span> <span class="o">=</span> <span class="n">calc_chemomechanical</span><span class="p">(</span><span class="n">ats</span><span class="p">)</span>
+  <span class="k">try</span><span class="p">:</span>
+    <span class="k">assert</span> <span class="nb">round</span><span class="p">(</span><span class="n">gb_energy</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span> <span class="o">==</span> <span class="nb">round</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span><span class="mi">2</span><span class="p">)</span>
+  <span class="k">except</span> <span class="ne">AssertionError</span><span class="p">:</span>
+    <span class="nb">print</span> <span class="s2">&quot;WARNING ENERGIES DON&#39;T MATCH&quot;</span><span class="p">,</span> <span class="n">gb_energy</span><span class="p">,</span> <span class="n">x</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+  <span class="k">return</span> <span class="n">x</span></div>
+
+<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+  <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
+  <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--input_file&#39;</span><span class="p">,</span> <span class="s1">&#39;-i&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Input grain boundary struct file to produce cumulative energy&#39;</span><span class="p">)</span>
+  <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+  <span class="n">add_structure_type</span><span class="p">(</span><span class="n">input_file</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">input_file</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Imeall</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../intro.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../imeall.html">Imeall Package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../models.html">Models and Queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../views.html">Views</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../slabmaker.html">Slabmaker</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../generators.html">Generators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../interstitials.html">Interstitials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../calculators.html">Calculators</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Henry Lambert, Adam Fekete, James Kermode, Alessandro De Vita.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

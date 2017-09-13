@@ -1,0 +1,861 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>imeall.models &#8212; Imeall 0.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for imeall.models</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">import</span> <span class="nn">glob</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">slabmaker.slabmaker</span> <span class="k">as</span> <span class="nn">slabmaker</span>
+
+<span class="kn">from</span>  <span class="nn">quippy</span> <span class="k">import</span> <span class="n">Atoms</span>
+<span class="kn">from</span>  <span class="nn">scipy.spatial</span> <span class="k">import</span> <span class="n">Voronoi</span><span class="p">,</span> <span class="n">voronoi_plot_2d</span>
+
+<span class="k">try</span><span class="p">:</span>
+  <span class="kn">from</span>  <span class="nn">imeall</span> <span class="k">import</span> <span class="n">app</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+  <span class="nb">print</span> <span class="s1">&#39;No app&#39;</span>
+
+<span class="k">try</span><span class="p">:</span>
+  <span class="kn">from</span> <span class="nn">flask</span>  <span class="k">import</span> <span class="n">Flask</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">session</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">redirect</span>
+  <span class="kn">from</span> <span class="nn">flask</span>  <span class="k">import</span> <span class="n">url_for</span><span class="p">,</span> <span class="n">abort</span><span class="p">,</span> <span class="n">render_template</span><span class="p">,</span> <span class="n">flash</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+  <span class="nb">print</span> <span class="s1">&#39;No Flask Module Available&#39;</span>
+
+<span class="c1"># Currently Our models are stored by hand</span>
+<span class="c1"># and then we handle the interactions with </span>
+<span class="c1"># directory structure manually. Which should allow us to serve</span>
+<span class="c1"># files.</span>
+
+<span class="k">class</span> <span class="nc">PotentialParameters</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Contains parameter dictionaries for basic properties associated with</span>
+<span class="sd">  interatomic potentials in the database.</span>
+
+<span class="sd">  The ground state energy per atom for bulk iron</span>
+<span class="sd">  for the different inter-atomic potentials used in the Imeall Database. </span>
+<span class="sd">  It also contains the values required to rescale the relaxed lattice parameters </span>
+<span class="sd">  for bulk iron predicted by the inter-atomic potentials </span>
+<span class="sd">  to the target DFT value.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;Potential Parameters&#39;</span>
+
+  <span class="k">def</span> <span class="nf">gs_ener_per_atom</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> 
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns:</span>
+<span class="sd">      eperat(dict): {&#39;parameter file&#39;: energy per atom (eV)}</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">eperat</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;Fe_Mendelev.xml&#39;</span> <span class="p">:</span> <span class="o">-</span><span class="mf">4.12243503431</span><span class="p">,</span>
+              <span class="s1">&#39;PotBH.xml&#39;</span>       <span class="p">:</span> <span class="o">-</span><span class="mf">4.01298214176</span><span class="p">,</span>
+              <span class="s1">&#39;iron_mish.xml&#39;</span>   <span class="p">:</span> <span class="o">-</span><span class="mf">4.28000356875</span><span class="p">,</span>
+              <span class="s1">&#39;Fe_Ackland.xml&#39;</span>  <span class="p">:</span> <span class="o">-</span><span class="mf">4.01298226805</span><span class="p">,</span>
+              <span class="s1">&#39;Fe_Dudarev.xml&#39;</span>  <span class="p">:</span> <span class="o">-</span><span class="mf">4.31608690638</span><span class="p">,</span>
+              <span class="s1">&#39;dft_vasp_pbe&#39;</span>    <span class="p">:</span> <span class="o">-</span><span class="mf">8.238035</span><span class="p">,</span>
+              <span class="s1">&#39;gp33b.xml&#39;</span>       <span class="p">:</span> <span class="o">-</span><span class="mf">3460.93341688</span>
+             <span class="p">}</span>
+    <span class="k">return</span> <span class="n">eperat</span>
+
+  <span class="k">def</span> <span class="nf">eam_rscale</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> 
+    <span class="sd">&quot;&quot;&quot;Dictionary of rescaling parameters of EAM to approximate pbe DFT value of 2.83.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">      rscale:{parameter file: rscale parameter} </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">rscale</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;Fe_Mendelev.xml&#39;</span> <span class="p">:</span> <span class="mf">1.00894848312</span><span class="p">,</span>
+              <span class="s1">&#39;PotBH.xml&#39;</span>       <span class="p">:</span> <span class="mf">1.00894848312</span><span class="p">,</span>
+              <span class="s1">&#39;iron_mish.xml&#39;</span>   <span class="p">:</span> <span class="mf">1.0129007626</span><span class="p">,</span>
+              <span class="s1">&#39;Fe_Ackland.xml&#39;</span>  <span class="p">:</span> <span class="mf">1.00894185389</span><span class="p">,</span>
+              <span class="s1">&#39;Fe_Dudarev.xml&#39;</span>  <span class="p">:</span> <span class="mf">1.01279093417</span><span class="p">,</span>
+              <span class="s1">&#39;dft_vasp_pbe&#39;</span>    <span class="p">:</span> <span class="mf">1.00000000000</span><span class="p">,</span>
+              <span class="s1">&#39;gp33b.xml&#39;</span>       <span class="p">:</span> <span class="mf">1.0015226318</span>
+              <span class="p">}</span>
+    <span class="k">return</span> <span class="n">rscale</span>
+
+  <span class="k">def</span> <span class="nf">paramfile_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Dictionary Mapping directory names to quip xml files.</span>
+
+<span class="sd">    Returns: </span>
+<span class="sd">      dict: {potential_directory:potential_file}</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">paramfile</span>      <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;DFT&#39;</span><span class="p">:</span><span class="s1">&#39;dft_vasp_pbe&#39;</span><span class="p">,</span>
+                      <span class="s1">&#39;PotBH&#39;</span><span class="p">:</span><span class="s1">&#39;PotBH.xml&#39;</span><span class="p">,</span>
+                      <span class="s1">&#39;EAM_Ack&#39;</span><span class="p">:</span><span class="s1">&#39;Fe_Ackland.xml&#39;</span><span class="p">,</span>
+                      <span class="s1">&#39;EAM_Men&#39;</span><span class="p">:</span><span class="s1">&#39;Fe_Mendelev.xml&#39;</span><span class="p">,</span>
+                      <span class="s1">&#39;EAM_Mish&#39;</span><span class="p">:</span><span class="s1">&#39;iron_mish.xml&#39;</span><span class="p">,</span>
+                      <span class="s1">&#39;EAM_Dud&#39;</span><span class="p">:</span><span class="s1">&#39;Fe_Dudarev.xml&#39;</span><span class="p">,</span>
+                      <span class="s1">&#39;GAP&#39;</span><span class="p">:</span><span class="s1">&#39;gp33b.xml&#39;</span><span class="p">}</span>
+    <span class="k">return</span> <span class="n">paramfile</span>
+
+  <span class="k">def</span> <span class="nf">potdir_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Invert keys from :py:func:`paramfile_dict` to give potential file to</span>
+<span class="sd">    directory mapping.</span>
+
+<span class="sd">    Returns: </span>
+<span class="sd">      dict: {potential_file:potential_directory}</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">paramfile_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">paramfile_dict</span><span class="p">()</span>
+    <span class="n">potdir</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="n">paramfile_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+      <span class="n">potdir</span><span class="p">[</span><span class="n">v</span><span class="p">]</span> <span class="o">=</span> <span class="n">k</span>
+    <span class="k">return</span> <span class="n">potdir</span>
+
+  <span class="k">def</span> <span class="nf">calc_e_gb</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">at</span><span class="p">,</span> <span class="n">E_bulk</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Calculate grain boundary energy relative to bulk value.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">      float: E_gb grain boundary energy J/m^{2}</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">cell</span> <span class="o">=</span> <span class="n">at</span><span class="o">.</span><span class="n">get_cell</span><span class="p">()</span>
+    <span class="n">A</span>    <span class="o">=</span> <span class="n">cell</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">cell</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">E_gb</span> <span class="o">=</span> <span class="p">(</span><span class="n">at</span><span class="o">.</span><span class="n">get_potential_energy</span><span class="p">()</span><span class="o">-</span><span class="p">(</span><span class="n">at</span><span class="o">.</span><span class="n">n</span><span class="o">*</span><span class="p">(</span><span class="n">E_bulk</span><span class="p">)))</span><span class="o">/</span><span class="p">(</span><span class="mf">2.</span><span class="o">*</span><span class="n">A</span><span class="p">)</span>
+    <span class="n">at</span><span class="o">.</span><span class="n">get_potential_energies</span><span class="p">()</span>
+    <span class="n">E_gb</span> <span class="o">=</span> <span class="mf">16.02</span><span class="o">*</span><span class="p">(</span><span class="n">at</span><span class="o">.</span><span class="n">get_potential_energy</span><span class="p">()</span><span class="o">-</span><span class="p">(</span><span class="n">at</span><span class="o">.</span><span class="n">n</span><span class="o">*</span><span class="p">(</span><span class="n">E_bulk</span><span class="p">)))</span><span class="o">/</span><span class="p">(</span><span class="mf">2.</span><span class="o">*</span><span class="n">A</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">E_gb</span>
+
+<div class="viewcode-block" id="GBQuery"><a class="viewcode-back" href="../../models.html#imeall.models.GBQuery">[docs]</a><span class="k">class</span> <span class="nc">GBQuery</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">  Routines for grabbing desired .xyz files and paths.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="fm">__repr__</span><span class="o">==</span><span class="s2">&quot;FetchStructure&quot;</span>
+
+<div class="viewcode-block" id="GBQuery.copy_gb_dirtree"><a class="viewcode-back" href="../../models.html#imeall.models.GBQuery.copy_gb_dirtree">[docs]</a>  <span class="k">def</span> <span class="nf">copy_gb_dirtree</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">material</span><span class="o">=</span><span class="s2">&quot;alphaFe&quot;</span><span class="p">,</span> <span class="n">or_axis</span><span class="o">=</span><span class="s2">&quot;0,0,1&quot;</span><span class="p">,</span> <span class="n">pots</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;PotBH.xml&#39;</span><span class="p">],</span> 
+                      <span class="n">target_dir</span><span class="o">=</span><span class="s1">&#39;./&#39;</span><span class="p">,</span> <span class="n">gb_type</span><span class="o">=</span><span class="s1">&#39;tilt&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Pull all minimum energy structures, using :py:func:`pull_minen_structs`,</span>
+<span class="sd">    from database for an orientation axis and copy them to target_dir. Useful for checking out</span>
+<span class="sd">    structures into a unique directory for specialized analysis.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      material(str): material name</span>
+<span class="sd">      or_axis(str): csv serialized vector of orientation axis</span>
+<span class="sd">      pots: list of potential parameter files.</span>
+<span class="sd">      target_dir: Location to copy files to  (Default: &#39;./&#39;).</span>
+<span class="sd">      gb_type(str): Options &#39;tilt&#39; or &#39;twist&#39;.</span>
+
+<span class="sd">    Todo:</span>
+<span class="sd">      * Add kwargs to pull_minen_structs to provide additional selection criteria.</span>
+<span class="sd">      </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">grain_dicts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pull_minen_structs</span><span class="p">(</span><span class="n">material</span><span class="o">=</span><span class="n">material</span><span class="p">,</span> <span class="n">or_axis</span><span class="o">=</span><span class="n">or_axis</span><span class="p">,</span> <span class="n">pots</span><span class="o">=</span><span class="n">pots</span><span class="p">,</span> <span class="n">gb_type</span><span class="o">=</span><span class="n">gb_type</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">gd</span> <span class="ow">in</span> <span class="n">grain_dicts</span><span class="p">:</span>
+      <span class="n">gbid</span> <span class="o">=</span> <span class="n">gd</span><span class="p">[</span><span class="s1">&#39;gbid&#39;</span><span class="p">]</span>
+      <span class="n">new_dir_name</span> <span class="o">=</span> <span class="n">gbid</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+      <span class="n">new_dir_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">target_dir</span><span class="p">,</span> <span class="n">new_dir_name</span><span class="p">)</span>
+      <span class="k">try</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">new_dir_name</span><span class="p">)</span>
+      <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+        <span class="nb">print</span> <span class="s1">&#39;Directory already exists.&#39;</span>
+      <span class="n">struct_name</span> <span class="o">=</span> <span class="n">gbid</span><span class="o">+</span><span class="s1">&#39;_traj.xyz&#39;</span>
+      <span class="n">dir_path</span> <span class="o">=</span> <span class="n">gd</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">]</span>
+    <span class="c1">#grab the gb.json file path.</span>
+      <span class="n">gb_path</span> <span class="o">=</span> <span class="n">gd</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">]</span>
+      <span class="n">gb_path</span> <span class="o">=</span> <span class="s1">&#39;/&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">gb_path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">:</span><span class="mi">3</span><span class="p">])</span><span class="o">+</span><span class="s1">&#39;/gb.json&#39;</span>
+      <span class="nb">print</span> <span class="n">gb_path</span>
+      <span class="n">gb_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;GRAIN_DATABASE&#39;</span><span class="p">],</span> <span class="n">gb_path</span><span class="p">)</span>
+    <span class="c1">#grab the struct file and the subgb.json path.</span>
+      <span class="n">dir_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;GRAIN_DATABASE&#39;</span><span class="p">],</span> <span class="n">dir_path</span><span class="p">)</span>
+      <span class="n">struct_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dir_path</span><span class="p">,</span> <span class="n">struct_name</span><span class="p">)</span>
+      <span class="n">subgb_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dir_path</span><span class="p">,</span> <span class="s1">&#39;subgb.json&#39;</span><span class="p">)</span>
+      <span class="n">shutil</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">struct_path</span><span class="p">,</span> <span class="n">new_dir_name</span><span class="p">)</span>
+      <span class="n">shutil</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">subgb_path</span><span class="p">,</span> <span class="n">new_dir_name</span><span class="p">)</span>
+      <span class="n">shutil</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">gb_path</span><span class="p">,</span> <span class="n">new_dir_name</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="GBQuery.pull_minen_structs"><a class="viewcode-back" href="../../models.html#imeall.models.GBQuery.pull_minen_structs">[docs]</a>  <span class="k">def</span> <span class="nf">pull_minen_structs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">material</span><span class="o">=</span><span class="s2">&quot;alphaFe&quot;</span><span class="p">,</span> <span class="n">or_axis</span><span class="o">=</span><span class="s2">&quot;1,1,1&quot;</span><span class="p">,</span> <span class="n">pots</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;PotBH.xml&#39;</span><span class="p">],</span> <span class="n">gb_type</span><span class="o">=</span><span class="s1">&#39;tilt&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Grab the minimum energy structure json dictionaries</span>
+<span class="sd">    for a given material, orientation_axis, and potential(s) parameter filenames.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      material(str,optional): Material to investigate.</span>
+<span class="sd">      or_axis(str,optional): Orientation axis &quot;1,1,1&quot;.</span>
+<span class="sd">      pots(list): list of potentials parameter files.</span>
+<span class="sd">      gb_type(str): Options &#39;tilt&#39; or &#39;twist&#39;.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">      list[:py:class:`SubGrainBoundary`]: List of :py:class:`SubGrainBoundary` :py:class:`Model` </span>
+<span class="sd">      represented as dictionaries.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="kn">from</span> <span class="nn">gb_models</span> <span class="k">import</span> <span class="n">database</span><span class="p">,</span> <span class="n">GrainBoundary</span><span class="p">,</span> <span class="n">SubGrainBoundary</span>
+    <span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">OrderedDict</span>
+
+    <span class="n">database</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+    <span class="n">pot_param</span>     <span class="o">=</span> <span class="n">PotentialParameters</span><span class="p">()</span>
+    <span class="n">ener_per_atom</span> <span class="o">=</span> <span class="n">pot_param</span><span class="o">.</span><span class="n">gs_ener_per_atom</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">gb_type</span><span class="o">==</span><span class="s1">&#39;tilt&#39;</span><span class="p">:</span>
+      <span class="n">gbs</span> <span class="o">=</span> <span class="p">(</span><span class="n">GrainBoundary</span><span class="o">.</span><span class="n">select</span><span class="p">()</span>
+                        <span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">GrainBoundary</span><span class="o">.</span><span class="n">orientation_axis</span> <span class="o">==</span> <span class="n">or_axis</span><span class="p">)</span>
+                        <span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">GrainBoundary</span><span class="o">.</span><span class="n">boundary_plane</span> <span class="o">!=</span> <span class="n">or_axis</span><span class="p">))</span>
+    <span class="k">elif</span> <span class="n">gb_type</span><span class="o">==</span><span class="s1">&#39;twist&#39;</span><span class="p">:</span>
+      <span class="n">gbs</span> <span class="o">=</span> <span class="p">(</span><span class="n">GrainBoundary</span><span class="o">.</span><span class="n">select</span><span class="p">()</span>
+                        <span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">GrainBoundary</span><span class="o">.</span><span class="n">orientation_axis</span> <span class="o">==</span> <span class="n">or_axis</span><span class="p">)</span>
+                        <span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">GrainBoundary</span><span class="o">.</span><span class="n">boundary_plane</span> <span class="o">==</span> <span class="n">or_axis</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="s2">&quot;Unsupported gb_type. Options:&#39;tilt&#39; or &#39;twist&#39;&quot;</span><span class="p">)</span>
+
+    <span class="n">dict_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">gb</span> <span class="ow">in</span> <span class="n">gbs</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">GrainBoundary</span><span class="o">.</span><span class="n">angle</span><span class="p">):</span>
+      <span class="n">pot_dict</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">({})</span>
+      <span class="k">for</span> <span class="n">potential</span> <span class="ow">in</span> <span class="n">pots</span><span class="p">:</span>
+        <span class="n">subgbs</span> <span class="o">=</span> <span class="p">(</span><span class="n">gb</span><span class="o">.</span><span class="n">subgrains</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">GrainBoundary</span><span class="p">,</span> <span class="n">SubGrainBoundary</span><span class="p">)</span>
+                      <span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">SubGrainBoundary</span><span class="o">.</span><span class="n">potential</span><span class="o">==</span><span class="n">potential</span><span class="p">)</span>
+                      <span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">GrainBoundary</span><span class="p">)</span>
+                      <span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">SubGrainBoundary</span><span class="o">.</span><span class="n">E_gb</span><span class="p">)</span>
+                      <span class="o">.</span><span class="n">dicts</span><span class="p">())</span>
+        <span class="n">subgbs</span> <span class="o">=</span> <span class="p">[(</span><span class="mf">16.02</span><span class="o">*</span><span class="p">(</span><span class="n">subgb</span><span class="p">[</span><span class="s1">&#39;E_gb&#39;</span><span class="p">]</span><span class="o">-</span><span class="nb">float</span><span class="p">(</span><span class="n">subgb</span><span class="p">[</span><span class="s1">&#39;n_at&#39;</span><span class="p">]</span><span class="o">*</span><span class="n">ener_per_atom</span><span class="p">[</span><span class="n">potential</span><span class="p">]))</span><span class="o">/</span>
+                  <span class="p">(</span><span class="mf">2.0</span><span class="o">*</span><span class="n">subgb</span><span class="p">[</span><span class="s1">&#39;area&#39;</span><span class="p">]),</span> <span class="n">subgb</span><span class="p">)</span> <span class="k">for</span> <span class="n">subgb</span> <span class="ow">in</span> <span class="n">subgbs</span><span class="p">]</span>
+        <span class="n">subgbs</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">try</span><span class="p">:</span>
+          <span class="k">if</span> <span class="n">subgbs</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;converged&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">pot_dict</span><span class="p">[</span><span class="n">potential</span><span class="p">]</span> <span class="o">=</span> <span class="n">subgbs</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">dict_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">subgbs</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+          <span class="nb">print</span> <span class="s1">&#39;No subgbs for: &#39;</span><span class="p">,</span> <span class="n">gb</span><span class="o">.</span><span class="n">gbid</span><span class="p">,</span> <span class="n">potential</span>
+      <span class="nb">print</span> <span class="s1">&#39;</span><span class="si">{:.3f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="mf">180.0</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">*</span><span class="n">gb</span><span class="o">.</span><span class="n">angle</span><span class="p">),</span> <span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39;</span><span class="si">{:.3f}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">pot_dict</span><span class="o">.</span><span class="n">values</span><span class="p">()])</span>
+    <span class="n">database</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">dict_list</span></div></div>
+
+<span class="k">class</span> <span class="nc">Job</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Collection of routines for generating and submitting pbs submission scripts.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">pbs_file</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">job_dir</span>  <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">job_id</span>   <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+
+  <span class="k">def</span> <span class="nf">sub_pbs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">job_dir</span><span class="p">,</span> <span class="n">exclude</span><span class="o">=</span><span class="s1">&#39;DFT&#39;</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s1">&#39;v6bxv2z&#39;</span><span class="p">,</span> <span class="n">regex</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Given an explicit suffix, or a regex this routine recurses through</span>
+<span class="sd">    the directory structure and change directory to location of pbs file and</span>
+<span class="sd">    submits pbs files that match the suffix or regex pattern. </span>
+<span class="sd">    Exclude avoids certain directories.</span>
+
+<span class="sd">    Useful submission patterns include:</span>
+<span class="sd">    REGEX:</span>
+<span class="sd">    Submit all pbs files with a rigid body translation </span>
+<span class="sd">    and any atom deletion criterion hydrogen concentration etc.: tv[.0-9]+bxv[.0-9]+_.*?</span>
+
+<span class="sd">    Submit all sub-pbs files with a rigid body translation</span>
+<span class="sd">    and different atom _deletion criterion: tv[.0-9]+bxv[.0-9]+_d[.0-9]+</span>
+
+<span class="sd">    All translations with a specific deletion criterion in this case 2.3 A: tv[.0-9]+bxv[.0-9]+_d2.3 etc.</span>
+<span class="sd">    SUFFIX:</span>
+<span class="sd">    submit all super cells: v6bxv2z</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      job_dir(str): root directory to walk downwards from.</span>
+<span class="sd">      exclude(str): directory names to exclude.</span>
+<span class="sd">      suffix(str): pattern that job file must contain to be submitted.</span>
+<span class="sd">      regex(str): regex pattern.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">lst</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">job_dir</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">target_dir</span> <span class="ow">in</span> <span class="n">lst</span><span class="p">:</span>
+      <span class="n">target_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">job_dir</span><span class="p">,</span> <span class="n">target_dir</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">regex</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">target_dir</span><span class="p">)</span> <span class="ow">and</span> <span class="n">target_dir</span> <span class="o">!=</span> <span class="s1">&#39;DFT&#39;</span><span class="p">:</span>
+          <span class="bp">self</span><span class="o">.</span><span class="n">sub_pbs</span><span class="p">(</span><span class="nb">dir</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="n">suffix</span><span class="p">,</span> <span class="n">regex</span><span class="o">=</span><span class="n">regex</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">target_dir</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">suffix</span><span class="p">:</span>
+          <span class="n">pbs_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sub_dir</span><span class="p">,</span> <span class="n">target_dir</span><span class="p">)</span>
+          <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="s2">&quot;cd </span><span class="si">{0}</span><span class="s2">; qsub fe</span><span class="si">{1}</span><span class="s2">.pbs&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pbs_dir</span><span class="p">,</span> <span class="n">job_dir</span><span class="o">+</span><span class="s1">&#39;_&#39;</span><span class="o">+</span><span class="n">suffix</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+          <span class="k">pass</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">target_dir</span><span class="p">)</span> <span class="ow">and</span> <span class="n">target_dir</span> <span class="o">!=</span> <span class="s1">&#39;DFT&#39;</span><span class="p">:</span>
+          <span class="bp">self</span><span class="o">.</span><span class="n">sub_pbs</span><span class="p">(</span><span class="n">target_dir</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="n">suffix</span><span class="p">,</span> <span class="n">regex</span><span class="o">=</span><span class="n">regex</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">regex</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">target_dir</span><span class="p">):</span>
+          <span class="k">try</span><span class="p">:</span>
+            <span class="n">target_dir</span>  <span class="o">=</span> <span class="s1">&#39;/&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">target_dir</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">target_dir</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="s2">&quot;cd </span><span class="si">{0}</span><span class="s2">; qsub fe</span><span class="si">{1}</span><span class="s2">.pbs&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">target_dir</span><span class="p">,</span> <span class="n">name</span><span class="p">))</span>
+          <span class="k">except</span><span class="p">:</span>
+            <span class="nb">print</span> <span class="s1">&#39;Job Submit Failed&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+          <span class="k">pass</span>
+
+<div class="viewcode-block" id="GBMaintenance"><a class="viewcode-back" href="../../models.html#imeall.models.GBMaintenance">[docs]</a><span class="k">class</span> <span class="nc">GBMaintenance</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Collection of maintenance routines for the GB database.</span>
+<span class="sd">  Methods include routines to regenerate all the csl lattices in the database,</span>
+<span class="sd">  take a new grain boundary profile picture for multiple directories, </span>
+<span class="sd">  update the gb.json information if a new grain boundary property is desired.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">materials</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;alphaFe&#39;</span><span class="p">]</span>
+
+<div class="viewcode-block" id="GBMaintenance.retake_pic"><a class="viewcode-back" href="../../models.html#imeall.models.GBMaintenance.retake_pic">[docs]</a>  <span class="k">def</span> <span class="nf">retake_pic</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fname</span><span class="p">,</span> <span class="n">translate</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">toggle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">confirm</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;DEPRECATED If using AtomEye take grain boundary profile pic in directory</span>
+<span class="sd">    requires gb directory with gbid.xyz file in it. Set confirm=False </span>
+<span class="sd">    to not prompt for overwrite. In future versions OVITO will be default image generator.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">confirm</span><span class="p">:</span>
+      <span class="n">var</span> <span class="o">=</span> <span class="s1">&#39;n&#39;</span>
+      <span class="n">var</span> <span class="o">=</span> <span class="n">raw_input</span><span class="p">(</span><span class="s1">&#39;Retake photo (y/n)?&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">var</span> <span class="o">=</span> <span class="s1">&#39;y&#39;</span>
+    <span class="k">if</span> <span class="n">var</span> <span class="o">==</span><span class="s1">&#39;y&#39;</span><span class="p">:</span>
+      <span class="n">fname</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">fname</span><span class="p">,</span><span class="n">fname</span><span class="p">)</span>
+      <span class="n">slabmaker</span><span class="o">.</span><span class="n">take_pic</span><span class="p">(</span><span class="n">fname</span><span class="p">,</span> <span class="n">translate</span><span class="o">=</span><span class="n">translate</span><span class="p">,</span> <span class="n">toggle</span><span class="o">=</span><span class="n">toggle</span><span class="p">)</span>
+      <span class="nb">print</span> <span class="s1">&#39;retaking photo&#39;</span>
+    <span class="k">elif</span> <span class="n">var</span> <span class="o">==</span><span class="s1">&#39;n&#39;</span><span class="p">:</span>
+      <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="GBMaintenance.remove_eo_files"><a class="viewcode-back" href="../../models.html#imeall.models.GBMaintenance.remove_eo_files">[docs]</a>  <span class="k">def</span> <span class="nf">remove_eo_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">num_deleted_files</span><span class="p">,</span> <span class="n">dryrun</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Remove files with pattern matching jobname.[eo][0-9]+. </span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">      path(str): root path to start walking downwards from.</span>
+<span class="sd">      num_deleted_files(int): Number of job files deleted.</span>
+<span class="sd">      dryrun(bool): (Default: True).</span>
+<span class="sd">    </span>
+<span class="sd">    Returns: </span>
+<span class="sd">      Number of deleted files.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">eo_regex</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;[eo][0-9]+&#39;</span><span class="p">)</span>
+    <span class="n">lst</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">lst</span><span class="p">:</span>
+      <span class="n">filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">dryrun</span><span class="p">:</span>
+          <span class="n">rec_deleted_files</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">remove_eo_files</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">num_deleted_files</span> <span class="o">+=</span> <span class="n">rec_deleted_files</span>
+      <span class="k">elif</span> <span class="n">eo_regex</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">filename</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
+        <span class="nb">print</span> <span class="n">filename</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="n">num_deleted_files</span> <span class="o">+=</span> <span class="mi">1</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="k">pass</span>
+    <span class="k">return</span> <span class="n">num_deleted_files</span></div>
+
+<div class="viewcode-block" id="GBMaintenance.add_key_to_dict"><a class="viewcode-back" href="../../models.html#imeall.models.GBMaintenance.add_key_to_dict">[docs]</a>  <span class="k">def</span> <span class="nf">add_key_to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dirname</span><span class="p">,</span> <span class="n">new_key</span><span class="p">,</span> <span class="n">new_value</span><span class="p">,</span> <span class="n">dict_type</span><span class="o">=</span><span class="s1">&#39;subgb.json&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Add single key to .json dictionary.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      dirname(str): directory name with json dictionary.</span>
+<span class="sd">      new_key(str): key to add to dictionary.</span>
+<span class="sd">      new_value(generic): value to add to dictionary.</span>
+<span class="sd">      dict_type(str, optional): Type of json dict &#39;subgb.json&#39; or &#39;gb.json&#39;.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">      dict: Updated json dictionary.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirname</span><span class="p">,</span> <span class="n">dict_type</span><span class="p">)</span>
+    <span class="n">new_json</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">json_path</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">json_old</span><span class="p">:</span>
+      <span class="n">old_json</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">json_old</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">old_json</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+      <span class="n">new_json</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">old_json</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+    <span class="n">new_json</span><span class="p">[</span><span class="n">new_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_value</span>
+    <span class="k">return</span> <span class="n">new_json</span></div>
+
+<div class="viewcode-block" id="GBMaintenance.update_json"><a class="viewcode-back" href="../../models.html#imeall.models.GBMaintenance.update_json">[docs]</a>  <span class="k">def</span> <span class="nf">update_json</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">json_path</span><span class="p">,</span> <span class="n">new_keys</span><span class="o">=</span><span class="p">[],</span> <span class="n">new_values</span><span class="o">=</span><span class="p">[],</span> <span class="n">dryrun</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Update or add multiple keys to json dictionaries. </span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      json_path(str): directory name where gb.json file needs to be updated.</span>
+<span class="sd">      new_keys(list): list of new keys.</span>
+<span class="sd">      new_values(list): list of new values</span>
+<span class="sd">      dryrun(bool):If False json file is over written with new keys.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">      dict: Updated json dictionary.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_keys</span><span class="p">)</span><span class="o">==</span><span class="nb">len</span><span class="p">(</span><span class="n">new_values</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">new_keys</span><span class="p">)</span><span class="o">==</span><span class="nb">list</span>
+    <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">new_values</span><span class="p">)</span><span class="o">==</span><span class="nb">list</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">json_path</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">json_old</span><span class="p">:</span>
+      <span class="n">old_json</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">json_old</span><span class="p">)</span>
+    <span class="n">new_json</span> <span class="o">=</span> <span class="n">old_json</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">new_keys</span><span class="p">,</span> <span class="n">new_values</span><span class="p">):</span>
+      <span class="n">new_json</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span> 
+    <span class="k">if</span> <span class="n">dryrun</span><span class="p">:</span>
+      <span class="nb">print</span> <span class="n">new_json</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">json_path</span><span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">json_new_file</span><span class="p">:</span>
+        <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">new_json</span><span class="p">,</span> <span class="n">json_new_file</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">new_json</span></div>
+
+<div class="viewcode-block" id="GBMaintenance.fix_json"><a class="viewcode-back" href="../../models.html#imeall.models.GBMaintenance.fix_json">[docs]</a>  <span class="k">def</span> <span class="nf">fix_json</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;If json file is corrupted and contains two {}{} dictionaries,</span>
+<span class="sd">    this function selects the second of the two dictionaries and overwrites json file.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      path(str): path to corrupted dictionary.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">lst</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">lst</span><span class="p">:</span>
+      <span class="n">new_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">new_path</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fix_json</span><span class="p">(</span><span class="n">new_path</span><span class="p">)</span>
+      <span class="k">elif</span> <span class="n">new_path</span><span class="p">[</span><span class="o">-</span><span class="mi">10</span><span class="p">:]</span> <span class="o">==</span> <span class="s1">&#39;subgb.json&#39;</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span> 
+          <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">new_path</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">j_file</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+          <span class="nb">print</span> <span class="s1">&#39;Value Error&#39;</span><span class="p">,</span> <span class="n">new_path</span>
+          <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">new_path</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">j_file</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+          <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">new_path</span><span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="nb">print</span> <span class="o">&gt;&gt;</span> <span class="n">f</span><span class="p">,</span> <span class="n">j_file</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;}&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="s1">&#39;}&#39;</span>
+        <span class="k">try</span><span class="p">:</span>
+          <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">new_path</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">j_file</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+          <span class="nb">print</span> <span class="s1">&#39;j_file fixed&#39;</span>
+        <span class="k">except</span><span class="p">:</span>
+          <span class="nb">print</span> <span class="n">new_path</span><span class="p">,</span> <span class="s1">&#39;Still Broken&#39;</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="k">pass</span></div></div>
+
+<span class="k">class</span> <span class="nc">GBAnalysis</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Contains methods for pulling structural.</span>
+<span class="sd">  energetic, and meta data from the grain boundary data tree.</span>
+<span class="sd">  Also routines for identifying unconverged structural relaxations.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+  <span class="k">def</span> <span class="nf">find_gb_json</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">j_list</span><span class="p">,</span> <span class="n">filetype</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Populates the list j_list with lists of the form</span>
+<span class="sd">    [/directory_path/, /subgb_file_path].</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      path     : root directory to begin recursive search</span>
+<span class="sd">      j_list   : empty list  to populate</span>
+<span class="sd">      filetype : &#39;subgb.json&#39;, &#39;gb.json&#39;</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">      None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">lst</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">lst</span><span class="p">:</span>
+      <span class="n">filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">find_gb_json</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">j_list</span><span class="p">,</span> <span class="n">filetype</span><span class="p">)</span>
+      <span class="k">elif</span> <span class="n">filename</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">filetype</span><span class="p">:</span>
+        <span class="n">j_list</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">path</span><span class="p">,</span><span class="n">filename</span><span class="p">])</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="k">pass</span>
+
+  <span class="k">def</span> <span class="nf">extract_energies</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">material</span><span class="o">=</span><span class="s1">&#39;alphaFe&#39;</span><span class="p">,</span> <span class="n">or_axis</span><span class="o">=</span><span class="s1">&#39;001&#39;</span><span class="p">,</span> <span class="n">gb_type</span><span class="o">=</span><span class="s1">&#39;tilt&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Pull GB formation energies using recursion from json files.</span>
+<span class="sd">    Go into a grain boundary directory, recurse through directory</span>
+<span class="sd">    to find subgb.json files and gb_energies and pull them out.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      material(str): material directory to pull from.</span>
+<span class="sd">      or_axis(str): orientation axis.</span>
+<span class="sd">      gb_type(str): tilt or twist boundary.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">      list: A list of dictionaries. Each dictionary contains keys</span>
+<span class="sd">      gbid, orientation_axis, angle, boundary_plane, param_file, </span>
+<span class="sd">      and energies.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">pot_param</span>     <span class="o">=</span> <span class="n">PotentialParameters</span><span class="p">()</span>
+    <span class="n">ener_per_atom</span> <span class="o">=</span> <span class="n">pot_param</span><span class="o">.</span><span class="n">gs_ener_per_atom</span><span class="p">()</span>
+    <span class="n">gb_files</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="c1">#dir str lets us point to whatever material and orientation axisi it is we want in the database.</span>
+    <span class="n">dir_str</span>  <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">material</span><span class="p">,</span> <span class="n">or_axis</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">find_gb_json</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;GRAIN_DATABASE&#39;</span><span class="p">],</span> <span class="n">dir_str</span><span class="p">)),</span> <span class="n">gb_files</span><span class="p">,</span> <span class="s1">&#39;gb.json&#39;</span><span class="p">)</span>
+    <span class="n">grain_energies</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">grain</span> <span class="ow">in</span>  <span class="n">gb_files</span><span class="p">:</span>
+      <span class="n">path</span> <span class="o">=</span> <span class="n">grain</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+      <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">grain</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">j_dict</span>    <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+      <span class="n">subgb_files</span> <span class="o">=</span> <span class="p">[]</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">find_gb_json</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">subgb_files</span><span class="p">,</span> <span class="s1">&#39;subgb.json&#39;</span><span class="p">)</span>
+      <span class="n">calc_types</span>  <span class="o">=</span> <span class="p">[]</span>
+<span class="c1">#Find all calculation types associated with this grain</span>
+      <span class="k">for</span> <span class="n">subgrain</span> <span class="ow">in</span> <span class="n">subgb_files</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">subgrain</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+          <span class="k">try</span><span class="p">:</span>
+            <span class="n">sub_dict</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+          <span class="k">except</span><span class="p">:</span>
+            <span class="k">pass</span>
+        <span class="k">try</span><span class="p">:</span>
+          <span class="k">if</span> <span class="n">sub_dict</span><span class="p">[</span><span class="s1">&#39;param_file&#39;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">calc_types</span><span class="p">:</span>
+            <span class="n">calc_types</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sub_dict</span><span class="p">[</span><span class="s1">&#39;param_file&#39;</span><span class="p">])</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+          <span class="k">pass</span>
+<span class="c1">#Initialize a dictionary of dictionaries for each calc type:</span>
+      <span class="n">gb_dict</span> <span class="o">=</span> <span class="p">{}</span>
+      <span class="k">for</span> <span class="n">calc</span> <span class="ow">in</span> <span class="n">calc_types</span><span class="p">:</span>
+        <span class="n">tmp_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">tmp_dict</span><span class="p">[</span><span class="s1">&#39;orientation_axis&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">j_dict</span><span class="p">[</span><span class="s1">&#39;orientation_axis&#39;</span><span class="p">]</span>
+        <span class="n">tmp_dict</span><span class="p">[</span><span class="s1">&#39;angle&#39;</span><span class="p">]</span>            <span class="o">=</span> <span class="n">j_dict</span><span class="p">[</span><span class="s1">&#39;angle&#39;</span><span class="p">]</span><span class="o">*</span><span class="p">(</span><span class="mf">180.</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
+        <span class="n">tmp_dict</span><span class="p">[</span><span class="s1">&#39;boundary_plane&#39;</span><span class="p">]</span>   <span class="o">=</span> <span class="n">j_dict</span><span class="p">[</span><span class="s1">&#39;boundary_plane&#39;</span><span class="p">]</span>
+        <span class="n">tmp_dict</span><span class="p">[</span><span class="s1">&#39;energies&#39;</span><span class="p">]</span>         <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">tmp_dict</span><span class="p">[</span><span class="s1">&#39;param_file&#39;</span><span class="p">]</span>       <span class="o">=</span> <span class="n">calc</span>
+        <span class="n">tmp_dict</span><span class="p">[</span><span class="s1">&#39;gbid&#39;</span><span class="p">]</span>             <span class="o">=</span> <span class="n">j_dict</span><span class="p">[</span><span class="s1">&#39;gbid&#39;</span><span class="p">]</span>
+        <span class="n">gb_dict</span><span class="p">[</span><span class="n">calc</span><span class="p">]</span> <span class="o">=</span> <span class="n">tmp_dict</span>
+
+      <span class="k">for</span> <span class="n">subgrain</span> <span class="ow">in</span> <span class="n">subgb_files</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">subgrain</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+          <span class="k">try</span><span class="p">:</span>
+            <span class="n">sub_dict</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+              <span class="k">if</span> <span class="p">(</span><span class="n">sub_dict</span><span class="p">[</span><span class="s1">&#39;param_file&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="n">ener_per_atom</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+                <span class="n">append_energy</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">gb_ener</span> <span class="o">=</span> <span class="mf">16.02</span><span class="o">*</span><span class="p">((</span><span class="n">sub_dict</span><span class="p">[</span><span class="s1">&#39;E_gb&#39;</span><span class="p">]</span><span class="o">-</span><span class="p">(</span><span class="n">ener_per_atom</span><span class="p">[</span><span class="n">sub_dict</span><span class="p">[</span><span class="s1">&#39;param_file&#39;</span><span class="p">]]</span><span class="o">*</span><span class="nb">float</span><span class="p">(</span><span class="n">sub_dict</span><span class="p">[</span><span class="s1">&#39;n_at&#39;</span><span class="p">])))</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">sub_dict</span><span class="p">[</span><span class="s1">&#39;A&#39;</span><span class="p">]))</span>
+              <span class="k">else</span><span class="p">:</span>
+                <span class="n">append_energy</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="nb">print</span> <span class="s1">&#39;Ground state energy not know for this potential!&#39;</span>
+              <span class="k">if</span> <span class="n">append_energy</span> <span class="o">==</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="n">gb_dict</span><span class="p">[</span><span class="n">sub_dict</span><span class="p">[</span><span class="s1">&#39;param_file&#39;</span><span class="p">]][</span><span class="s1">&#39;energies&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gb_ener</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+              <span class="k">pass</span>
+          <span class="k">except</span><span class="p">:</span>
+            <span class="nb">print</span> <span class="s1">&#39;Missing json file.&#39;</span>
+            <span class="k">pass</span>
+      <span class="k">for</span> <span class="n">gdict</span> <span class="ow">in</span> <span class="n">gb_dict</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+        <span class="n">grain_energies</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gdict</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">grain_energies</span>
+
+  <span class="k">def</span> <span class="nf">calc_energy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gb_dict</span><span class="p">,</span> <span class="n">param_file</span><span class="o">=</span><span class="s1">&#39;PotBH.xml&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Given a subgb.json dictionary, and a potential</span>
+<span class="sd">    calculate grainboundary energy.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      gb_dict(dict): sub grain dictionary.</span>
+<span class="sd">      param_file(str): Inter-atomic potential filename.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">      float: Grain boundary energy in J/m^{-2}.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">pot_param</span>     <span class="o">=</span> <span class="n">PotentialParameters</span><span class="p">()</span>
+    <span class="n">ener_per_atom</span> <span class="o">=</span> <span class="n">pot_param</span><span class="o">.</span><span class="n">gs_ener_per_atom</span><span class="p">()</span>
+    <span class="k">try</span><span class="p">:</span>
+      <span class="n">gb_ener</span> <span class="o">=</span> <span class="mf">16.02</span><span class="o">*</span><span class="p">((</span><span class="n">gb_dict</span><span class="p">[</span><span class="s1">&#39;E_gb&#39;</span><span class="p">]</span><span class="o">-</span><span class="p">(</span><span class="n">ener_per_atom</span><span class="p">[</span><span class="n">param_file</span><span class="p">]</span><span class="o">*</span><span class="nb">float</span><span class="p">(</span><span class="n">gb_dict</span><span class="p">[</span><span class="s1">&#39;n_at&#39;</span><span class="p">])))</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">gb_dict</span><span class="p">[</span><span class="s1">&#39;A&#39;</span><span class="p">]))</span>
+    <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+      <span class="k">return</span> <span class="kc">None</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">gb_ener</span>
+
+  <span class="k">def</span> <span class="nf">pull_gamsurf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="s2">&quot;./&quot;</span><span class="p">,</span>  <span class="n">potential</span><span class="o">=</span><span class="s2">&quot;PotBH&quot;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Loop over subgrain directories of a potential</span>
+<span class="sd">    to find the minimum and maximum subgrain energies for the canonical grain, return</span>
+<span class="sd">    a dictionary, with information about the lowest and highest energy structures, and the</span>
+<span class="sd">    directory they are contained in.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      path(str): File path to begin search for subgb.json files.</span>
+<span class="sd">      potential(str): Name of potential directory.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">      dictionary: {&#39;max_en&#39;:float, &#39;min_en&#39;:float,&#39;min_coords&#39;:list,&#39;max_coords&#39;:list, &#39;path&#39;:str}</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">potparams</span> <span class="o">=</span> <span class="n">PotentialParameters</span><span class="p">()</span>
+    <span class="n">paramfile_dict</span> <span class="o">=</span> <span class="n">potparams</span><span class="o">.</span><span class="n">paramfile_dict</span><span class="p">()</span>
+    <span class="n">subgb_files</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">potential</span><span class="p">)):</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">find_gb_json</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">potential</span><span class="p">),</span> <span class="n">subgb_files</span><span class="p">,</span> <span class="s1">&#39;subgb.json&#39;</span><span class="p">)</span>
+      <span class="n">gam_surfs</span>   <span class="o">=</span> <span class="p">[]</span>
+      <span class="n">unconv</span>      <span class="o">=</span> <span class="p">[]</span>
+<span class="c1">#Only pulling for PotBH:</span>
+      <span class="k">for</span> <span class="n">gb</span> <span class="ow">in</span> <span class="n">subgb_files</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">gb</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+          <span class="n">gb_json</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="n">ener</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_energy</span><span class="p">(</span><span class="n">gb_json</span><span class="p">,</span> <span class="n">param_file</span><span class="o">=</span><span class="n">paramfile_dict</span><span class="p">[</span><span class="n">potential</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">ener</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
+          <span class="k">try</span><span class="p">:</span>
+            <span class="n">gam_surfs</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">gb_json</span><span class="p">[</span><span class="s1">&#39;rcut&#39;</span><span class="p">],</span> <span class="n">gb_json</span><span class="p">[</span><span class="s1">&#39;rbt&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">gb_json</span><span class="p">[</span><span class="s1">&#39;rbt&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">ener</span><span class="p">,</span> <span class="n">gb</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">gb_json</span><span class="p">[</span><span class="s1">&#39;gbid&#39;</span><span class="p">]))</span>
+          <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="n">gam_surfs</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">gb_json</span><span class="p">[</span><span class="s1">&#39;rcut&#39;</span><span class="p">],</span> <span class="n">gb_json</span><span class="p">[</span><span class="s1">&#39;rbt&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">gb_json</span><span class="p">[</span><span class="s1">&#39;rbt&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">ener</span><span class="p">,</span> <span class="n">gb</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">gb_json</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]))</span>
+        <span class="k">else</span><span class="p">:</span>
+          <span class="n">unconv</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gb</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+      <span class="n">en_list</span>     <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">gam_surfs</span><span class="p">]</span>
+      <span class="k">try</span><span class="p">:</span>
+        <span class="n">min_en</span>      <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">en_list</span><span class="p">)</span>
+      <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;max_en&#39;</span><span class="p">:</span><span class="mf">0.0</span><span class="p">,</span> <span class="s1">&#39;min_en&#39;</span><span class="p">:</span><span class="mf">0.0</span><span class="p">,</span> <span class="s1">&#39;min_coords&#39;</span><span class="p">:[],</span> <span class="s1">&#39;max_coords&#39;</span><span class="p">:[],</span> <span class="s1">&#39;min_path&#39;</span><span class="p">:</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;max_path&#39;</span><span class="p">:</span><span class="s1">&#39;&#39;</span><span class="p">}</span>
+      <span class="k">else</span><span class="p">:</span>
+<span class="c1">#Create lists of minimum energy structures (vx bxv rcut).</span>
+        <span class="n">max_en</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">en_list</span><span class="p">)</span>
+        <span class="n">min_coords</span> <span class="o">=</span> <span class="p">[(</span><span class="n">gam</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">gam</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">gam</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="k">for</span> <span class="n">gam</span> <span class="ow">in</span> <span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="mi">5</span><span class="p">)</span> <span class="o">==</span> <span class="nb">round</span><span class="p">(</span><span class="n">min_en</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">gam_surfs</span><span class="p">)]</span>
+        <span class="n">max_coords</span> <span class="o">=</span> <span class="p">[(</span><span class="n">gam</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">gam</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">gam</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="k">for</span> <span class="n">gam</span> <span class="ow">in</span> <span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="mi">5</span><span class="p">)</span> <span class="o">==</span> <span class="nb">round</span><span class="p">(</span><span class="n">max_en</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">gam_surfs</span><span class="p">)]</span>
+        <span class="n">min_path</span> <span class="o">=</span> <span class="p">[(</span><span class="n">gam</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="n">gam</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span> <span class="k">for</span> <span class="n">gam</span> <span class="ow">in</span> <span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="mi">5</span><span class="p">)</span> <span class="o">==</span> <span class="nb">round</span><span class="p">(</span><span class="n">min_en</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">gam_surfs</span><span class="p">)]</span>
+        <span class="n">max_path</span> <span class="o">=</span> <span class="p">[(</span><span class="n">gam</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="n">gam</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span> <span class="k">for</span> <span class="n">gam</span> <span class="ow">in</span> <span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="mi">5</span><span class="p">)</span> <span class="o">==</span> <span class="nb">round</span><span class="p">(</span><span class="n">max_en</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">gam_surfs</span><span class="p">)]</span>
+        <span class="n">min_path</span> <span class="o">=</span> <span class="s1">&#39;/&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">min_path</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">+</span><span class="s1">&#39;_traj.xyz&#39;</span>
+        <span class="n">max_path</span> <span class="o">=</span> <span class="s1">&#39;/&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">max_path</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">+</span><span class="s1">&#39;_traj.xyz&#39;</span>
+        <span class="n">min_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span><span class="n">min_path</span><span class="p">,</span> <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;GRAIN_DATABASE&#39;</span><span class="p">])</span>
+        <span class="n">max_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span><span class="n">max_path</span><span class="p">,</span> <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;GRAIN_DATABASE&#39;</span><span class="p">])</span>
+        <span class="n">gam_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;max_en&#39;</span><span class="p">:</span><span class="n">max_en</span><span class="p">,</span> <span class="s1">&#39;min_en&#39;</span><span class="p">:</span><span class="n">min_en</span><span class="p">,</span> <span class="s1">&#39;min_coords&#39;</span><span class="p">:</span><span class="n">min_coords</span><span class="p">,</span> <span class="s1">&#39;max_coords&#39;</span><span class="p">:</span><span class="n">max_coords</span><span class="p">,</span>
+                    <span class="s1">&#39;min_path&#39;</span><span class="p">:</span><span class="n">min_path</span><span class="p">,</span> <span class="s1">&#39;max_path&#39;</span><span class="p">:</span><span class="n">max_path</span><span class="p">}</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="nb">print</span> <span class="s2">&quot;No potential directory:&quot;</span><span class="p">,</span> <span class="n">potential</span><span class="p">,</span> <span class="s2">&quot;found.&quot;</span>
+      <span class="n">gam_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;max_en&#39;</span><span class="p">:</span><span class="mf">0.0</span><span class="p">,</span> <span class="s1">&#39;min_en&#39;</span><span class="p">:</span><span class="mf">0.0</span><span class="p">,</span><span class="s1">&#39;min_coords&#39;</span><span class="p">:[],</span><span class="s1">&#39;max_coords&#39;</span><span class="p">:[],</span> <span class="s1">&#39;max_path&#39;</span><span class="p">:</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;min_path&#39;</span><span class="p">:</span><span class="s1">&#39;&#39;</span><span class="p">}</span>
+    <span class="k">return</span> <span class="n">gam_dict</span>
+
+  <span class="k">def</span> <span class="nf">plot_gamsurf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pot_dir</span><span class="o">=</span><span class="s1">&#39;PotBH&#39;</span><span class="p">,</span> <span class="n">rcut</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">print_gamsurf</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns:</span>
+<span class="sd">      min and max rigid body translations for a particular rcut value. If rcut is None</span>
+<span class="sd">      return min and max rigid body translation for minimum energy structure for all</span>
+<span class="sd">      atom deletion criterion.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">subgb_files</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">find_gb_json</span><span class="p">(</span><span class="n">pot_dir</span><span class="p">,</span> <span class="n">subgb_files</span><span class="p">,</span> <span class="s1">&#39;subgb.json&#39;</span><span class="p">)</span>
+    <span class="n">gam_surfs</span>   <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">gb</span> <span class="ow">in</span> <span class="n">subgb_files</span><span class="p">:</span>
+      <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">gb</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">gb_json</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+      <span class="n">locen</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_energy</span><span class="p">(</span><span class="n">gb_json</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">locen</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">locen</span> <span class="o">&gt;=</span> <span class="mf">0.0</span><span class="p">:</span>
+        <span class="n">gam_surfs</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">gb_json</span><span class="p">[</span><span class="s1">&#39;rcut&#39;</span><span class="p">],</span> <span class="n">gb_json</span><span class="p">[</span><span class="s1">&#39;rbt&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">gb_json</span><span class="p">[</span><span class="s1">&#39;rbt&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">locen</span><span class="p">,</span> <span class="n">gb</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="k">pass</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;gam_surfs&#39;</span><span class="p">,</span> <span class="n">gam_surfs</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">rcut</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="n">gam_surf_rcut</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">==</span><span class="n">rcut</span><span class="p">,</span> <span class="n">gam_surfs</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">gam_surf_rcut</span> <span class="o">=</span> <span class="n">gam_surfs</span>
+    <span class="k">if</span> <span class="n">print_gamsurf</span><span class="p">:</span>
+      <span class="k">for</span> <span class="n">count</span><span class="p">,</span> <span class="n">gs</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">gam_surf_rcut</span><span class="p">):</span>
+        <span class="nb">print</span> <span class="n">gs</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">gs</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">gs</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+        <span class="k">if</span> <span class="p">((</span><span class="n">count</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">%</span><span class="mi">6</span><span class="o">==</span><span class="mi">0</span><span class="p">):</span>
+          <span class="nb">print</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+    <span class="n">en_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">gam_surfs</span><span class="p">]</span>
+    <span class="n">en_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">en_list</span> <span class="k">if</span> <span class="n">x</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
+    <span class="n">min_en</span>  <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">en_list</span><span class="p">)</span>
+    <span class="nb">print</span> <span class="s1">&#39;Min Energy: &#39;</span><span class="p">,</span> <span class="n">min_en</span><span class="p">,</span> <span class="s1">&#39;J/m^</span><span class="si">{2}</span><span class="s1">&#39;</span> 
+    <span class="n">min_coords</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="mi">5</span><span class="p">)</span> <span class="o">==</span> <span class="nb">round</span><span class="p">(</span><span class="n">min_en</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">gam_surfs</span><span class="p">)</span>
+    <span class="nb">print</span> <span class="s1">&#39;Coordinates of Min Energy Grain Boundaries:&#39;</span>
+    <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">min_coords</span><span class="p">:</span>
+      <span class="nb">print</span> <span class="n">m</span>
+    <span class="n">max_en</span>  <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">en_list</span><span class="p">)</span>
+    <span class="nb">print</span> <span class="s1">&#39;Max Energy: &#39;</span><span class="p">,</span> <span class="n">max_en</span><span class="p">,</span> <span class="s1">&#39;J/m^</span><span class="si">{2}</span><span class="s1">&#39;</span>
+    <span class="nb">print</span> <span class="s1">&#39;Coordinates of Max Energy Grain Boundaries:&#39;</span>
+    <span class="n">max_coords</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="mi">5</span><span class="p">)</span><span class="o">==</span><span class="nb">round</span><span class="p">(</span><span class="n">max_en</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">gam_surfs</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">max_coords</span><span class="p">:</span>
+      <span class="nb">print</span> <span class="n">m</span>
+    <span class="k">return</span> <span class="n">min_coords</span><span class="p">,</span> <span class="n">max_coords</span>
+
+  <span class="k">def</span> <span class="nf">list_all_unconverged</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pattern</span><span class="o">=</span><span class="s1">&#39;b111&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Searches through subdirectories that match against pattern for </span>
+<span class="sd">    subgb.json files.</span>
+
+<span class="sd">    Parameters:</span>
+<span class="sd">      pattern: regex to pattern match against.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">      Three lists converged_dirs, unconverged_dirs, dirs_missing_convergence_keys</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">jobdirs</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">*&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pattern</span><span class="p">))</span>
+    <span class="n">jobdirs</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">,</span> <span class="n">jobdirs</span><span class="p">)</span>
+    <span class="n">scratch</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+    <span class="n">converged_list</span>   <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">unconverged_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">missing_key_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">job</span> <span class="ow">in</span> <span class="n">jobdirs</span><span class="p">:</span>
+      <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">scratch</span><span class="p">,</span> <span class="n">job</span><span class="p">))</span>
+      <span class="n">subgb_files</span> <span class="o">=</span> <span class="p">[]</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">find_gb_json</span><span class="p">(</span><span class="s1">&#39;./&#39;</span><span class="p">,</span> <span class="n">subgb_files</span><span class="p">,</span> <span class="s1">&#39;subgb.json&#39;</span><span class="p">)</span>
+      <span class="k">for</span> <span class="n">gb</span> <span class="ow">in</span> <span class="n">subgb_files</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">gb</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+          <span class="n">gb_json</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s1">&#39;converged&#39;</span> <span class="ow">in</span> <span class="n">gb_json</span><span class="p">:</span>
+          <span class="k">if</span> <span class="n">gb_json</span><span class="p">[</span><span class="s1">&#39;converged&#39;</span><span class="p">]:</span>
+            <span class="c1">#print &#39;Converged&#39;, gb</span>
+            <span class="n">converged_list</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">job</span><span class="p">]</span><span class="o">+</span><span class="n">gb</span><span class="p">)</span>
+          <span class="k">elif</span> <span class="ow">not</span> <span class="n">gb_json</span><span class="p">[</span><span class="s1">&#39;converged&#39;</span><span class="p">]:</span>
+            <span class="c1">#print &#39;Not Converged&#39;, gb</span>
+            <span class="n">unconverged_list</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">job</span><span class="p">]</span><span class="o">+</span><span class="n">gb</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="s1">&#39;converged&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">gb</span><span class="p">:</span>
+            <span class="c1">#print &#39;subgb missing converged key&#39;, gb</span>
+            <span class="n">missing_key_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gb</span><span class="p">)</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">scratch</span><span class="p">)</span>
+    <span class="k">return</span>  <span class="n">converged_list</span><span class="p">,</span> <span class="n">unconverged_list</span><span class="p">,</span> <span class="n">missing_key_list</span>
+
+  <span class="k">def</span> <span class="nf">list_unconverged</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pattern</span><span class="o">=</span><span class="s1">&#39;001&#39;</span><span class="p">,</span> <span class="n">potential</span><span class="o">=</span><span class="s1">&#39;PotBH&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Find all unconverged subgrains. Convergence flag is in </span>
+<span class="sd">    subgb.json file. </span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      pattern(str): Orientation axis</span>
+<span class="sd">      potential(str): Interatomic Potential to search.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">      Three lists converged_dirs, unconverged_dirs, dirs_missing_convergence_keys</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">jobdirs</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">*&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pattern</span><span class="p">))</span>
+    <span class="n">jobdirs</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">,</span> <span class="n">jobdirs</span><span class="p">)</span>
+    <span class="n">scratch</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+    <span class="n">converged_list</span>   <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">unconverged_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">missing_key_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">job</span> <span class="ow">in</span> <span class="n">jobdirs</span><span class="p">:</span>
+      <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">scratch</span><span class="p">,</span> <span class="n">job</span><span class="p">))</span>
+      <span class="n">subgb_files</span> <span class="o">=</span> <span class="p">[]</span>
+      <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">potential</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">find_gb_json</span><span class="p">(</span><span class="n">potential</span><span class="p">,</span> <span class="n">subgb_files</span><span class="p">,</span> <span class="s1">&#39;subgb.json&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">gb</span> <span class="ow">in</span> <span class="n">subgb_files</span><span class="p">:</span>
+          <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">gb</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">gb_json</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+          <span class="k">if</span> <span class="s1">&#39;converged&#39;</span> <span class="ow">in</span> <span class="n">gb_json</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">gb_json</span><span class="p">[</span><span class="s1">&#39;converged&#39;</span><span class="p">]:</span>
+             <span class="c1"># print &#39;Converged&#39;, gb</span>
+              <span class="n">converged_list</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">job</span><span class="p">]</span><span class="o">+</span><span class="n">gb</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="ow">not</span> <span class="n">gb_json</span><span class="p">[</span><span class="s1">&#39;converged&#39;</span><span class="p">]:</span>
+             <span class="c1"># print &#39;Not Converged&#39;, gb</span>
+              <span class="n">unconverged_list</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">job</span><span class="p">]</span><span class="o">+</span><span class="n">gb</span><span class="p">)</span>
+          <span class="k">elif</span> <span class="s1">&#39;converged&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">gb</span><span class="p">:</span>
+             <span class="c1"># print &#39;subgb missing converged key&#39;, gb</span>
+              <span class="n">missing_key_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gb</span><span class="p">)</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">scratch</span><span class="p">)</span>
+    <span class="k">return</span>  <span class="n">converged_list</span><span class="p">,</span> <span class="n">unconverged_list</span><span class="p">,</span> <span class="n">missing_key_list</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+  <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
+  <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;-e&quot;</span><span class="p">,</span> <span class="s2">&quot;--extracten&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Pull all energies for an orientation axis </span><span class="se">\</span>
+<span class="s2">                                                    print lowest energies to terminal. List is ordered by angle.&quot;</span><span class="p">)</span>
+  <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;-g&quot;</span><span class="p">,</span> <span class="s2">&quot;--gam_min&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_true&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Pull gamma surface for specified potential directory.&quot;</span><span class="p">)</span>
+  <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;-d&quot;</span><span class="p">,</span> <span class="s2">&quot;--directory&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;PotBH&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Directory to search for min_en structure. (Default PotBH).&quot;</span><span class="p">)</span>
+  <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;-m&quot;</span><span class="p">,</span> <span class="s2">&quot;--material&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;The material we wish to query. Default (alphaFe).&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;alphaFe&quot;</span><span class="p">)</span>
+  <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;-o&quot;</span><span class="p">,</span> <span class="s2">&quot;--or_axis&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Orientation axis.&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;001&quot;</span><span class="p">)</span>
+  <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;-pt&quot;</span><span class="p">,</span> <span class="s2">&quot;--potential&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Potential file.&quot;</span><span class="p">,</span> <span class="n">default</span> <span class="o">=</span><span class="s2">&quot;PotBH.xml&quot;</span><span class="p">)</span>
+  <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+  <span class="n">analyze</span> <span class="o">=</span>  <span class="n">GBAnalysis</span><span class="p">()</span>
+
+  <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">extracten</span><span class="p">:</span>
+    <span class="n">or_axis</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">or_axis</span>
+    <span class="n">gb_list</span> <span class="o">=</span> <span class="n">analyze</span><span class="o">.</span><span class="n">extract_energies</span><span class="p">(</span><span class="n">or_axis</span><span class="o">=</span><span class="n">or_axis</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">gb</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">gb_list</span><span class="p">,</span> <span class="n">key</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="s1">&#39;angle&#39;</span><span class="p">]):</span>
+      <span class="k">if</span> <span class="n">gb</span><span class="p">[</span><span class="s1">&#39;param_file&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">args</span><span class="o">.</span><span class="n">potential</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+          <span class="nb">print</span> <span class="n">gb</span><span class="p">[</span><span class="s1">&#39;param_file&#39;</span><span class="p">],</span> <span class="n">gb</span><span class="p">[</span><span class="s1">&#39;angle&#39;</span><span class="p">],</span> <span class="nb">min</span><span class="p">(</span><span class="n">gb</span><span class="p">[</span><span class="s1">&#39;energies&#39;</span><span class="p">]),</span> <span class="nb">max</span><span class="p">(</span><span class="n">gb</span><span class="p">[</span><span class="s1">&#39;energies&#39;</span><span class="p">])</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+          <span class="nb">print</span> <span class="s1">&#39;No Valid Energy: &#39;</span><span class="p">,</span> <span class="n">gb</span><span class="p">[</span><span class="s1">&#39;param_file&#39;</span><span class="p">],</span> <span class="n">gb</span><span class="p">[</span><span class="s1">&#39;angle&#39;</span><span class="p">]</span>
+  
+  <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">gam_min</span><span class="p">:</span>
+<span class="c1">#   Search potential directory for the gamma surface it contains</span>
+<span class="c1">#   for all the cutoff radii.</span>
+    <span class="n">analyze</span><span class="o">.</span><span class="n">gam_min</span><span class="p">(</span><span class="n">directory</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">directory</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Imeall</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../intro.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../imeall.html">Imeall Package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../models.html">Models and Queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../views.html">Views</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../slabmaker.html">Slabmaker</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../generators.html">Generators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../interstitials.html">Interstitials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../calculators.html">Calculators</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Henry Lambert, Adam Fekete, James Kermode, Alessandro De Vita.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

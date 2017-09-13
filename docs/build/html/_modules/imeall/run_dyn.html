@@ -1,0 +1,506 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>imeall.run_dyn &#8212; Imeall 0.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for imeall.run_dyn</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">import</span> <span class="nn">ase.io</span>        
+<span class="kn">import</span> <span class="nn">glob</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+
+<span class="kn">from</span> <span class="nn">ase.constraints</span> <span class="k">import</span> <span class="n">UnitCellFilter</span>
+<span class="kn">from</span> <span class="nn">ase.optimize</span> <span class="k">import</span> <span class="n">BFGS</span><span class="p">,</span> <span class="n">FIRE</span>
+<span class="kn">from</span> <span class="nn">cStringIO</span> <span class="k">import</span> <span class="n">StringIO</span>
+<span class="kn">from</span> <span class="nn">pprint</span> <span class="k">import</span> <span class="n">pprint</span>
+<span class="kn">from</span> <span class="nn">quippy</span> <span class="k">import</span> <span class="n">Atoms</span><span class="p">,</span> <span class="n">Potential</span>
+<span class="kn">from</span> <span class="nn">quippy</span> <span class="k">import</span> <span class="n">set_fortran_indexing</span><span class="p">,</span> <span class="n">fzeros</span><span class="p">,</span> <span class="n">frange</span>
+<span class="kn">from</span> <span class="nn">quippy.io</span> <span class="k">import</span> <span class="n">AtomsWriter</span><span class="p">,</span> <span class="n">AtomsReader</span><span class="p">,</span> <span class="n">write</span>
+<span class="kn">from</span> <span class="nn">relax</span> <span class="k">import</span> <span class="n">relax_gb</span>
+<span class="kn">from</span> <span class="nn">slabmaker.slabmaker</span> <span class="k">import</span> <span class="n">build_tilt_sym_gb</span><span class="p">,</span> <span class="n">build_twist_sym_gb</span>
+
+<span class="n">set_fortran_indexing</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Capturing"><a class="viewcode-back" href="../../generators.html#imeall.run_dyn.Capturing">[docs]</a><span class="k">class</span> <span class="nc">Capturing</span><span class="p">(</span><span class="nb">list</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;:class:`Capturing` wraps a function to capture output for redirection.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">def</span> <span class="nf">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_stdout</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_stringio</span> <span class="o">=</span> <span class="n">StringIO</span><span class="p">()</span>
+    <span class="k">return</span> <span class="bp">self</span>
+
+  <span class="k">def</span> <span class="nf">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_stringio</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span><span class="o">.</span><span class="n">splitlines</span><span class="p">())</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stdout</span></div>
+
+<div class="viewcode-block" id="ImeallIO"><a class="viewcode-back" href="../../generators.html#imeall.run_dyn.ImeallIO">[docs]</a><span class="k">class</span> <span class="nc">ImeallIO</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;:class:`ImeallIO` contains methods for searching the Imeall Directory tree,</span>
+<span class="sd">  and creating new :class:`imeall.gb_models.GrainBoundary` and :class:`imeall.gb_models.SubGrainBoundary` directories. </span>
+<span class="sd">  Each :class:`SubGrainBoundary` directory contains supercells of the parent canonical </span>
+<span class="sd">  :class:`GrainBoundary`.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="c1">#IO variables for VASP Calculations. </span>
+<span class="c1">#Might be better to have a separate VASP OBJECT templated POSCAR, INCAR Files</span>
+<span class="c1">#then an Espresso Object Template</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">vasp_template_dir</span> <span class="o">=</span>  <span class="s1">&#39;/projects/SiO2_Fracture/iron/vasp_template/&#39;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">vasp_dict</span>         <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;kpar&#39;</span>  <span class="p">:</span><span class="mi">32</span><span class="p">,</span> <span class="s1">&#39;npar&#39;</span><span class="p">:</span><span class="mi">16</span><span class="p">,</span> <span class="s1">&#39;magmom&#39;</span><span class="p">:</span><span class="mf">3.0</span><span class="p">,</span> <span class="s1">&#39;n_at&#39;</span><span class="p">:</span><span class="s1">&#39;NOTSET&#39;</span><span class="p">,</span><span class="s1">&#39;ediffg&#39;</span><span class="p">:</span> <span class="o">-</span><span class="mf">0.05</span><span class="p">}</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">kpt_grid</span>          <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;kx&#39;</span><span class="p">:</span><span class="mi">12</span><span class="p">,</span> <span class="s1">&#39;ky&#39;</span><span class="p">:</span><span class="mi">12</span><span class="p">,</span> <span class="s1">&#39;kz&#39;</span><span class="p">:</span><span class="mi">1</span><span class="p">}</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">runsh</span>             <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;nodes&#39;</span><span class="p">:</span><span class="mi">512</span><span class="p">,</span> <span class="s1">&#39;time&#39;</span><span class="p">:</span><span class="mi">360</span><span class="p">}</span>
+
+<div class="viewcode-block" id="ImeallIO.make_dir"><a class="viewcode-back" href="../../generators.html#imeall.run_dyn.ImeallIO.make_dir">[docs]</a>  <span class="k">def</span> <span class="nf">make_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target_dir</span><span class="p">,</span> <span class="n">dir_name</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create :class:`GrainBoundary` directory if it does not exist and</span>
+<span class="sd">    return the concatenated string name.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      target_dir(str): target directory.</span>
+<span class="sd">      dir_name(str): name of new directory in target directory.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">      str: target directory name.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">target_subdir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">target_dir</span><span class="p">,</span> <span class="n">dir_name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">target_subdir</span><span class="p">):</span>
+      <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">target_subdir</span><span class="p">)</span>
+      <span class="nb">print</span> <span class="s1">&#39;Created </span><span class="si">{0}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">target_subdir</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="nb">print</span> <span class="s1">&#39;</span><span class="se">\t</span><span class="s1"> directory already exists&#39;</span>
+    <span class="k">return</span> <span class="n">target_subdir</span></div>
+
+<div class="viewcode-block" id="ImeallIO.load_json"><a class="viewcode-back" href="../../generators.html#imeall.run_dyn.ImeallIO.load_json">[docs]</a>  <span class="k">def</span> <span class="nf">load_json</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">json_file</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Helper function to return gb_data as dict.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      json_file(str): name of gb.json or subgb.json file.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">      dict: grain boundary data dictionary.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+  
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">json_file</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">datfile</span><span class="p">:</span>
+      <span class="n">gb_data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">datfile</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">gb_data</span></div>
+
+<div class="viewcode-block" id="ImeallIO.find_subdir"><a class="viewcode-back" href="../../generators.html#imeall.run_dyn.ImeallIO.find_subdir">[docs]</a>  <span class="k">def</span> <span class="nf">find_subdir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target_dir</span><span class="p">,</span> <span class="n">calc_suffix</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Find if named directory is in target directory.</span>
+<span class="sd">    Args:</span>
+<span class="sd">      target_dir(str): directory to search.</span>
+<span class="sd">      calc_suffix(str): name of directory to look for.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">      directory location and name.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">_dir</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">target_dir</span><span class="p">):</span>
+      <span class="k">if</span> <span class="n">calc_suffix</span> <span class="ow">in</span> <span class="n">_dir</span><span class="p">:</span>
+        <span class="n">from_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">target_dir</span><span class="p">,</span> <span class="n">_dir</span><span class="p">)</span>
+        <span class="n">from_dir_name</span> <span class="o">=</span> <span class="n">_dir</span>
+        <span class="k">return</span> <span class="n">from_dir</span><span class="p">,</span> <span class="n">from_dir_name</span>
+    <span class="nb">print</span> <span class="s1">&#39;no directory with calc_suffix,&#39;</span><span class="p">,</span> <span class="n">calc_suffix</span>
+    <span class="k">return</span> <span class="kc">None</span></div></div>
+
+<span class="k">class</span> <span class="nc">GBRelax</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grain_dir</span><span class="o">=</span><span class="s1">&#39;./&#39;</span><span class="p">,</span> <span class="n">gbid</span><span class="o">=</span><span class="s1">&#39;0000000000&#39;</span><span class="p">,</span> <span class="n">calc_type</span><span class="o">=</span><span class="s1">&#39;EAM&#39;</span><span class="p">,</span>
+               <span class="n">potential</span> <span class="o">=</span> <span class="s1">&#39;IP EAM_ErcolAd&#39;</span><span class="p">,</span> <span class="n">param_file</span> <span class="o">=</span> <span class="s1">&#39;iron_mish.xml&#39;</span><span class="p">,</span>
+               <span class="n">traj_file</span><span class="o">=</span><span class="s1">&#39;traj.xyz&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;:class:`GBRelax` is responsible for generating the </span>
+<span class="sd">    initial configuration of the :class:`SubGrainBoundary` before relaxation occurs.</span>
+
+<span class="sd">    Args: </span>
+<span class="sd">      grain_dir (str, optional): root directory to build grain boundary tree.</span>
+<span class="sd">      gbid (str,optional): gbid of grain boundary root.</span>
+<span class="sd">      calc_type(str,optional): Type of calculation: EAM, DFT, TB, GAP.</span>
+<span class="sd">      potential(str,optional): String specifying the :class:`quippy.potential` type.</span>
+<span class="sd">      param_file(str,optional): Name of interatomic potential file.</span>
+<span class="sd">      traj_file(str, optional): Name of target structure file.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">gbid</span>        <span class="o">=</span>  <span class="n">gbid</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">grain_dir</span>    <span class="o">=</span> <span class="n">grain_dir</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">calc_dir</span>   <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">grain_dir</span><span class="p">,</span> <span class="n">calc_type</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">subgrain_dir</span> <span class="o">=</span><span class="s1">&#39;&#39;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">name</span>        <span class="o">=</span> <span class="s1">&#39;subgrain&#39;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">calc_type</span>   <span class="o">=</span> <span class="n">calc_type</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">struct_file</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">param_file</span>  <span class="o">=</span> <span class="n">param_file</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">potential</span>   <span class="o">=</span> <span class="n">potential</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">fmax</span>        <span class="o">=</span> <span class="mf">0.5E-2</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">traj_file</span>   <span class="o">=</span> <span class="n">traj_file</span>
+    <span class="nb">print</span> <span class="s1">&#39;Canonical Grain Directory:&#39;</span>
+    <span class="nb">print</span> <span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">grain_dir</span>
+    <span class="nb">print</span> <span class="s1">&#39;Generate Job in:&#39;</span>
+    <span class="nb">print</span> <span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_dir</span>
+
+  <span class="k">def</span> <span class="nf">gen_super_rbt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bp</span><span class="o">=</span><span class="p">[],</span><span class="n">v</span><span class="o">=</span><span class="p">[],</span> <span class="n">rbt</span><span class="o">=</span><span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span> <span class="n">sup_v</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">sup_bxv</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">rcut</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">gb_type</span><span class="o">=</span><span class="s2">&quot;tilt&quot;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create a :class:`SubGrainBoundary` supercell with rigid body translations (rbt).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      bp (list): Boundary plane normal.</span>
+<span class="sd">      v (list): Perpendicular vector to the boundary plane normal.</span>
+<span class="sd">      rbt (list): rigid body translation as fractional translations of the supercell.</span>
+<span class="sd">      sup_v(int): Size of supercell along v.</span>
+<span class="sd">      sup_bxv(int): Size of supercell along boundary_plane_normal crossed with v.</span>
+<span class="sd">      rcut(float): Atom deletion criterion angstrom.</span>
+<span class="sd">      gb_type(str): Determine whether to generate a tilt or twist boundary.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">      None</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">io</span> <span class="o">=</span> <span class="n">ImeallIO</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">gb_type</span><span class="o">==</span><span class="s2">&quot;tilt&quot;</span><span class="p">:</span>
+      <span class="n">grain</span> <span class="o">=</span> <span class="n">build_tilt_sym_gb</span><span class="p">(</span><span class="n">bp</span><span class="o">=</span><span class="n">bp</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="n">v</span><span class="p">,</span> <span class="n">rbt</span><span class="o">=</span><span class="n">rbt</span><span class="p">)</span>
+      <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;bp: </span><span class="si">{}</span><span class="s1"> v: </span><span class="si">{}</span><span class="s1"> rbt: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">bp</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">rbt</span><span class="p">))</span>
+    <span class="k">elif</span> <span class="n">gb_type</span><span class="o">==</span><span class="s2">&quot;twist&quot;</span><span class="p">:</span>
+      <span class="n">grain</span> <span class="o">=</span> <span class="n">build_twist_sym_gb</span><span class="p">(</span><span class="n">bp</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">],</span> <span class="n">v</span><span class="o">=</span><span class="n">v</span><span class="p">,</span> <span class="n">rbt</span><span class="o">=</span><span class="n">rbt</span><span class="p">)</span>
+    <span class="c1">#For RBT we build a top level dir with just the translated supercell and no deletion criterion</span>
+    <span class="n">m</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">grain</span>  <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gen_super</span><span class="p">(</span><span class="n">grain</span><span class="o">=</span><span class="n">grain</span><span class="p">,</span> <span class="n">rbt</span><span class="o">=</span><span class="n">rbt</span><span class="p">,</span> <span class="n">sup_v</span><span class="o">=</span><span class="n">sup_v</span><span class="p">,</span> <span class="n">sup_bxv</span><span class="o">=</span><span class="n">sup_bxv</span><span class="p">,</span>  <span class="n">rcut</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">name</span>    <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">_v</span><span class="si">{1}</span><span class="s1">bxv</span><span class="si">{2}</span><span class="s1">_tv</span><span class="si">{3}</span><span class="s1">bxv</span><span class="si">{4}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gbid</span><span class="p">,</span>
+    <span class="nb">str</span><span class="p">(</span><span class="n">m</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">n</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">rbt</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="mi">2</span><span class="p">)),</span> <span class="nb">str</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">rbt</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="mi">2</span><span class="p">)))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">subgrain_dir</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">make_dir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">calc_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+    <span class="n">grain</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">.xyz&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">subgrain_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">name</span>    <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">_v</span><span class="si">{1}</span><span class="s1">bxv</span><span class="si">{2}</span><span class="s1">_tv</span><span class="si">{3}</span><span class="s1">bxv</span><span class="si">{4}</span><span class="s1">_d</span><span class="si">{5}</span><span class="s1">z&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gbid</span><span class="p">,</span>
+    <span class="nb">str</span><span class="p">(</span><span class="n">sup_v</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">sup_bxv</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">rbt</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="mi">2</span><span class="p">)),</span> <span class="nb">str</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">rbt</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="mi">2</span><span class="p">)),</span> <span class="nb">str</span><span class="p">(</span><span class="n">rcut</span><span class="p">))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">subgrain_dir</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">make_dir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">subgrain_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+    <span class="nb">print</span> <span class="s2">&quot;delete atoms&quot;</span>
+    <span class="n">grain</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">delete_atoms</span><span class="p">(</span><span class="n">grain</span><span class="o">=</span><span class="n">grain</span><span class="p">,</span> <span class="n">rcut</span><span class="o">=</span><span class="n">rcut</span><span class="p">)</span>
+    <span class="n">grain</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">.xyz&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">subgrain_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)))</span>
+    <span class="c1">#write json file with subgb information.</span>
+    <span class="k">try</span><span class="p">:</span>
+      <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">/subgb.json&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">subgrain_dir</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span>
+      <span class="n">j_dict</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+      <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">except</span> <span class="ne">IOError</span><span class="p">:</span>
+      <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">/subgb.json&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">subgrain_dir</span><span class="p">),</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
+      <span class="n">j_dict</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="c1">#Terms to append to subgrain dictionary:</span>
+    <span class="n">cell</span>           <span class="o">=</span> <span class="n">grain</span><span class="o">.</span><span class="n">get_cell</span><span class="p">()</span>
+    <span class="n">cell_area</span>      <span class="o">=</span> <span class="n">cell</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">cell</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">cell_height</span>    <span class="o">=</span> <span class="n">cell</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">]</span>
+    <span class="n">j_dict</span><span class="p">[</span><span class="s1">&#39;param_file&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">param_file</span>
+    <span class="n">j_dict</span><span class="p">[</span><span class="s1">&#39;potential&#39;</span><span class="p">]</span>  <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">param_file</span>
+    <span class="n">j_dict</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
+    <span class="n">j_dict</span><span class="p">[</span><span class="s1">&#39;rbt&#39;</span><span class="p">]</span>  <span class="o">=</span> <span class="n">rbt</span>
+    <span class="n">j_dict</span><span class="p">[</span><span class="s1">&#39;rcut&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rcut</span>
+    <span class="n">j_dict</span><span class="p">[</span><span class="s1">&#39;H&#39;</span><span class="p">]</span>    <span class="o">=</span> <span class="n">cell_height</span>
+    <span class="n">j_dict</span><span class="p">[</span><span class="s1">&#39;A&#39;</span><span class="p">]</span>    <span class="o">=</span> <span class="n">cell_area</span>
+    <span class="n">j_dict</span><span class="p">[</span><span class="s1">&#39;converged&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">j_dict</span><span class="p">[</span><span class="s1">&#39;area&#39;</span><span class="p">]</span>      <span class="o">=</span> <span class="n">cell_area</span>
+    <span class="n">j_dict</span><span class="p">[</span><span class="s1">&#39;n_at&#39;</span><span class="p">]</span>      <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">grain</span><span class="p">)</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">/subgb.json&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">subgrain_dir</span><span class="p">),</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
+    <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">j_dict</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+  <span class="k">def</span> <span class="nf">gen_super</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grain</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">rbt</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sup_v</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">sup_bxv</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">rcut</span><span class="o">=</span><span class="mf">2.0</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; :method:`gen_super` Creates a :class:SubGrainBoundary super cell according to </span>
+<span class="sd">    conventions described in Rittner and Seidman (PRB 54 6999).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      grain(:class:`ase.Atoms`): atoms object passed from gen_super_rbt.</span>
+<span class="sd">      rbt (list): rigid body translation as fractional translations of the supercell.</span>
+<span class="sd">      sup_v(int): Size of supercell along v.</span>
+<span class="sd">      sup_bxv(int): Size of supercell along boundary_plane_normal crossed with v.</span>
+<span class="sd">      rcut(float): Atom deletion criterion in angstrom.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">io</span> <span class="o">=</span> <span class="n">ImeallIO</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">rbt</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="n">x</span> <span class="o">=</span> <span class="n">Atoms</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">.xyz&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grain_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gbid</span><span class="p">)))</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">x</span> <span class="o">=</span> <span class="n">Atoms</span><span class="p">(</span><span class="n">grain</span><span class="p">)</span>
+
+    <span class="n">struct_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grain_dir</span><span class="p">,</span> <span class="s1">&#39;structs&#39;</span><span class="p">)</span>  
+    <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">_v</span><span class="si">{1}</span><span class="s1">bxv</span><span class="si">{2}</span><span class="s1">_tv</span><span class="si">{3}</span><span class="s1">bxv</span><span class="si">{4}</span><span class="s1">_d</span><span class="si">{5}</span><span class="s1">z&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gbid</span><span class="p">,</span>
+    <span class="nb">str</span><span class="p">(</span><span class="n">sup_v</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">sup_bxv</span><span class="p">),</span> <span class="s1">&#39;0.0&#39;</span><span class="p">,</span> <span class="s1">&#39;0.0&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">rcut</span><span class="p">))</span>
+<span class="c1">#TODO fix this so it is more transparent.</span>
+<span class="c1">#if rcut = 0 then only a super cell is generated with no deletion of atoms.</span>
+    <span class="k">if</span> <span class="n">rcut</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">:</span>
+      <span class="n">x</span><span class="o">.</span><span class="n">set_cutoff</span><span class="p">(</span><span class="mf">2.4</span><span class="p">)</span>
+      <span class="n">x</span><span class="o">.</span><span class="n">calc_connect</span><span class="p">()</span>
+      <span class="n">x</span><span class="o">.</span><span class="n">calc_dists</span><span class="p">()</span>
+      <span class="n">rem</span> <span class="o">=</span> <span class="p">[]</span>
+      <span class="n">u</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+      <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">n</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">n_neighbours</span><span class="p">(</span><span class="n">i</span><span class="p">)):</span>
+          <span class="n">j</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">neighbour</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">distance</span><span class="o">=</span><span class="mf">3.0</span><span class="p">,</span> <span class="n">diff</span><span class="o">=</span><span class="n">u</span><span class="p">)</span>
+          <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">distance_min_image</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">rcut</span> <span class="ow">and</span> <span class="n">j</span> <span class="o">!=</span> <span class="n">i</span><span class="p">:</span>
+            <span class="n">rem</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">sorted</span><span class="p">([</span><span class="n">j</span><span class="p">,</span><span class="n">i</span><span class="p">]))</span>
+      <span class="n">rem</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">([</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">rem</span><span class="p">]))</span>
+      <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">rem</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">x</span><span class="o">.</span><span class="n">remove_atoms</span><span class="p">(</span><span class="n">rem</span><span class="p">)</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span> <span class="s1">&#39;No duplicate atoms in list.&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">*</span><span class="p">(</span><span class="n">sup_v</span><span class="p">,</span> <span class="n">sup_bxv</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+      <span class="n">x</span><span class="o">.</span><span class="n">set_scaled_positions</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">get_scaled_positions</span><span class="p">())</span>
+
+    <span class="k">if</span> <span class="n">rbt</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">struct_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">subgrain_dir</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">make_dir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">calc_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+      <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">/subgb.json&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">subgrain_dir</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+          <span class="n">j_dict</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+      <span class="k">except</span> <span class="ne">IOError</span><span class="p">:</span>
+        <span class="n">j_dict</span>             <span class="o">=</span> <span class="p">{}</span>
+
+      <span class="n">j_dict</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span>       <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
+      <span class="n">j_dict</span><span class="p">[</span><span class="s1">&#39;param_file&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">param_file</span>
+      <span class="n">j_dict</span><span class="p">[</span><span class="s1">&#39;rbt&#39;</span><span class="p">]</span>        <span class="o">=</span> <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]</span>
+      <span class="n">j_dict</span><span class="p">[</span><span class="s1">&#39;rcut&#39;</span><span class="p">]</span>       <span class="o">=</span> <span class="n">rcut</span>
+
+      <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">/subgb.json&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">subgrain_dir</span><span class="p">),</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">j_dict</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">sup_v</span><span class="p">,</span> <span class="n">sup_bxv</span><span class="p">,</span> <span class="n">x</span>
+
+  <span class="k">def</span> <span class="nf">delete_atoms</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grain</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">rcut</span><span class="o">=</span><span class="mf">2.0</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">    Delete atoms below a certain distance threshold.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      grain(:class:`quippy.Atoms`): Atoms object of the grain.</span>
+<span class="sd">      rcut(float): Atom deletion criterion.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">      :class:`quippy.Atoms` object with atoms nearer than deletion criterion removed.</span>
+<span class="sd">    &quot;&quot;&quot;</span> 
+    <span class="n">io</span> <span class="o">=</span> <span class="n">ImeallIO</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">grain</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="n">x</span> <span class="o">=</span> <span class="n">Atoms</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">.xyz&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grain_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gbid</span><span class="p">)))</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">x</span> <span class="o">=</span> <span class="n">Atoms</span><span class="p">(</span><span class="n">grain</span><span class="p">)</span>
+    <span class="n">x</span><span class="o">.</span><span class="n">set_cutoff</span><span class="p">(</span><span class="mf">2.4</span><span class="p">)</span>
+    <span class="n">x</span><span class="o">.</span><span class="n">calc_connect</span><span class="p">()</span>
+    <span class="n">x</span><span class="o">.</span><span class="n">calc_dists</span><span class="p">()</span>
+    <span class="n">rem</span><span class="o">=</span><span class="p">[]</span>
+    <span class="n">u</span><span class="o">=</span><span class="n">fzeros</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">frange</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">n</span><span class="p">):</span>
+      <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">frange</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">n_neighbours</span><span class="p">(</span><span class="n">i</span><span class="p">)):</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">neighbour</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">distance</span><span class="o">=</span><span class="mf">3.0</span><span class="p">,</span> <span class="n">diff</span><span class="o">=</span><span class="n">u</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">distance_min_image</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">rcut</span> <span class="ow">and</span> <span class="n">j</span><span class="o">!=</span><span class="n">i</span><span class="p">:</span>
+          <span class="n">rem</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">sorted</span><span class="p">([</span><span class="n">j</span><span class="p">,</span><span class="n">i</span><span class="p">]))</span>
+    <span class="n">rem</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">([</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">rem</span><span class="p">]))</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">rem</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+      <span class="n">x</span><span class="o">.</span><span class="n">remove_atoms</span><span class="p">(</span><span class="n">rem</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="nb">print</span> <span class="s1">&#39;No duplicate atoms in list.&#39;</span>
+    <span class="k">if</span> <span class="n">grain</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">name</span>    <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">_d</span><span class="si">{1}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gbid</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">rcut</span><span class="p">))</span> 
+      <span class="bp">self</span><span class="o">.</span><span class="n">subgrain_dir</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">make_dir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">calc_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">struct_file</span>  <span class="o">=</span> <span class="n">gbid</span> <span class="o">+</span> <span class="s1">&#39;_&#39;</span> <span class="o">+</span> <span class="s1">&#39;n&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">rem</span><span class="p">))</span> <span class="o">+</span> <span class="s1">&#39;d&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">rcut</span><span class="p">)</span>  
+      <span class="n">x</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">.xyz&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">subgrain_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">struct_file</span><span class="p">)))</span>
+      <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">rem</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">x</span>
+
+  <span class="k">def</span> <span class="nf">gen_pbs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">time</span><span class="o">=</span><span class="s1">&#39;02:30:00&#39;</span><span class="p">,</span> <span class="n">queue</span><span class="o">=</span><span class="s1">&#39;serial.q&#39;</span><span class="p">,</span> <span class="n">template_str</span><span class="o">=</span><span class="s1">&#39;/users/k1511981/pymodules/templates/calc_ada.pbs&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">    :method:`gen_pbs` generates job pbs file.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      time(str): length of job time in string format.</span>
+<span class="sd">      queue(str): name of queue to generate submission script for</span>
+<span class="sd">      template_str(str): Name of location for pbs template file (example templates in imeall directory).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">pbs_str</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">template_str</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+    <span class="n">pbs_str</span> <span class="o">=</span> <span class="n">pbs_str</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">jname</span><span class="o">=</span><span class="s1">&#39;fe&#39;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">xyz_file</span><span class="o">=</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">.xyz&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">),</span> 
+                             <span class="n">time</span><span class="o">=</span><span class="n">time</span><span class="p">,</span> <span class="n">queue</span><span class="o">=</span><span class="n">queue</span><span class="p">)</span>
+    <span class="nb">print</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">subgrain_dir</span><span class="p">,</span> <span class="s1">&#39;fe</span><span class="si">{0}</span><span class="s1">.pbs&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">subgrain_dir</span><span class="p">,</span> <span class="s1">&#39;fe</span><span class="si">{0}</span><span class="s1">.pbs&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">))</span> <span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pbs_file</span><span class="p">:</span>
+      <span class="nb">print</span> <span class="o">&gt;&gt;</span> <span class="n">pbs_file</span><span class="p">,</span> <span class="n">pbs_str</span>
+
+<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+  <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span> 
+  <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;-p&quot;</span><span class="p">,</span> <span class="s2">&quot;--prefix&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Subsequent commands will act on all </span><span class="se">\</span>
+<span class="s2">                                                subdirectories with first characters matching prefix.&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;001&#39;</span><span class="p">)</span>
+  <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;-ct&quot;</span><span class="p">,</span> <span class="s2">&quot;--calc_type&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Name of calculation type TB, EAM, DFT, etc.&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;PotBH&#39;</span><span class="p">)</span>
+  <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;-q&quot;</span><span class="p">,</span>  <span class="s2">&quot;--queue&quot;</span><span class="p">,</span>     <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Jobs will be submitted to this queue.&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;smp.q&#39;</span><span class="p">)</span>
+  <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;-t&quot;</span><span class="p">,</span>  <span class="s2">&quot;--time&quot;</span><span class="p">,</span>      <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Time limit on jobs.&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;1:00:00&#39;</span><span class="p">)</span>
+  <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;-hyd&quot;</span><span class="p">,</span> <span class="s2">&quot;--hydrogen&quot;</span><span class="p">,</span> <span class="nb">type</span> <span class="o">=</span> <span class="nb">int</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;If greater than 0 add n hydrogens to the boundary.&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+  <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;-rc&quot;</span><span class="p">,</span>  <span class="s2">&quot;--rcut&quot;</span><span class="p">,</span>     <span class="nb">type</span> <span class="o">=</span> <span class="nb">float</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Deletion criterion for nearest neighbour atoms.&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mf">2.0</span><span class="p">)</span>
+  <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;-i_v&quot;</span><span class="p">,</span>   <span class="s2">&quot;--i_v&quot;</span><span class="p">,</span>    <span class="nb">type</span> <span class="o">=</span> <span class="nb">float</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Rigid body translation along i_v.&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+  <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;-i_bxv&quot;</span><span class="p">,</span> <span class="s2">&quot;--i_bxv&quot;</span><span class="p">,</span>  <span class="nb">type</span> <span class="o">=</span> <span class="nb">float</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Rigid body translation along i_bxv.&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+  <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;-gbt&quot;</span><span class="p">,</span>   <span class="s2">&quot;--gb_type&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Specify type of boundary twist or tilt.&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;tilt&quot;</span><span class="p">)</span>
+  <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s2">&quot;-fs&quot;</span><span class="p">,</span><span class="s2">&quot;--from_script&quot;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Whether this pyscript is run from a script.&quot;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s2">&quot;store_false&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+  <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+  <span class="n">prefix</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">prefix</span>
+  <span class="n">queue</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">queue</span>
+  <span class="n">time</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">time</span>
+  <span class="n">rcut</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">rcut</span><span class="p">)</span>
+
+<span class="c1"># Each calculation type is associated with a potential:</span>
+  <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">calc_type</span> <span class="o">==</span> <span class="s1">&#39;EAM_Mish&#39;</span><span class="p">:</span>
+    <span class="n">param_file</span> <span class="o">=</span> <span class="s1">&#39;iron_mish.xml&#39;</span>
+  <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">calc_type</span> <span class="o">==</span> <span class="s1">&#39;PotBH&#39;</span><span class="p">:</span>
+    <span class="n">param_file</span> <span class="o">=</span> <span class="s1">&#39;PotBH.xml&#39;</span>
+  <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">calc_type</span> <span class="o">==</span> <span class="s1">&#39;EAM_Men&#39;</span><span class="p">:</span>
+    <span class="n">param_file</span> <span class="o">=</span> <span class="s1">&#39;Fe_Mendelev.xml&#39;</span>
+  <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">calc_type</span> <span class="o">==</span> <span class="s1">&#39;EAM_Ack&#39;</span><span class="p">:</span>
+    <span class="n">param_file</span> <span class="o">=</span> <span class="s1">&#39;Fe_Ackland.xml&#39;</span>
+  <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">calc_type</span> <span class="o">==</span> <span class="s1">&#39;EAM_Dud&#39;</span><span class="p">:</span>
+    <span class="n">param_file</span> <span class="o">=</span> <span class="s1">&#39;Fe_Dudarev.xml&#39;</span>
+  <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">calc_type</span> <span class="o">==</span> <span class="s1">&#39;GAP&#39;</span><span class="p">:</span>
+    <span class="n">param_file</span> <span class="o">=</span> <span class="s1">&#39;gp33b.xml&#39;</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="nb">print</span> <span class="s1">&#39;No available potential corresponds to this calculation type.&#39;</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">()</span>
+
+  <span class="k">if</span> <span class="ow">not</span> <span class="n">args</span><span class="o">.</span><span class="n">from_script</span><span class="p">:</span>
+    <span class="n">jobdirs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">target_dir</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="s1">&#39;./&#39;</span><span class="p">):</span>
+      <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">target_dir</span><span class="p">)</span> <span class="ow">and</span> <span class="n">thing</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="n">prefix</span><span class="p">)]</span><span class="o">==</span><span class="n">prefix</span><span class="p">:</span>
+        <span class="n">jobdirs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">target_dir</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">job_dir</span> <span class="ow">in</span> <span class="n">jobdirs</span><span class="p">[:]:</span>
+      <span class="n">gbid</span>    <span class="o">=</span> <span class="n">job_dir</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+      <span class="nb">print</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+      <span class="nb">print</span> <span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">gbid</span>
+      <span class="nb">print</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+      <span class="n">gbrelax</span> <span class="o">=</span> <span class="n">GBRelax</span><span class="p">(</span><span class="n">grain_dir</span><span class="o">=</span><span class="n">job_dir</span><span class="p">,</span> <span class="n">gbid</span><span class="o">=</span><span class="n">gbid</span><span class="p">,</span> <span class="n">calc_type</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">calc_type</span><span class="p">,</span>
+                        <span class="n">potential</span><span class="o">=</span><span class="s1">&#39;IP EAM_ErcolAd&#39;</span><span class="p">,</span> <span class="n">param_file</span><span class="o">=</span><span class="n">param_file</span><span class="p">)</span>
+
+      <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">gb_type</span><span class="o">==</span><span class="s2">&quot;twist&quot;</span><span class="p">:</span>
+        <span class="n">sup_v</span>   <span class="o">=</span> <span class="mi">4</span>
+        <span class="n">sup_bxv</span> <span class="o">=</span> <span class="mi">4</span>
+      <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">gb_type</span><span class="o">==</span><span class="s2">&quot;tilt&quot;</span><span class="p">:</span>
+        <span class="n">sup_v</span>   <span class="o">=</span> <span class="mi">6</span>
+        <span class="n">sup_bxv</span> <span class="o">=</span> <span class="mi">2</span>
+
+      <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">job_dir</span><span class="p">,</span><span class="s1">&#39;gb.json&#39;</span><span class="p">))</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">grain_dict</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+      <span class="n">bp</span> <span class="o">=</span> <span class="n">grain_dict</span><span class="p">[</span><span class="s1">&#39;boundary_plane&#39;</span><span class="p">]</span>
+      <span class="n">v</span> <span class="o">=</span> <span class="n">grain_dict</span><span class="p">[</span><span class="s1">&#39;orientation_axis&#39;</span><span class="p">]</span>
+      <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.125</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.125</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">):</span>
+          <span class="n">gbrelax</span><span class="o">.</span><span class="n">gen_super_rbt</span><span class="p">(</span><span class="n">rcut</span><span class="o">=</span><span class="n">rcut</span><span class="p">,</span> <span class="n">bp</span><span class="o">=</span><span class="n">bp</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="n">v</span><span class="p">,</span> <span class="n">sup_v</span><span class="o">=</span><span class="n">sup_v</span><span class="p">,</span> <span class="n">sup_bxv</span><span class="o">=</span><span class="n">sup_bxv</span><span class="p">,</span> <span class="n">rbt</span><span class="o">=</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">])</span>
+          <span class="n">gbrelax</span><span class="o">.</span><span class="n">gen_pbs</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="n">time</span><span class="p">,</span> <span class="n">queue</span><span class="o">=</span><span class="n">queue</span><span class="p">)</span>
+  <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">from_script</span><span class="p">:</span>
+    <span class="n">job_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+    <span class="nb">print</span> <span class="n">job_dir</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">job_dir</span><span class="p">,</span><span class="s1">&#39;gb.json&#39;</span><span class="p">))</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+      <span class="n">grain_dict</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="n">gbid</span> <span class="o">=</span> <span class="n">grain_dict</span><span class="p">[</span><span class="s1">&#39;gbid&#39;</span><span class="p">]</span>
+    <span class="n">bp</span> <span class="o">=</span> <span class="n">grain_dict</span><span class="p">[</span><span class="s1">&#39;boundary_plane&#39;</span><span class="p">]</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="n">grain_dict</span><span class="p">[</span><span class="s1">&#39;orientation_axis&#39;</span><span class="p">]</span>
+    <span class="n">gbrelax</span> <span class="o">=</span> <span class="n">GBRelax</span><span class="p">(</span><span class="n">grain_dir</span><span class="o">=</span><span class="n">job_dir</span><span class="p">,</span> <span class="n">gbid</span><span class="o">=</span><span class="n">gbid</span><span class="p">,</span> <span class="n">calc_type</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">calc_type</span><span class="p">,</span>
+                      <span class="n">potential</span> <span class="o">=</span> <span class="s1">&#39;IP EAM_ErcolAd&#39;</span><span class="p">,</span> <span class="n">param_file</span><span class="o">=</span><span class="n">param_file</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">gb_type</span><span class="o">==</span><span class="s2">&quot;twist&quot;</span><span class="p">:</span>
+      <span class="n">sup_v</span> <span class="o">=</span> <span class="mi">4</span>
+      <span class="n">sup_bxv</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="k">elif</span> <span class="n">args</span><span class="o">.</span><span class="n">gb_type</span><span class="o">==</span><span class="s2">&quot;tilt&quot;</span><span class="p">:</span>
+      <span class="n">sup_v</span> <span class="o">=</span> <span class="mi">6</span>
+      <span class="n">sup_bxv</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="nb">print</span> <span class="s2">&quot;Boundary Plane&quot;</span><span class="p">,</span> <span class="n">bp</span><span class="p">,</span> <span class="s2">&quot;Orientation Axis&quot;</span><span class="p">,</span> <span class="n">v</span>
+    <span class="n">i_v</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">i_v</span><span class="p">)</span> 
+    <span class="n">i_bxv</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">i_bxv</span><span class="p">)</span>
+<span class="c1"># Generate the appropriate grain boundary in this directory.</span>
+    <span class="n">gbrelax</span><span class="o">.</span><span class="n">gen_super_rbt</span><span class="p">(</span><span class="n">rcut</span><span class="o">=</span><span class="n">rcut</span><span class="p">,</span> <span class="n">bp</span><span class="o">=</span><span class="n">bp</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="n">v</span><span class="p">,</span> <span class="n">sup_v</span><span class="o">=</span><span class="n">sup_v</span><span class="p">,</span> <span class="n">sup_bxv</span><span class="o">=</span><span class="n">sup_bxv</span><span class="p">,</span> <span class="n">rbt</span><span class="o">=</span><span class="p">[</span><span class="n">i_v</span><span class="p">,</span> <span class="n">i_bxv</span><span class="p">],</span> <span class="n">gb_type</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">gb_type</span><span class="p">)</span>
+<span class="c1"># Switch to the appropriate subgrain directory.</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">gbrelax</span><span class="o">.</span><span class="n">subgrain_dir</span><span class="p">)</span>
+<span class="c1"># Call the relax function from this directory, reads in the initial struct_file,</span>
+    <span class="n">relax_gb</span><span class="p">(</span><span class="n">gb_file</span> <span class="o">=</span> <span class="n">gbrelax</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Imeall</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../intro.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../imeall.html">Imeall Package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../models.html">Models and Queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../views.html">Views</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../slabmaker.html">Slabmaker</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../generators.html">Generators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../interstitials.html">Interstitials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../calculators.html">Calculators</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Henry Lambert, Adam Fekete, James Kermode, Alessandro De Vita.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

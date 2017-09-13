@@ -1,0 +1,605 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Slabmaker &#8212; Imeall 0.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Generators" href="generators.html" />
+    <link rel="prev" title="Views" href="views.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="slabmaker">
+<h1>Slabmaker<a class="headerlink" href="#slabmaker" title="Permalink to this headline">¶</a></h1>
+<p>This module contains builder methods for generating grain boundary structures.
+Currently supports builders for generating symmetric tilt and twist grain boundaries
+in BCC crystals.</p>
+<p>Standard quaternion algebra routines are provided by the <code class="docutils literal"><span class="pre">transformations.py</span></code> library
+developed by <a class="reference external" href="http://www.lfd.uci.edu/~gohlke/">Christoph Gohlke</a>.</p>
+<dl class="class">
+<dt id="imeall.slabmaker.gengb_from_quat.QuaternionGB">
+<em class="property">class </em><code class="descclassname">imeall.slabmaker.gengb_from_quat.</code><code class="descname">QuaternionGB</code><a class="reference internal" href="_modules/imeall/slabmaker/gengb_from_quat.html#QuaternionGB"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.slabmaker.gengb_from_quat.QuaternionGB" title="Permalink to this definition">¶</a></dt>
+<dd><p><a class="reference internal" href="#imeall.slabmaker.gengb_from_quat.QuaternionGB" title="imeall.slabmaker.gengb_from_quat.QuaternionGB"><code class="xref py py-class docutils literal"><span class="pre">imeall.slabmaker.gengb_from_quat.QuaternionGB</span></code></a> contains routines to generate
+lists of valid grain boundary orientations (i.e. the boundary planes of
+grains for different orientation axes and misorientation angles) using
+quaternion algebra. Currently supports routines for symmetric tilt
+grain boundaries and twist boundaries.</p>
+<dl class="method">
+<dt id="imeall.slabmaker.gengb_from_quat.QuaternionGB.gen_sym_tilt">
+<code class="descname">gen_sym_tilt</code><span class="sig-paren">(</span><em>orientation_axis=[0.0, 0.0, 1.0]</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/slabmaker/gengb_from_quat.html#QuaternionGB.gen_sym_tilt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.slabmaker.gengb_from_quat.QuaternionGB.gen_sym_tilt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate symmetric tilt grain boundary list.
+A printed list of the misorientation angle for the given orientation axis
+and the relevant tilt boundary plane so the grain
+boundary bicrystal can be generated with <code class="xref py py-func docutils literal"><span class="pre">imeall.slabmaker.build_tilt_sym_gb()</span></code>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>orientation_axis</strong> (<em>list</em><em>[</em><a class="reference external" href="https://docs.python.org/2.7/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a><em>]</em>) – 3d array of floats defining orientation axis.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Dictionary of ‘x’ axis co-ordinates keyed by angle rounded to two floating point numbers.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/2.7/library/stdtypes.html#dict" title="(in Python v2.7)">dict</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="imeall.slabmaker.gengb_from_quat.QuaternionGB.gen_sym_twist_gb">
+<code class="descname">gen_sym_twist_gb</code><span class="sig-paren">(</span><em>or_axis=[0, 0, 1]</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/slabmaker/gengb_from_quat.html#QuaternionGB.gen_sym_twist_gb"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.slabmaker.gengb_from_quat.QuaternionGB.gen_sym_twist_gb" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate symmetric twist grain boundary list.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>or_axis</strong> (<em>list</em><em>[</em><em>ints</em><em>]</em>) – orientation axis in ints.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Dictionary of ‘x’ axis co-ordinates keyed by angle rounded to two floating point numbers.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/2.7/library/stdtypes.html#dict" title="(in Python v2.7)">dict</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="imeall.slabmaker.gengb_from_quat.QuaternionGB.or_axis_to_angle">
+<code class="descname">or_axis_to_angle</code><span class="sig-paren">(</span><em>m</em>, <em>n</em>, <em>orientation_axis</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/slabmaker/gengb_from_quat.html#QuaternionGB.or_axis_to_angle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.slabmaker.gengb_from_quat.QuaternionGB.or_axis_to_angle" title="Permalink to this definition">¶</a></dt>
+<dd><p>To generate an approximate spanning set of angles iterate
+over integers m and n and determine the angle from a combination
+of these integers according to the chosen orientation axis.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>m</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) – Integer rotation</li>
+<li><strong>n</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) – Integer rotation</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">misorientation angle from integers and orientation axis.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)">float</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="imeall.slabmaker.gengb_from_quat.QuaternionGB.or_axis_to_quat">
+<code class="descname">or_axis_to_quat</code><span class="sig-paren">(</span><em>orientation_axis</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/slabmaker/gengb_from_quat.html#QuaternionGB.or_axis_to_quat"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.slabmaker.gengb_from_quat.QuaternionGB.or_axis_to_quat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given an orientation axis converts the vector to quaternion
+representation defining the orientation axis and a second quaternion
+giving the 0 of the angle. :</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>orientation_axis</strong> (<em>list</em>) – orientation axis.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">planequat_1, planequat_2</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">quaternion, quaternion</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-imeall.slabmaker.slabmaker"></span><dl class="function">
+<dt id="imeall.slabmaker.slabmaker.bcc_csl_nn0">
+<code class="descclassname">imeall.slabmaker.slabmaker.</code><code class="descname">bcc_csl_nn0</code><span class="sig-paren">(</span><em>m</em>, <em>n</em>, <em>grain</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/slabmaker/slabmaker.html#bcc_csl_nn0"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.slabmaker.slabmaker.bcc_csl_nn0" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rotate grain atom positions according to a rotation matrix generated from a
+quaternion.</p>
+<p>Example for integer m, and orientation axis defined by vector [n n 0],
+the angle of rotation is given by: arccos((m^{2} - 2n^{2})(m^{2} + 2n^{2})).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>m</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) – Integer of scalar part of quaternion.</li>
+<li><strong>n</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) – Integer for vector part.</li>
+<li><strong>grain</strong> (<a class="reference external" href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="(in ASE v)"><code class="xref py py-class docutils literal"><span class="pre">ase.Atoms</span></code></a>) – grain boundary structure.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.slabmaker.slabmaker.build_tilt_sym_gb">
+<code class="descclassname">imeall.slabmaker.slabmaker.</code><code class="descname">build_tilt_sym_gb</code><span class="sig-paren">(</span><em>gbid='', bp=[3, 3, 2], v=[1, -1, 0], min_spacing=12.0, c_space=None, target_dir=None, rbt=None, chem_symbol='Fe', alat=2.83</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/slabmaker/slabmaker.html#build_tilt_sym_gb"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.slabmaker.slabmaker.build_tilt_sym_gb" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate symmetric tilt grain boundary with appropriate configurations boundary
+plane (bp) oriented along z axis and orthogonal directions in the
+the other two planes given the orientation axis (v) and an orthogonal vector
+bpxv so we have a proper cube. If rbt is not None then rigid body
+translations are present, this is passed as a list of two numbers
+abs(rbt[0]) &lt; 1. The cell is then displaced as a function of these numbers.
+This routine should work for any BCC crystal with the appropriate modification
+to alat and chem_symbol.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>gbid</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – id label for the grain boundary.</li>
+<li><strong>bp</strong> (<em>list</em><em>, </em><a class="reference external" href="https://docs.python.org/2.7/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) – boundary plane normal.</li>
+<li><strong>v</strong> (<em>list</em><em>,</em><a class="reference external" href="https://docs.python.org/2.7/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) – orientation axis.</li>
+<li><strong>min_spacing</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – minimum spacing between grain boundaries.</li>
+<li><strong>c_space</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a><em>,</em><em>optional</em>) – inter-planar spacing if not passed this is calculated automatically.</li>
+<li><strong>target_dir</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – string specifying grain boundary target directory.</li>
+<li><strong>rbt</strong> (<em>list</em><em>,</em><a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – rigid body translations.</li>
+<li><strong>alat</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Lattice constant of the unit cell.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">if
+target_dir is none function returns [z_planes, len(dups), n_grain_unit, grain_c]
+i.e the location of the interfacial planes, the number of duplicate atoms when the grain is built, the
+number of atoms in the canonical unit cell, and the bicrystal <a class="reference external" href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="(in ASE v)"><code class="xref py py-class docutils literal"><span class="pre">ase.Atoms</span></code></a> object.
+else
+returns the bicrystal <a class="reference external" href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="(in ASE v)"><code class="xref py py-class docutils literal"><span class="pre">ase.Atoms</span></code></a> object.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.slabmaker.slabmaker.build_twist_sym_gb">
+<code class="descclassname">imeall.slabmaker.slabmaker.</code><code class="descname">build_twist_sym_gb</code><span class="sig-paren">(</span><em>gbid='', bp=[0, 0, 1], v=[3, 5, 0], min_spacing=15.0, c_space=None, target_dir=None, rbt=None, alat=2.83, chem_symbol='Fe'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/slabmaker/slabmaker.html#build_twist_sym_gb"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.slabmaker.slabmaker.build_twist_sym_gb" title="Permalink to this definition">¶</a></dt>
+<dd><p>Builder for twist boundary structures. For the twist boundaries the orientation
+axis (or_axis) also defines the boundary plane normal.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>gbid</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – <a class="reference internal" href="models.html#imeall.gb_models.SubGrainBoundary" title="imeall.gb_models.SubGrainBoundary"><code class="xref py py-class docutils literal"><span class="pre">imeall.gb_models.SubGrainBoundary</span></code></a> id.</li>
+<li><strong>bp</strong> (<em>list</em><em>[</em><a class="reference external" href="https://docs.python.org/2.7/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a><em>]</em>) – Boundary plane.</li>
+<li><strong>v</strong> (<em>list</em><em>[</em><a class="reference external" href="https://docs.python.org/2.7/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a><em>]</em>) – Defines the ‘x’ axis of the orthorhombic bicrystal.</li>
+<li><strong>min_spacing</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Minimum separation between interfaces.</li>
+<li><strong>c_space</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Interplanar spacing of boundary planes.</li>
+<li><strong>target_dir</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Path str of where to deposit grain boundary.</li>
+<li><strong>rbt</strong> (<em>list</em><em>[</em><a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a><em>]</em>) – Rigid body translations.</li>
+<li><strong>alat</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – lattice constanct BCC crystal.</li>
+<li><strong>chem_symbol</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – chemical symbol of bcc element.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">if target_dir==None returns list [z_planes, sigma_csl, n_grain_unit, grain_c]
+else returns <a class="reference external" href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="(in ASE v)"><code class="xref py py-class docutils literal"><span class="pre">ase.Atoms</span></code></a>.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.slabmaker.slabmaker.csl_lattice_vecs">
+<code class="descclassname">imeall.slabmaker.slabmaker.</code><code class="descname">csl_lattice_vecs</code><span class="sig-paren">(</span><em>m</em>, <em>n</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/slabmaker/slabmaker.html#csl_lattice_vecs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.slabmaker.slabmaker.csl_lattice_vecs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns lattice vectors defining a coincident site lattice
+from quaternion following Zeiner(05).</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.slabmaker.slabmaker.csl_tilt_factory">
+<code class="descclassname">imeall.slabmaker.slabmaker.</code><code class="descname">csl_tilt_factory</code><span class="sig-paren">(</span><em>orientation_axis</em>, <em>boundary_plane</em>, <em>m</em>, <em>n</em>, <em>gbid</em>, <em>grain_a</em>, <em>grain_b</em>, <em>theta=0</em>, <em>target_dir='./'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/slabmaker/slabmaker.html#csl_tilt_factory"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.slabmaker.slabmaker.csl_tilt_factory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Builds a plot of the coincident site lattice oriented along a suitable
+plane for viewing purposes. In the gnuplot plane we think of x,y,z orientation.
+so that the orientation axis = N = z is oriented ‘into’ the page.
+Vector specifying 0 Angle (for the case of tilt) = v = x
+y = Nxv.</p>
+<p><a class="reference internal" href="#imeall.slabmaker.slabmaker.rotate_plane_z" title="imeall.slabmaker.slabmaker.rotate_plane_z"><code class="xref py py-func docutils literal"><span class="pre">rotate_plane_z()</span></code></a> takes a grain and rotates it
+so that the orientation axis of the grain boundary with
+respect to grain a is orthogonal to the x-y plane. The
+quaternion to accomplish this rotation is stored
+in plane_quaternion_z.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>orientation_axis</strong> (<em>list</em>) – </li>
+<li><strong>boundary_plane</strong> (<em>list</em>) – </li>
+<li><strong>m</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) – slope of boundary plane</li>
+<li><strong>n</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) – integer of orientation axis.</li>
+<li><strong>gbid</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – grain boundary identifying label.</li>
+<li><strong>grain_a</strong> (<a class="reference external" href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="(in ASE v)"><code class="xref py py-class docutils literal"><span class="pre">ase.Atoms</span></code></a>) – blue crystal.</li>
+<li><strong>grain_b</strong> (<a class="reference external" href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="(in ASE v)"><code class="xref py py-class docutils literal"><span class="pre">ase.Atoms</span></code></a>) – red crystal.</li>
+<li><strong>theta</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – angle</li>
+<li><strong>target_dir</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – target directory to write plotting scripts.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.slabmaker.slabmaker.csl_twist_factory">
+<code class="descclassname">imeall.slabmaker.slabmaker.</code><code class="descname">csl_twist_factory</code><span class="sig-paren">(</span><em>bp</em>, <em>v</em>, <em>gbid</em>, <em>target_dir</em>, <em>crystal_type='BCC'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/slabmaker/slabmaker.html#csl_twist_factory"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.slabmaker.slabmaker.csl_twist_factory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate coincident site lattice points for arbitraty twist boundary.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>bp</strong> (<em>list</em>) – Boundary plane.</li>
+<li><strong>v</strong> (<em>list</em>) – Orientation axis.</li>
+<li><strong>gbid</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Grain boundary id.</li>
+<li><strong>target_dir</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – target_directory string.</li>
+<li><strong>crystal_type</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – BCC</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.slabmaker.slabmaker.find_densest_plane">
+<code class="descclassname">imeall.slabmaker.slabmaker.</code><code class="descname">find_densest_plane</code><span class="sig-paren">(</span><em>grain_dict</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/slabmaker/slabmaker.html#find_densest_plane"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.slabmaker.slabmaker.find_densest_plane" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the indices for a set of adjacent planes with the largest number of points.
+Used in <a class="reference internal" href="#imeall.slabmaker.slabmaker.gen_csl" title="imeall.slabmaker.slabmaker.gen_csl"><code class="xref py py-func docutils literal"><span class="pre">gen_csl()</span></code></a>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>grain_dict</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/stdtypes.html#dict" title="(in Python v2.7)"><em>dict</em></a>) – Grain dictionary.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">key1 and key2 floating point values representing the z-coordinates of the
+two adjacent planes along z-axis with the most Atoms on them.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)">float</a>, <a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)">float</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.slabmaker.slabmaker.gen_canonical_grain_dir">
+<code class="descclassname">imeall.slabmaker.slabmaker.</code><code class="descname">gen_canonical_grain_dir</code><span class="sig-paren">(</span><em>angle</em>, <em>orientation_axis</em>, <em>boundary_plane</em>, <em>material='alphaFe'</em>, <em>target_dir='./'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/slabmaker/slabmaker.html#gen_canonical_grain_dir"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.slabmaker.slabmaker.gen_canonical_grain_dir" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a canonical grain boundary directory.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>angle</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – misorientation angle in radians.</li>
+<li><strong>orienation_axis</strong> (<em>list</em>) – orientation axis.</li>
+<li><strong>boundary_plane</strong> (<em>list</em>) – boundary_plane</li>
+<li><strong>material</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a><em>, </em><em>optional</em>) – </li>
+<li><strong>target_dir</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a><em>, </em><em>optional</em>) – target directory to deposit canonical grain structure.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.slabmaker.slabmaker.gen_csl">
+<code class="descclassname">imeall.slabmaker.slabmaker.</code><code class="descname">gen_csl</code><span class="sig-paren">(</span><em>theta</em>, <em>orientation_axis</em>, <em>boundary_plane</em>, <em>target_dir='./'</em>, <em>gbid='0000000000'</em>, <em>alat=2.83</em>, <em>chem_symbol='Fe'</em>, <em>gb_type='tilt'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/slabmaker/slabmaker.html#gen_csl"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.slabmaker.slabmaker.gen_csl" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate the coincident site lattice representations.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>theta</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – misorientation angle in radians.</li>
+<li><strong>orientation_axis</strong> (<em>list</em>) – orientation axis.</li>
+<li><strong>boundary_plane</strong> (<em>list</em><em>[</em><a class="reference external" href="https://docs.python.org/2.7/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a><em>]</em>) – boundary plane normal vector.</li>
+<li><strong>target_dir</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – location to store coincident site lattice files.</li>
+<li><strong>gbid</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Grain boundary id.</li>
+<li><strong>alat</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Magnitude lattice vector.</li>
+<li><strong>chem_symbol</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Chemical symbol.</li>
+<li><strong>gb_type</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – boundary type [tilt, twist] (Default: ‘tilt’).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.slabmaker.slabmaker.gnu_plot_gb">
+<code class="descclassname">imeall.slabmaker.slabmaker.</code><code class="descname">gnu_plot_gb</code><span class="sig-paren">(</span><em>boundary_plane</em>, <em>m</em>, <em>invm</em>, <em>gbid</em>, <em>mb=0.0</em>, <em>invmb=0.0</em>, <em>target_dir='./'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/slabmaker/slabmaker.html#gnu_plot_gb"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.slabmaker.slabmaker.gnu_plot_gb" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate coincident site lattice plots on the fly in svg format for web based visualization.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>boundary_plane</strong> (<em>list</em>) – vector defining interfacial plane.</li>
+<li><strong>m</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – slope of line separating red and blue crystal.</li>
+<li><strong>invm</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – slope of line perpendicular to m.</li>
+<li><strong>gbid</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – grain boundary id.</li>
+<li><strong>mb</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a><em>,</em><em>optional</em>) – deprecated.</li>
+<li><strong>invmb</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a><em>,</em><em>optional</em>) – deprecated.</li>
+<li><strong>target_dir</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a><em>, </em><em>optional</em>) – location to write plotting script.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.slabmaker.slabmaker.print_points">
+<code class="descclassname">imeall.slabmaker.slabmaker.</code><code class="descname">print_points</code><span class="sig-paren">(</span><em>atoms</em>, <em>f</em>, <em>top_grain=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/slabmaker/slabmaker.html#print_points"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.slabmaker.slabmaker.print_points" title="Permalink to this definition">¶</a></dt>
+<dd><p>Print positions of atoms to file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>atoms</strong> (<a class="reference external" href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="(in ASE v)"><em>ase.Atoms</em></a>) – list of <code class="xref py py-class docutils literal"><span class="pre">ase.Atom</span></code> object to print positions.</li>
+<li><strong>f</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#file" title="(in Python v2.7)"><em>file</em></a>) – file handle to print position list to.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.slabmaker.slabmaker.rotate_grain">
+<code class="descclassname">imeall.slabmaker.slabmaker.</code><code class="descname">rotate_grain</code><span class="sig-paren">(</span><em>grain, theta=0.0, x=[0.0, 0.0, 0.0], q=[]</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/slabmaker/slabmaker.html#rotate_grain"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.slabmaker.slabmaker.rotate_grain" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rotate the grain according to quaternion=[Theta, u,v,w]=[w,x,y,z].
+Standard routine is passed angle and vector this generates the quaternion to do the rotation
+however if a quaternion, q!=None, is passed the plane is rotated using q as: qvq^{-1}.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>grain</strong> (<a class="reference external" href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="(in ASE v)"><code class="xref py py-class docutils literal"><span class="pre">ase.Atoms</span></code></a>) – Grain boundary to rotate.</li>
+<li><strong>theta</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Angle to rotate vector.</li>
+<li><strong>x</strong> (<em>list</em><em>[</em><a class="reference external" href="https://docs.python.org/2.7/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a><em>]</em>) – Three vector defining orientation vector and vector component of quaternion.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Rotated grain.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.slabmaker.slabmaker.rotate_plane_y">
+<code class="descclassname">imeall.slabmaker.slabmaker.</code><code class="descname">rotate_plane_y</code><span class="sig-paren">(</span><em>grain</em>, <em>miller</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/slabmaker/slabmaker.html#rotate_plane_y"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.slabmaker.slabmaker.rotate_plane_y" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rotates atoms in grain so that the miller plane
+in grain is parallel to the y axis. Returns the quaternion
+characterizing the rotation which achieves this.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>grain</strong> (<code class="xref py py-class docutils literal"><span class="pre">Atoms</span></code>) – grain atoms object.</li>
+<li><strong>miller</strong> (<em>list</em><em>,</em><a class="reference external" href="https://docs.python.org/2.7/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) – Vector specifying grain boundary interfacial plane.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">quaternion which acheives this rotation.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.slabmaker.slabmaker.rotate_plane_z">
+<code class="descclassname">imeall.slabmaker.slabmaker.</code><code class="descname">rotate_plane_z</code><span class="sig-paren">(</span><em>grain</em>, <em>miller</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/slabmaker/slabmaker.html#rotate_plane_z"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.slabmaker.slabmaker.rotate_plane_z" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rotates atoms in grain so that planes parallel to the plane defined by the vector
+miller are parallel to the xy plotting plane.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>grain</strong> (<code class="xref py py-class docutils literal"><span class="pre">Atoms</span></code>) – grain structure to be rotated.</li>
+<li><strong>miller</strong> (<em>numpy array</em>) – 3x1 vector defining plane.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">rotation_quaternion to achieve this rotation.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.slabmaker.slabmaker.rotate_vec">
+<code class="descclassname">imeall.slabmaker.slabmaker.</code><code class="descname">rotate_vec</code><span class="sig-paren">(</span><em>q</em>, <em>vec</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/slabmaker/slabmaker.html#rotate_vec"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.slabmaker.slabmaker.rotate_vec" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rotate 3 vector with quaternion: qvq^{-1}.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>q</strong> (<em>quaternion</em>) – rotation quaternion.</li>
+<li><strong>vec</strong> (<em>3x1 list</em>) – vector to rotate.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Rotated 3 vector.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.slabmaker.slabmaker.simplify_csl">
+<code class="descclassname">imeall.slabmaker.slabmaker.</code><code class="descname">simplify_csl</code><span class="sig-paren">(</span><em>m</em>, <em>b=0.0</em>, <em>target_dir='./'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/slabmaker/slabmaker.html#simplify_csl"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.slabmaker.slabmaker.simplify_csl" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simplify the dat files of the CSL so that atoms in grain_a are below the line
+defined by the boundary plane in the current projection and atoms from grain_b
+are above the line.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>m</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – slope of the line.</li>
+<li><strong>b</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – y-intercept.</li>
+<li><strong>target_dir</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – target direcotry string.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.slabmaker.slabmaker.take_photo">
+<code class="descclassname">imeall.slabmaker.slabmaker.</code><code class="descname">take_photo</code><span class="sig-paren">(</span><em>grain</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/slabmaker/slabmaker.html#take_photo"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.slabmaker.slabmaker.take_photo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Take profile picture of grain boundary.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.slabmaker.slabmaker.zeiner_matrix">
+<code class="descclassname">imeall.slabmaker.slabmaker.</code><code class="descname">zeiner_matrix</code><span class="sig-paren">(</span><em>q</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/slabmaker/slabmaker.html#zeiner_matrix"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.slabmaker.slabmaker.zeiner_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a rotation mater from a quaternion.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>q</strong> (<em>quaternion</em>) – 4 vector representation of a quaternion.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Rotation matrix generated from a quaternion.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Imeall</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="imeall.html">Imeall Package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Models and Queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="views.html">Views</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Slabmaker</a></li>
+<li class="toctree-l1"><a class="reference internal" href="generators.html">Generators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interstitials.html">Interstitials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="calculators.html">Calculators</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="views.html" title="previous chapter">Views</a></li>
+      <li>Next: <a href="generators.html" title="next chapter">Generators</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Henry Lambert, Adam Fekete, James Kermode, Alessandro De Vita.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/slabmaker.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

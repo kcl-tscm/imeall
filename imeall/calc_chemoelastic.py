@@ -4,50 +4,62 @@ import argparse
 import subprocess
 import numpy as np
 import ase.units as units
-from quippy import Atoms, Potential, AtomsReader, set_fortran_indexing
+
+
+from imeall import app
 from imeall.models import PotentialParameters
+from quippy import Atoms, Potential, AtomsReader, set_fortran_indexing
 
 set_fortran_indexing(False)
-def strain_energy(ats):
+def strain_energy(ats, cursor_step=0.2):
+  """Create an array tracking the accumulation of energy above the bulk energy along the z-axis.
+  For interfacial structures this has pronounced speakes in the region of the interface.
+
+  Args: 
+    ats(:py:class:`Atoms`) object with a potential calculator attached.
+    cursor_step(float): step distance along z to add atomic energies to the cumulative energy.
+
+  Returns: 
+    list: Cumulative energy distribution along the z-axis.
+  """
+
   cell = ats.get_cell()
   A = cell[0][0]*cell[1][1]
   z_height = cell[2][2]
   ener_z = np.transpose(np.vstack((ats.get_potential_energies(), [at.position[2] for at in ats])))
   ener_z = np.array(sorted(ener_z, key=lambda x: x[1]))
-  cursor = 0.2
+  cursor = cursor_step
   elastic_energy = []
-  while cursor < (z_height + 0.2):
+  while cursor < (z_height + cursor_step):
     try:
       cum_energy = 16.02*sum([x+4.01298214176 for x in np.array(filter(lambda x: x[1]<= cursor, ener_z))[:,0]])/(A)
     except IndexError:
-      cursor += 0.2 #initial step doesn't capture atoms
+      cursor += cursor_step #initial step doesn't capture atoms
       continue 
     elastic_energy.append((cursor, cum_energy))
-    cursor += 0.2
+    cursor += cursor_step
   return elastic_energy
 
-def convolution(original_curve, z_height=79.0):
-  sigma = 0.2
-  norm = np.sqrt(2*np.pi)
-  dx = float(z_height-0.2)/len(original_curve)
-  gx = np.arange(-3*sigma, 3*sigma, dx)
-  gaussian = np.exp(-(gx/sigma)**2/2.0)/norm
-  result = np.convolve(original_curve, gaussian, mode="full")
-  return result
-
 def calc_chemomechanical(ats):
+  """Calculate elastic and chemical contributions to the total energy.
+  Requires :py:class:`Atoms` object with a :py:class:`Potential` capable of returning a per atom energy.
+  :py:class:`Atoms` object must have at least structure_type and 
+  local_energy properties. For a bcc lattice structure_type=3. 
+
+  Args: 
+    ats(:py:class:`Atoms`):  
+
+  Returns: 
+    list:[(chemical_energy/total_energy)*gb_energy, (elastic_energy/total_energy)*gb_energy, gb_energy]
   """
-  method:`chemoelastic_percentage` requires atoms object to have at least structure_type
-          and local_energy property. bcc lattice structure_type=3.
-  """
+
 #case quip types to numpy arrays stack and transpose
   loc_en = np.array(ats.properties['local_energy'])
   struct_type = np.array(ats.properties['structure_type'])
   joined = np.vstack((loc_en, struct_type)).transpose()
   cell = ats.get_cell()
   A = cell[0][0]*cell[1][1]
-#compute relative total energy contributions of the
-#two types
+#compute relative total energy contributions of the two types
   gs = np.zeros(np.shape(joined))
 #zero energies
   gs[:,0] = -4.01298
@@ -64,6 +76,16 @@ def calc_chemomechanical(ats):
   return [(chemical_energy/total_energy)*gb_energy, (elastic_energy/total_energy)*gb_energy, gb_energy]
 
 def calc_chemoelast(input_file):
+  """Adds the structure type using an ovitos script to the :py:class:`Atoms` object
+  and calculates the breakdown of the energy contributions.
+
+  Args:
+    input_file(str):Relaxed grain boundary structure file.
+
+  Returns: 
+    list(float):[(chemical_energy/total_energy)*gb_energy, (elastic_energy/total_energy)*gb_energy, gb_energy]
+  """
+
   potparam = PotentialParameters()
   ener_bulk_dict = potparam.gs_ener_per_atom()
   r_scale_dict = potparam.eam_rscale()
@@ -86,17 +108,21 @@ def calc_chemoelast(input_file):
     for x in elastic_energy:
       print >> f, x[0], x[1]
 #generates output.xyz
-  args_str =  'ovitos /Users/lambert/pymodules/imeall/imeall/ovito_scripts/attach_cna.py -i {input_file}'.format(input_file='full.xyz').split()
+  imeall_root = os.path.join(app.root_path, 'ovito_scripts/attach_cna.py')
+  args_str =  'ovitos {imeall_root} -i {input_file}'.format(imeall_root=app.root_path, input_file='full.xyz').split()
   job = subprocess.Popen(args_str)
   job.wait()
   ats = Atoms('output.xyz')
 #print the three contributions
   x = calc_chemomechanical(ats)
-  assert round(gb_energy,2) == round(x[2],2)
+  try:
+    assert round(gb_energy,2) == round(x[2],2)
+  except AssertionError:
+    print "WARNING ENERGIES DON'T MATCH", gb_energy, x[2]
   return x
 
 if __name__=='__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument('--input_file', '-i', help='Input grain boundary struct file to produce cumulative energy')
   args = parser.parse_args()
-  calc_chemoelast(input_file=args.input_file)
+  add_structure_type(input_file=args.input_file)

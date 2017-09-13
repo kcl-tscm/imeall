@@ -1,4 +1,5 @@
 import os
+import sys
 import logging
 from   logging.handlers import RotatingFileHandler
 
@@ -16,7 +17,7 @@ def file_extension(filepath):
 
 if not NO_FLASK:
   app             = Flask(__name__, instance_relative_config=True)
-  handler = RotatingFileHandler('foo.log', maxBytes=10000, backupCount=1)
+  handler = RotatingFileHandler('imeall.log', maxBytes=10000, backupCount=1)
   handler.setLevel(logging.INFO)
   app.logger.addHandler(handler)
   app.config.from_pyfile('config.py')
