@@ -32,14 +32,14 @@
     <li> Sigma({{ (gb_info.n_at/gb_info.coincident_sites) | round(2, 'floor') }})</li>
   </ul>
 
+  <div class="min_max_structs">
   <h3> Min/Max Energy Structures: </h3>
   {% for pot, pot_gam_dict in gam_dict.items() %}
     <p> {{pot}} </p>
     <ul>
       <li> Min. Energy: {{ pot_gam_dict.min_en | round(4, 'floor') }} J/m^{2} </li>  
-      <li> {{pot_gam_dict.min_path}} </li>
       <li> <a href="{{url_for('serve_struct', filename='apathtoafile', textpath=pot_gam_dict.min_path)}}"> Min. Energy Structure </a></li>
-      <li> Rigid Body Translation (x,y, Cutoff Criterion)</li>
+      <li> Microscopic Degrees of Freedom (x,y, Cutoff Criterion)</li>
       <ul>
         {% for rbt in pot_gam_dict.min_coords %} 
             <li> {{rbt}} </li>
@@ -47,8 +47,7 @@
       </ul>
       <li> Max. Energy:{{ pot_gam_dict.max_en | round(4, 'floor') }} J/m^{2}  </li>  
       <li> <a href="{{url_for('serve_struct', filename='apathtoafile', textpath=pot_gam_dict.max_path)}}"> Max. Energy Structure </a></li>
-      <li> Rigid Body Translation (x,y, Cutoff Criterion)</li>
-      <li> Structure </li>
+      <li> Microscopic Degrees of Freedom (x,y, Cutoff Criterion)</li>
       <ul>
         {% for rbt in pot_gam_dict.max_coords %}
           <li> {{rbt}} </li>
@@ -56,6 +55,7 @@
       </ul>
     </ul>
   {% endfor %}
+  </div>
 
 	<h2> Structure  </h2>
   <img src = "{{url_for('serve_img', filename=url_path, gbid=gbid, img_type='struct')}}" alt="GB structure" width=700>
@@ -64,8 +64,14 @@
 {# Collapsible indented tree layout taken from
    http://bl.ocks.org/mbostock/1093025 #}
   <h3> Subgrain Directories of {{gbid}}: </h3> 
+
   <p> <button id="subgraindirbutton"> Show/Hide Subgrain Subdirectories </button> </p>
-  <script src="https://d3js.org/d3-hierarchy.v1.min.js"></script>
+  <script>
+  $("#subgraindirbutton").click(function(){
+    $("#subgraintree").toggle();
+    });
+  </script>
+
   <div id="subgraindirs">
     <script> 
       var flare_root = jQuery.parseJSON('{{ flare_root|safe }}');

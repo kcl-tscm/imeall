@@ -9,16 +9,10 @@ from flask import Flask, request, session, g, redirect, url_for, abort,\
                   render_template, flash, send_file, jsonify, make_response, safe_join
 from imeall.models import GBAnalysis
 from gb_models import serialize_vector, GRAIN_DATABASE, DATABASE, GrainBoundary, SubGrainBoundary,\
-                      deserialize_vector_int
+                      deserialize_vector_int, database
 from models import PotentialParameters
 
-calculations      = {}
-calculations['0000000000'] = {'VASP-DFT-PBE' : {'E0':-8.23807, 'DFT-mag': 2.2238, 'nat':1}, 'IP-EAM-MISH':{'E0': -4.2701, 'nat':1}}
-calculations['1107053111'] = {'VASP-DFT-PBE' : {'E0':-406.154623782, 'nat':96, 'A': 27.7436434255}}
-calculations['1105048332'] = {'IP-EAM-MISH'  : {'E0':-382.847802363, 'nat':90, 'A':18.7825353894 }}
-calculations['1106000112'] = {'IP-EAM-MISH'  : {'E0':-196.171, 'nat':46, 'A': 9.80885920049}}
-
-#files that Imeall server can wants to display in browser:
+#Files that Imeall server can display in browser:
 valid_extensions = ['xyz', 'json', 'mp4', 'png','day']
 vasp_files       = ['IBZKPT', 'INCAR', 'CHG', 'CHGCAR', 'DOSCAR', 'EIGENVAL', 
                     'KPOINTS', 'OSZICAR', 'OUTCAR', 'PCDAT', 'POSCAR',
@@ -26,7 +20,12 @@ vasp_files       = ['IBZKPT', 'INCAR', 'CHG', 'CHGCAR', 'DOSCAR', 'EIGENVAL',
 
 @app.before_request
 def before_request():
-  g.gb_dir = app.config['GRAIN_DATABASE']
+  g.sql = database.connect()
+
+@app.after_request
+def after_request(response):
+  g.sql = database.close()
+  return response
 
 @app.route('/')
 def home_page():
@@ -57,7 +56,7 @@ def orientations(url_path, orientation):
 
 #can only handle three digit or_axis atm.
   url_path = url_path+'/'+orientation
-  path     = os.path.join(g.gb_dir, url_path)
+  path = os.path.join(app.config['GRAIN_DATABASE'], url_path)
 
 #load serialized grain data
   with open(os.path.join(path, 'or_axis.json'), 'r') as json_file:
@@ -185,7 +184,6 @@ def make_tree(path):
       else:
 #append file if it is a relevant with its route:
         extension = name.split(".")[-1]
-        #print filename
         filename = os.path.relpath(filename, app.root_path)
         if (name in vasp_files) or (extension in valid_extensions):
           tree['children'].append(dict(name=name, fullpath = url_for('serve_struct', filename='apathtoafile', textpath=filename)))
@@ -216,15 +214,13 @@ def run_ovito(filename):
     ovito = os.environ["OVITO"]
   except KeyError:
     flash('No path to OVITO found in the environment')
-  #app.logger.debug(ovito, os.path.dirname(filename),  os.path.basename(filename))
   job = subprocess.Popen("{0} {1}".format(ovito, os.path.basename(filename)).split(), cwd=os.path.dirname(filename))
 
 
 @app.route('/struct/<path:filename>/<path:textpath>')
 def serve_struct(filename, textpath=None):
-  """View for serving structure files to clients.
+  """View for serving files to clients [png, json, xyz].
   """
-
   if textpath.endswith('xyz'):
     if app.config["RUN_OVITO"]:
       run_ovito(os.path.join(app.config['GRAIN_DATABASE'], textpath))
@@ -232,14 +228,10 @@ def serve_struct(filename, textpath=None):
       return redirect(request.referrer)
     else:
       return send_file(textpath)
-
   elif textpath.endswith('json'):
-    with open(os.path.join(app.config['GRAIN_DATABASE'], textpath),'r') as f:
-      json_dict = json.load(f)
-    return render_template('json_dict.html', json_dict=json_dict)
+    return send_file(textpath)
   elif textpath.endswith('png'):
-    print os.path.join(app.config['GRAIN_DATABASE'], textpath)
-    return send_file(os.path.join(app.config['GRAIN_DATABASE'], textpath))
+    return send_file(textpath)
   else:
     return redirect(request.referrer)
   
