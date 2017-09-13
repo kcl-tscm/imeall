@@ -12,11 +12,6 @@ from gb_models import serialize_vector, GRAIN_DATABASE, DATABASE, GrainBoundary,
                       deserialize_vector_int
 from models import PotentialParameters
 
-calculations      = {}
-calculations['0000000000'] = {'VASP-DFT-PBE' : {'E0':-8.23807, 'DFT-mag': 2.2238, 'nat':1}, 'IP-EAM-MISH':{'E0': -4.2701, 'nat':1}}
-calculations['1107053111'] = {'VASP-DFT-PBE' : {'E0':-406.154623782, 'nat':96, 'A': 27.7436434255}}
-calculations['1105048332'] = {'IP-EAM-MISH'  : {'E0':-382.847802363, 'nat':90, 'A':18.7825353894 }}
-calculations['1106000112'] = {'IP-EAM-MISH'  : {'E0':-196.171, 'nat':46, 'A': 9.80885920049}}
 
 #files that Imeall server can wants to display in browser:
 valid_extensions = ['xyz', 'json', 'mp4', 'png','day']
