@@ -7,7 +7,7 @@ import transformations as quat
 from ase.io import read
 from ase.io import write
 from ase.lattice.spacegroup import crystal
-from ase.lattice.surface import surface, bcc111,bcc110
+from ase.lattice.surface import surface, bcc111, bcc110
 from ase.lattice.cubic   import BodyCenteredCubic
 from ase.utils.geometry  import get_duplicate_atoms
 from quippy  import io
@@ -43,13 +43,6 @@ def rotate_plane_z(grain, miller):
   grain = rotate_grain(grain, q=rotation_quaternion)
   return rotation_quaternion
 
-def take_photo(grain):
-  """
-  Take profile picture of grain boundary.
-  """
-  pass
-
-
 def build_tilt_sym_gb(gbid='', bp=[3,3,2], v=[1,-1,0], min_spacing=12.0,
                       c_space=None, target_dir=None, rbt=None, chem_symbol='Fe',
                       alat=2.83):
@@ -73,14 +66,13 @@ def build_tilt_sym_gb(gbid='', bp=[3,3,2], v=[1,-1,0], min_spacing=12.0,
     alat(float): Lattice constant of the unit cell.
 
   Returns:
-    if 
-    target_dir is none function returns [z_planes, len(dups), n_grain_unit, grain_c] 
-    i.e the location of the interfacial planes, the number of duplicate atoms when the grain is built, the
-    number of atoms in the canonical unit cell, and the bicrystal :class:`ase.Atoms` object.
-    else
-    returns the bicrystal :class:`ase.Atoms` object.
+    if target_dir==None returns [z_planes, len(dups), n_grain_unit, grain_c] 
+      i.e the location of the interfacial planes, the number of duplicate atoms 
+      when the grain is built, the
+      number of atoms in the canonical unit cell, and the bicrystal :class:`ase.Atoms` object.
+    else returns :class:`ase.Atoms`.
   """
-  #bpxv boundary planeX orientation axis vector. Gives y orientation of bicrystal.
+  #bpxv [boundary plane]X[orientation axis] cross product. Gives y axis of bicrystal.
   bpxv = [(bp[1]*v[2]-v[1]*bp[2]),(bp[2]*v[0]-bp[0]*v[2]),(bp[0]*v[1]- v[0]*bp[1])]
   grain_a = BodyCenteredCubic(directions=[v, bpxv, bp],
                               size=(1,1,1), symbol=chem_symbol, pbc=(1,1,1),
@@ -98,7 +90,7 @@ def build_tilt_sym_gb(gbid='', bp=[3,3,2], v=[1,-1,0], min_spacing=12.0,
   grain_b = grain_a.copy()
   grain_c = grain_a.copy()
   print '\t', '{0} {1} {2}'.format(v[0],v[1],v[2])
-  print '\t', '{0} {1} {2}'.format(bpxv[0],bpxv[1],bpxv[2])
+  print '\t', '{0} {1} {2}'.format(bpxv[0], bpxv[1], bpxv[2])
   print '\t', '{0} {1} {2}'.format(bp[0], bp[1], bp[2])
   if c_space==None:
     s1 = surface('Fe', (map(int, bp)), 1)
@@ -109,6 +101,7 @@ def build_tilt_sym_gb(gbid='', bp=[3,3,2], v=[1,-1,0], min_spacing=12.0,
     s3 = surface('Fe', (map(int, bpxv)), 1)
     y_space = s3.get_cell()[1,1] #-s1.positions[:,2].max()
   print '\t Interplanar spacing: ', n, x_space.round(2), y_space.round(2), c_space.round(2), 'A'
+
 # Reflect grain b in z-axis (across mirror plane):
   print grain_a.get_cell()[2,2]-grain_a.positions[:,2].max()
   grain_b.positions[:,2]  = -1.0*grain_b.positions[:,2]
@@ -118,7 +111,8 @@ def build_tilt_sym_gb(gbid='', bp=[3,3,2], v=[1,-1,0], min_spacing=12.0,
   pos = [grain.position for grain in grain_c]
   pos = sorted(pos, key= lambda x: x[2])
   dups = get_duplicate_atoms(grain_c)
-# Now build the second grain boundary by reflecting in y plane
+
+# Now build the second grain boundary by reflecting in 'y' plane
   grain_b = grain_c.copy()
   grain_b.positions[:,0] = -grain_b.positions[:,0]
   grain_b.positions[:,1] = -grain_b.positions[:,1]
@@ -169,9 +163,45 @@ def build_tilt_sym_gb(gbid='', bp=[3,3,2], v=[1,-1,0], min_spacing=12.0,
   else:
     return grain_c
 
-def build_twist_sym_gb(gbid='', bp =[0,0,1], v=[3,5,0], min_spacing=15.0,
-                       c_space=None, target_dir=None, rbt = None,
-                       alat=2.83, chem_symbol='Fe'):
+def calc_twist_sigma_csl(bp, v, chem_symbol="Fe", alat=2.83, n=3):
+  """Calculate sigma number for a twist symmetric structure.
+
+  Args:
+    bp(:numpy:`array`): Boundary plane.
+    v(:numpy:`array`): x-axis of unit cell.
+    chem_symbol(str): Chemical element abbreviation.
+    n(int): size of unit cell.
+
+  Returns:
+    list: number of atoms, duplicate pairs, Sigma
+  """
+  bpxv = [(bp[1]*v[2]-v[1]*bp[2]),(bp[2]*v[0]-bp[0]*v[2]),(bp[0]*v[1]-v[0]*bp[1])]
+  grain_a = BodyCenteredCubic(directions=[list(v), list(bpxv), list(bp)],
+                               size=(n,n,n), symbol=chem_symbol, pbc=(1,1,1),
+                               latticeconstant=alat)
+  n_at = len(grain_a)
+  v2 = v.copy()
+  if np.allclose(bp, [0,0,1]):
+    v2[0] = -v2[0]
+  elif np.allclose(bp, [1,1,0]):
+    v2[2] = -v2[2]
+  elif np.allclose(bp, [1,1,1]):
+    v2[1] = -v2[1]
+    v2[2] = -v2[2]
+
+  bpxv = [(bp[1]*v2[2]-v2[1]*bp[2]),(bp[2]*v2[0]-bp[0]*v2[2]),(bp[0]*v2[1]- v2[0]*bp[1])]
+  grain_b = BodyCenteredCubic(directions = [list(v2), list(bpxv), list(bp)],
+                              size = (n,n,n), symbol=chem_symbol, pbc=(1,1,1),
+                              latticeconstant = alat)
+  grain_a.extend(grain_b)
+  dups = get_duplicate_atoms(grain_a)
+  print 'n_at', n_at, 'dups', len(dups), 'Sigma:', float(n_at)/float(len(dups))
+  return n_at, len(dups), float(n_at)/float(len(dups))
+
+
+def build_twist_sym_gb(gbid='', bp=[0,0,1], v=[3,5,0], min_spacing=14.0,
+                       c_space=None, target_dir=None, rbt=None, chem_symbol='Fe', 
+                       alat=2.83):
   """Builder for twist boundary structures. For the twist boundaries the orientation 
   axis (or_axis) also defines the boundary plane normal.
 
@@ -183,28 +213,31 @@ def build_twist_sym_gb(gbid='', bp =[0,0,1], v=[3,5,0], min_spacing=15.0,
     c_space(float): Interplanar spacing of boundary planes.
     target_dir(str): Path str of where to deposit grain boundary.
     rbt(list[float]): Rigid body translations.
-    alat(float): lattice constanct BCC crystal.
     chem_symbol(str): chemical symbol of bcc element.
+    alat(float): lattice constanct BCC crystal.
 
   Returns:
     if target_dir==None returns list [z_planes, sigma_csl, n_grain_unit, grain_c]
     else returns :class:`ase.Atoms`.
   """
-
-  bpxv    = [(bp[1]*v[2]-v[1]*bp[2]), (bp[2]*v[0]-bp[0]*v[2]), (bp[0]*v[1]-v[0]*bp[1])]
-  print "Symmetry Axis", v, "Orientation Axis", bp
-  print "bpxv", bpxv
-  grain_a =  BodyCenteredCubic(directions = [v, bpxv, bp],
-                               size = (1,1,1), symbol=chem_symbol, pbc=(1,1,1),
-                               latticeconstant = alat)
+  #bpxv [boundary plane]X[orientation axis] cross product. Gives y axis of bicrystal.
+  bpxv = [(bp[1]*v[2]-v[1]*bp[2]),(bp[2]*v[0]-bp[0]*v[2]),(bp[0]*v[1]-v[0]*bp[1])]
+  grain_a =  BodyCenteredCubic(directions=[list(v), list(bpxv), list(bp)],
+                               size=(1,1,1), symbol=chem_symbol, pbc=(1,1,1),
+                               latticeconstant=alat)
   n_grain_unit = len(grain_a)
   n = 2
   while(grain_a.get_cell()[2,2]< min_spacing and n < 10):
-    grain_a = BodyCenteredCubic(directions = [v, bpxv, bp],
-                              size = (1,1,n), symbol=chem_symbol, pbc=(1,1,1),
+    grain_a = BodyCenteredCubic(directions=[list(v), list(bpxv), list(bp)],
+                              size=(1,1,n), symbol=chem_symbol, pbc=(1,1,1),
                               latticeconstant = alat)
     n += 1
-
+  print '\n'
+  print 'Cell 1 Lattice Orientation'
+  print '\t v (xdim)', '{0} {1} {2}'.format(v[0],v[1],v[2])
+  print '\t bpxv (ydim)', '{0} {1} {2}'.format(bpxv[0], bpxv[1], bpxv[2])
+  print '\t bp (zdim)', '{0} {1} {2}'.format(bp[0], bp[1], bp[2])
+  print '\t {0} repeats in z direction'.format(n)
   v2      = v.copy()
   if np.allclose(bp, [0,0,1]):
     v2[0]   = -v2[0]
@@ -213,29 +246,30 @@ def build_twist_sym_gb(gbid='', bp =[0,0,1], v=[3,5,0], min_spacing=15.0,
   elif np.allclose(bp, [1,1,1]):
     v2[1]   = -v2[1]
     v2[2]   = -v2[2]
-
+#Build second cell.
   bpxv    = [(bp[1]*v2[2]-v2[1]*bp[2]),(bp[2]*v2[0]-bp[0]*v2[2]),(bp[0]*v2[1]- v2[0]*bp[1])]
-  grain_b = BodyCenteredCubic(directions = [v2, bpxv, bp],
+  grain_b = BodyCenteredCubic(directions = [list(v2), list(bpxv), list(bp)],
                               size = (1,1,1), symbol=chem_symbol, pbc=(1,1,1),
                               latticeconstant = alat)
+  print '\n'
+  print 'Cell 2 Lattice Orientation'
+  print '\t v (xdim)', '{0} {1} {2}'.format(v2[0],v2[1],v2[2])
+  print '\t bpxv (ydim)', '{0} {1} {2}'.format(bpxv[0], bpxv[1], bpxv[2])
+  print '\t bp (zdim)', '{0} {1} {2}'.format(bp[0], bp[1], bp[2])
+  print '\t {0} repeats in z direction'.format(n)
+
+  print 'Calculated Misorientation Angle: ', np.arccos((v.dot(v2))/(np.linalg.norm(v)*np.linalg.norm(v2)))*(180./np.pi)
+
   n = 2
-  while(grain_b.get_cell()[2,2] < 22.0 and n < 10):
-    grain_b = BodyCenteredCubic(directions = [v2, bpxv, bp],
+  while(grain_b.get_cell()[2,2] < 2*min_spacing and n < 10):
+    grain_b = BodyCenteredCubic(directions = [list(v2), list(bpxv), list(bp)],
                                 size = (1,1,n), symbol=chem_symbol, pbc=(1,1,1),
                                 latticeconstant = alat)
     n += 1
   grain_c = grain_a.copy()
-
   if c_space==None:
-    s1      = surface('Fe', (0,0,1), n)
-    c_space = grain_b.get_cell()[2,2]/float(n)
-    print 'Cspace', c_space
-    c_space = np.array(0.0)
-    s2      = surface('Fe', (map(int, v)), 1)
-    x_space = s2.get_cell()[0,0] #-s1.positions[:,2].max()
-    s3      = surface('Fe', (map(int, bpxv)), 1)
-    y_space = s3.get_cell()[1,1] #-s1.positions[:,2].max()
-  print '\t Interplanar spacing: ', x_space.round(2), y_space.round(2), c_space.round(2), 'A'
+    c_space = alat/np.sqrt(float(bp[0]**2+bp[1]**2 + bp[2]**2))
+
   if sum([int(n)%2 for n in bp])%2 == 0 :
     grain_b.positions[:,2]  -= (grain_b.positions[:,2].max() + c_space)
   else:
@@ -244,46 +278,42 @@ def build_twist_sym_gb(gbid='', bp =[0,0,1], v=[3,5,0], min_spacing=15.0,
   grain_c.extend(grain_b)
   grain_c.set_cell([grain_c.get_cell()[0,0], grain_c.get_cell()[1,1], 2.*grain_c.get_cell()[2,2]])
   grain_c.positions[:,2] += abs(grain_c.positions[:,2].min())
-# In BCC lattice spacing is different depending on whether the
-# z-plane has an even or odd number of odd miller indices:
+  #In BCC lattice spacing is different depending on whether the
+  #z-plane has an even or odd number of odd miller indices:
   if sum([int(n)%2 for n in bp])%2 == 0 :
-    grain_a.positions[:,2] -= (grain_a.positions[:,2].max()+c_space)
+    grain_a.positions[:,2] -= (grain_a.positions[:,2].max() + c_space)
   else:
-    grain_a.positions[:,2] -= (grain_a.positions[:,2].max()+c_space/2.0)
+    grain_a.positions[:,2] -= (grain_a.positions[:,2].max() + c_space/2.0)
   grain_c.extend(grain_a)
-#grain_c.set_cell([grain_c.get_cell()[0,0], grain_c.get_cell()[1,1], 2.*grain_c.get_cell()[2,2]])
   grain_c.positions[:,2] += abs(grain_c.positions[:,2].min())
   dups = get_duplicate_atoms(grain_c)
   shared_atoms = [grain_c[dup[0]] for dup in dups]
   for at in shared_atoms:
     print '\t', at.index, at.position
-  print '\t There are {0} shared atoms'.format(len(shared_atoms))
-
-  # Get sigma number
+  print '\t There are {} shared atoms'.format(len(shared_atoms))
+  #Get sigma number
   grain_d = grain_a.copy()
   grain_d.extend(grain_b)
   dups = get_duplicate_atoms(grain_d)
   shared_atoms_csl = [grain_d[dup[0]] for dup in dups]
   sigma_csl = float(len(grain_a))/float(len(shared_atoms_csl)+len(shared_atoms))
   dups = get_duplicate_atoms(grain_c, delete=True)
-#Space bicrystal properly.
+  # Space bicrystal.
   if np.allclose(bp, [0,0,1]):
     c_space = np.array(2.83)
   elif np.allclose(bp, [1,1,0]):
     c_space = np.array(2.001)
-
+  elif np.allclose(bp, [1,1,1]):
+    c_space = np.array(1.633)
   if sum([int(n)%2 for n in bp])%2 == 0 :
 	  grain_c.center(vacuum=c_space/2.0, axis=2)
   else:
     grain_c.center(vacuum=c_space/4.0, axis=2)
-
-  grain_c.info['adsorbate_info']=None
-  grain_c = Atoms(grain_c)
+  z_planes = [round(atom.position[2],4) for atom in shared_atoms]
+  z_planes = list(sorted(set(z_planes)))
   if target_dir != None:
     print '\t Writing {0}.xyz to file'.format(gbid)
-    n_grain_unt = len(grain_c)
-    z_planes = [round(atom.position[2],4) for atom in shared_atoms]
-    z_planes = list(sorted(set(z_planes)))
+    io.write('{0}.xyz'.format(os.path.join(target_dir, gbid)), grain_c)
     return [z_planes, sigma_csl, n_grain_unit, grain_c]
   else:
     return grain_c
@@ -478,7 +508,7 @@ def rotate_grain(grain, theta=0., x=[0.,0.,0.], q=[]):
     grain[i].position = quat.quaternion_imag(pos_prime)
   return grain
 
-def print_points(atoms, f, top_grain=True):
+def print_points(atoms, f, top_grain=True, gb_type='tilt'):
   """Print positions of atoms to file.
 
   Args:
@@ -486,13 +516,17 @@ def print_points(atoms, f, top_grain=True):
     f(file): file handle to print position list to.
   """
 
-  for atom in atoms:
-    if top_grain: 
-      if atom.position[0]>=0.0:
-        print>>f, '{0:12.7f} {1:12.7f} {2:12.7f}'.format(atom.position[0], atom.position[1], atom.position[2])
-    else:
-      if atom.position[0]<=0.0:
-        print>>f, '{0:12.7f} {1:12.7f} {2:12.7f}'.format(atom.position[0], atom.position[1], atom.position[2])
+  if gb_type == 'tilt':
+    for atom in atoms:
+      if top_grain: 
+        if atom.position[0]>=0.0:
+          print>>f, '{0:12.7f} {1:12.7f} {2:12.7f}'.format(atom.position[0], atom.position[1], atom.position[2])
+      else:
+        if atom.position[0]<=0.0:
+          print>>f, '{0:12.7f} {1:12.7f} {2:12.7f}'.format(atom.position[0], atom.position[1], atom.position[2])
+  else:
+    for atom in atoms:
+      print>>f, '{0:12.7f} {1:12.7f} {2:12.7f}'.format(atom.position[0], atom.position[1], atom.position[2])
 
 
 def simplify_csl(m, b=0.0, target_dir='./'):
@@ -636,11 +670,11 @@ def gen_csl(theta, orientation_axis, boundary_plane, target_dir='./', gbid='0000
 
   if gb_type=="tilt":
     csl_tilt_factory(orientation_axis, boundary_plane, m, n, gbid, grain_a, grain_b,
-                theta=theta, target_dir=target_dir)
+                theta=theta, target_dir=target_dir, gb_type=gb_type)
   elif gb_type=="twist":
-    csl_twist_factory(orientation_axis, boundary_plane, gbid, target_dir)
+    csl_twist_factory(orientation_axis, boundary_plane, gbid, target_dir, gb_type=gb_type)
 
-def csl_twist_factory(bp, v, gbid, target_dir, crystal_type='BCC'):
+def csl_twist_factory(bp, v, gbid, target_dir, crystal_type='BCC', gb_type='twist'):
   """
   Generate coincident site lattice points for arbitraty twist boundary.
   
@@ -656,7 +690,7 @@ def csl_twist_factory(bp, v, gbid, target_dir, crystal_type='BCC'):
   bpxv    = [(bp[1]*v[2]-v[1]*bp[2]), (bp[2]*v[0]-bp[0]*v[2]), (bp[0]*v[1]- v[0]*bp[1])]
 
   if crystal_type=='BCC':
-    grain_a =  BodyCenteredCubic(directions = [v, bpxv, bp],
+    grain_a =  BodyCenteredCubic(directions = [list(v), list(bpxv), list(bp)],
                                  size = (1,1,1), symbol='Fe', pbc=(1,1,1),
                                  latticeconstant = 2.83)
   else:
@@ -675,7 +709,7 @@ def csl_twist_factory(bp, v, gbid, target_dir, crystal_type='BCC'):
     v2[2]   = -v2[2]
 
   bpxv = [(bp[1]*v2[2]-v2[1]*bp[2]),(bp[2]*v2[0]-bp[0]*v2[2]),(bp[0]*v2[1]- v2[0]*bp[1])]
-  grain_b = BodyCenteredCubic(directions = [v2, bpxv, bp],
+  grain_b = BodyCenteredCubic(directions = [list(v2), list(bpxv), list(bp)],
                               size = (1,1,1), symbol='Fe', pbc=(1,1,1),
                               latticeconstant = 2.83)
 
@@ -693,7 +727,7 @@ def csl_twist_factory(bp, v, gbid, target_dir, crystal_type='BCC'):
 
   for key, dat_file in zip(grain_dict.keys()[:2], dat_files):
     with open(os.path.join(target_dir, dat_file), 'w') as f:
-      print_points(grain_dict[key], f)
+      print_points(grain_dict[key], f, gb_type=gb_type)
 
   dat_files = ['grainbT.dat', 'grainbB.dat']
   grain_b = sorted(grain_b, key=lambda x: (x.position[2], x.position[0], x.position[1]))
@@ -708,7 +742,7 @@ def csl_twist_factory(bp, v, gbid, target_dir, crystal_type='BCC'):
 
   for key, dat_file in zip(grain_dict.keys()[:2], dat_files):
     with open(os.path.join(target_dir, dat_file), 'w') as f:
-      print_points(grain_dict[key], f)
+      print_points(grain_dict[key], f, gb_type=gb_type)
   gnu_plot_twist_gb(gbid=gbid, target_dir=target_dir)
 
 def zeiner_info():
@@ -736,7 +770,7 @@ def zeiner_info():
 
 
 def csl_tilt_factory(orientation_axis, boundary_plane, m, n, gbid, grain_a, grain_b,
-                     theta=0, target_dir='./'):
+                     theta=0, target_dir='./', gb_type='tilt'):
   """ Builds a plot of the coincident site lattice oriented along a suitable
   plane for viewing purposes. In the gnuplot plane we think of x,y,z orientation.
   so that the orientation axis = N = z is oriented 'into' the page.
@@ -750,15 +784,16 @@ def csl_tilt_factory(orientation_axis, boundary_plane, m, n, gbid, grain_a, grai
   in plane_quaternion_z.
 
   Args:
-    orientation_axis(list):
-    boundary_plane(list):
+    orientation_axis(list): orientation axis
+    boundary_plane(list): boundary plane
     m(int): slope of boundary plane
     n(int): integer of orientation axis.
     gbid(str): grain boundary identifying label.
     grain_a(:class:`ase.Atoms`): blue crystal.
     grain_b(:class:`ase.Atoms`): red crystal.
-    theta(float): angle
+    theta(float): angle.
     target_dir(str): target directory to write plotting scripts.
+    gb_type(str): grain boundary type.
   """
 
   f = open(os.path.join(target_dir, 'grainaT.dat'), 'w')
@@ -797,8 +832,8 @@ def csl_tilt_factory(orientation_axis, boundary_plane, m, n, gbid, grain_a, grai
     len_list.append((z, len(grain_dict[z])))
 
   key1, key2 = find_densest_plane(grain_dict)
-  print_points(grain_dict[key1], f, top_grain=True)
-  print_points(grain_dict[key2], g, top_grain=True)
+  print_points(grain_dict[key1], f, top_grain=True, gb_type=gb_type)
+  print_points(grain_dict[key2], g, top_grain=True, gb_type=gb_type)
   f.close()
   g.close()
 # Setup grain b and project into chosen plane
@@ -854,20 +889,20 @@ def csl_tilt_factory(orientation_axis, boundary_plane, m, n, gbid, grain_a, grai
   for z in z_vals:
      len_list.append((z,len(grain_dict[z])))
   key1, key2 = find_densest_plane(grain_dict)
-  print_points(grain_dict[key1], f, top_grain=False)
-  print_points(grain_dict[key2], g, top_grain=False)
+  print_points(grain_dict[key1], f, top_grain=False, gb_type=gb_type)
+  print_points(grain_dict[key2], g, top_grain=False, gb_type=gb_type)
   f.close()
   g.close()
 
-def gen_canonical_grain_dir(angle, orientation_axis, boundary_plane, material='alphaFe', target_dir='./'):
-  """Generate a canonical grain boundary directory. 
-
+def gen_canonical_grain_dir(angle, orientation_axis, boundary_plane, material='alphaFe', target_dir='./', gb_type="tilt"):
+  """Generate a canonical grain boundary directory.
   Args:
     angle(float): misorientation angle in radians.
     orienation_axis(list): orientation axis.
-    boundary_plane(list): boundary_plane
-    material(str, optional): 
+    boundary_plane(list): boundary plane
+    material(str, optional): material
     target_dir(str, optional): target directory to deposit canonical grain structure.
+    gb_type(str): grain boundary type options are 'tilt', 'twist'.
   """
 
   angle_str = str(round((angle*180./np.pi),2)).replace('.', '')
@@ -876,11 +911,20 @@ def gen_canonical_grain_dir(angle, orientation_axis, boundary_plane, material='a
   elif len(angle_str) < 4:
     angle_str = angle_str + '0'
 
-  gbid = '{0}{1}{2}'.format(orientation_axis[0], orientation_axis[1], orientation_axis[2])\
+  if gb_type == 'tilt':
+    gbid = '{0}{1}{2}'.format(orientation_axis[0], orientation_axis[1], orientation_axis[2])\
                             + angle_str \
                             + '{0}{1}{2}'.format(int(abs(boundary_plane[0])), 
                                                  int(abs(boundary_plane[1])), 
                                                  int(abs(boundary_plane[2])))
+  elif gb_type == 'twist':
+    gbid = '{0}{1}{2}'.format(orientation_axis[0], orientation_axis[1], orientation_axis[2])\
+                            + angle_str \
+                            + '{0}{1}{2}'.format(int(abs(orientation_axis[0])), 
+                                                 int(abs(orientation_axis[1])), 
+                                                 int(abs(orientation_axis[2])))
+  else:
+    sys.exit("gb_type not recognized.")
 
   print '\t Grain Boundary ID',  gbid
   target_dir = os.path.join(target_dir, gbid)
@@ -891,19 +935,30 @@ def gen_canonical_grain_dir(angle, orientation_axis, boundary_plane, material='a
   else:
     'File already exists.'
 
-  gen_csl(angle, orientation_axis, boundary_plane, target_dir=target_dir, gbid=gbid)
+  gen_csl(angle, orientation_axis, boundary_plane, target_dir=target_dir, gbid=gbid, gb_type=gb_type)
 
-  zplanes, dups, nunitcell, grain = build_tilt_sym_gb(gbid, bp=boundary_plane, v=orientation_axis, 
-                                                      c_space=None, target_dir=target_dir,
-                                                      rbt=[0.0, 0.0])
+  if gb_type == 'tilt':
+    zplanes, dups, nunitcell, grain = build_tilt_sym_gb(gbid, bp=boundary_plane, v=orientation_axis, 
+                                                        c_space=None, target_dir=target_dir,
+                                                        rbt=[0.0, 0.0])
+    sigma = float(nunitcell)/float(dups)
+  elif gb_type =='twist':
+  #swap or_axis, and bp_plane for twist boundary:
+    zplanes, dups, nunitcell, grain = build_twist_sym_gb(gbid, bp=orientation_axis, v=boundary_plane, 
+                                                         c_space=None, target_dir=target_dir,
+                                                         rbt=[0.0, 0.0])
+    n_at, dups, sigma = calc_twist_sigma_csl(orientation_axis, boundary_plane, chem_symbol="Fe")
+  else:
+    sys.exit("Unknown gb_type.")
+
   cell = grain.get_cell()
   A = cell[0][0]*cell[1][1]
   H = cell[2][2]
   gb_dict = {"gbid"  : gbid, "boundary_plane" : list(boundary_plane),
              "orientation_axis" : list(orientation_axis), 
-             "type": "symmetric tilt boundary",
+             "type": "symmetric {} boundary".format(gb_type),
              "angle": angle, "zplanes" : zplanes, "coincident_sites": dups,
-             "n_at" : nunitcell, 'A':A, 'area':A, 'H':H} #area should become dominant keyword
+             "sigma_csl": sigma, "n_at" : nunitcell, 'A':A, 'area':A, 'H':H} #area should become dominant keyword
 
   with open(os.path.join(target_dir, 'gb.json'), 'w') as outfile:
     json.dump(gb_dict, outfile, indent=2)
