@@ -954,11 +954,20 @@ def gen_canonical_grain_dir(angle, orientation_axis, boundary_plane, material='a
   cell = grain.get_cell()
   A = cell[0][0]*cell[1][1]
   H = cell[2][2]
-  gb_dict = {"gbid"  : gbid, "boundary_plane" : list(boundary_plane),
-             "orientation_axis" : list(orientation_axis), 
-             "type": "symmetric {} boundary".format(gb_type),
-             "angle": angle, "zplanes" : zplanes, "coincident_sites": dups,
-             "sigma_csl": sigma, "n_at" : nunitcell, 'A':A, 'area':A, 'H':H} #area should become dominant keyword
+  if gb_type == 'tilt':
+    gb_dict = {"gbid"  : gbid, "boundary_plane" : list(boundary_plane),
+               "orientation_axis" : list(orientation_axis), 
+               "type": "symmetric {} boundary".format(gb_type),
+               "angle": angle, "zplanes" : zplanes, "coincident_sites": dups,
+               "sigma_csl": sigma, "n_at" : nunitcell, 'A':A, 'area':A, 'H':H} #area should become dominant keyword
+  elif gb_type == 'twist':
+    gb_dict = {"gbid"  : gbid, "boundary_plane" : list(orientation_axis),
+               "orientation_axis" : list(orientation_axis), 
+               "type": "symmetric {} boundary".format(gb_type),
+               "angle": angle, "zplanes" : zplanes, "coincident_sites": dups,
+               "sigma_csl": sigma, "n_at" : nunitcell, 'A':A, 'area':A, 'H':H} #area should become dominant keyword
+  else:
+    sys.exit("unrecognized grain boundary type")
 
   with open(os.path.join(target_dir, 'gb.json'), 'w') as outfile:
     json.dump(gb_dict, outfile, indent=2)

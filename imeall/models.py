@@ -338,7 +338,7 @@ class GBMaintenance(object):
         pass
     return num_deleted_files
 
-  def add_key_to_dict(self, dirname, new_key, new_value, dict_type='subgb.json'):
+  def add_key_to_dict(self, dirname, new_key, new_value, dict_type='subgb.json', modify=False):
     """Add single key to .json dictionary.
 
     Args:
@@ -346,18 +346,23 @@ class GBMaintenance(object):
       new_key(str): key to add to dictionary.
       new_value(generic): value to add to dictionary.
       dict_type(str, optional): Type of json dict 'subgb.json' or 'gb.json'.
+      modify(bool): If True json file will be overwritten.
 
     Returns:
       dict: Updated json dictionary.
     """
 
-    os.path.join(dirname, dict_type)
+    json_path = os.path.join(dirname, dict_type)
     new_json = {}
     with open(json_path,'r') as json_old:
       old_json = json.load(json_old)
     for key in old_json.keys():
       new_json[key] = old_json[key]
+    #modify key or add it 
     new_json[new_key] = new_value
+    if modify:
+      with open(json_path,'w') as json_new_file:
+        json.dump(new_json, json_new_file, indent=2)
     return new_json
 
   def update_json(self, json_path, new_keys=[], new_values=[], dryrun=True):

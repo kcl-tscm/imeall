@@ -45,12 +45,15 @@ tree and the sql database are in non-standard locations modify the appropriate c
 
   GRAIN_DATABASE = '/path/to/grain_database/'
   GRAIN_DATABASE_SQL = '/path/to/gb_database.db'
-  SECRET_KEY = 'mostsecret'
   MATERIALS = ['alphaFe']
   RUN_OVITO = False
+  SECRET_KEY = 'mostsecret'
   DEBUG = True
+
+Additional keys to set are ``RUN_OVITO`` which determines whether xyz files selected
+from the web interface are downloadable or should be launched directly in the ovito viewer,
+and the ``Materials`` list with the materials in the local database.
 
 A `representative subset <https://imeall.co.uk>`_ of the grain boundary database to download for 
 testing is available from the ``imeall`` website hosted on the `NOMAD <https://nomad-coe.eu>`_ server.
-
 

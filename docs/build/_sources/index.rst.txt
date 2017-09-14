@@ -30,6 +30,7 @@ Contents
    generators.rst
    interstitials.rst
    calculators.rst
+   examples.rst
 
 Indices and tables
 ==================

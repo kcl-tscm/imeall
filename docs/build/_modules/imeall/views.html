@@ -50,16 +50,10 @@
                   <span class="n">render_template</span><span class="p">,</span> <span class="n">flash</span><span class="p">,</span> <span class="n">send_file</span><span class="p">,</span> <span class="n">jsonify</span><span class="p">,</span> <span class="n">make_response</span><span class="p">,</span> <span class="n">safe_join</span>
 <span class="kn">from</span> <span class="nn">imeall.models</span> <span class="k">import</span> <span class="n">GBAnalysis</span>
 <span class="kn">from</span> <span class="nn">gb_models</span> <span class="k">import</span> <span class="n">serialize_vector</span><span class="p">,</span> <span class="n">GRAIN_DATABASE</span><span class="p">,</span> <span class="n">DATABASE</span><span class="p">,</span> <span class="n">GrainBoundary</span><span class="p">,</span> <span class="n">SubGrainBoundary</span><span class="p">,</span>\
-                      <span class="n">deserialize_vector_int</span>
+                      <span class="n">deserialize_vector_int</span><span class="p">,</span> <span class="n">database</span>
 <span class="kn">from</span> <span class="nn">models</span> <span class="k">import</span> <span class="n">PotentialParameters</span>
 
-<span class="n">calculations</span>      <span class="o">=</span> <span class="p">{}</span>
-<span class="n">calculations</span><span class="p">[</span><span class="s1">&#39;0000000000&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;VASP-DFT-PBE&#39;</span> <span class="p">:</span> <span class="p">{</span><span class="s1">&#39;E0&#39;</span><span class="p">:</span><span class="o">-</span><span class="mf">8.23807</span><span class="p">,</span> <span class="s1">&#39;DFT-mag&#39;</span><span class="p">:</span> <span class="mf">2.2238</span><span class="p">,</span> <span class="s1">&#39;nat&#39;</span><span class="p">:</span><span class="mi">1</span><span class="p">},</span> <span class="s1">&#39;IP-EAM-MISH&#39;</span><span class="p">:{</span><span class="s1">&#39;E0&#39;</span><span class="p">:</span> <span class="o">-</span><span class="mf">4.2701</span><span class="p">,</span> <span class="s1">&#39;nat&#39;</span><span class="p">:</span><span class="mi">1</span><span class="p">}}</span>
-<span class="n">calculations</span><span class="p">[</span><span class="s1">&#39;1107053111&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;VASP-DFT-PBE&#39;</span> <span class="p">:</span> <span class="p">{</span><span class="s1">&#39;E0&#39;</span><span class="p">:</span><span class="o">-</span><span class="mf">406.154623782</span><span class="p">,</span> <span class="s1">&#39;nat&#39;</span><span class="p">:</span><span class="mi">96</span><span class="p">,</span> <span class="s1">&#39;A&#39;</span><span class="p">:</span> <span class="mf">27.7436434255</span><span class="p">}}</span>
-<span class="n">calculations</span><span class="p">[</span><span class="s1">&#39;1105048332&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;IP-EAM-MISH&#39;</span>  <span class="p">:</span> <span class="p">{</span><span class="s1">&#39;E0&#39;</span><span class="p">:</span><span class="o">-</span><span class="mf">382.847802363</span><span class="p">,</span> <span class="s1">&#39;nat&#39;</span><span class="p">:</span><span class="mi">90</span><span class="p">,</span> <span class="s1">&#39;A&#39;</span><span class="p">:</span><span class="mf">18.7825353894</span> <span class="p">}}</span>
-<span class="n">calculations</span><span class="p">[</span><span class="s1">&#39;1106000112&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;IP-EAM-MISH&#39;</span>  <span class="p">:</span> <span class="p">{</span><span class="s1">&#39;E0&#39;</span><span class="p">:</span><span class="o">-</span><span class="mf">196.171</span><span class="p">,</span> <span class="s1">&#39;nat&#39;</span><span class="p">:</span><span class="mi">46</span><span class="p">,</span> <span class="s1">&#39;A&#39;</span><span class="p">:</span> <span class="mf">9.80885920049</span><span class="p">}}</span>
-
-<span class="c1">#files that Imeall server can wants to display in browser:</span>
+<span class="c1">#Files that Imeall server can display in browser:</span>
 <span class="n">valid_extensions</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;xyz&#39;</span><span class="p">,</span> <span class="s1">&#39;json&#39;</span><span class="p">,</span> <span class="s1">&#39;mp4&#39;</span><span class="p">,</span> <span class="s1">&#39;png&#39;</span><span class="p">,</span><span class="s1">&#39;day&#39;</span><span class="p">]</span>
 <span class="n">vasp_files</span>       <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;IBZKPT&#39;</span><span class="p">,</span> <span class="s1">&#39;INCAR&#39;</span><span class="p">,</span> <span class="s1">&#39;CHG&#39;</span><span class="p">,</span> <span class="s1">&#39;CHGCAR&#39;</span><span class="p">,</span> <span class="s1">&#39;DOSCAR&#39;</span><span class="p">,</span> <span class="s1">&#39;EIGENVAL&#39;</span><span class="p">,</span> 
                     <span class="s1">&#39;KPOINTS&#39;</span><span class="p">,</span> <span class="s1">&#39;OSZICAR&#39;</span><span class="p">,</span> <span class="s1">&#39;OUTCAR&#39;</span><span class="p">,</span> <span class="s1">&#39;PCDAT&#39;</span><span class="p">,</span> <span class="s1">&#39;POSCAR&#39;</span><span class="p">,</span>
@@ -67,14 +61,17 @@
 
 <span class="nd">@app</span><span class="o">.</span><span class="n">before_request</span>
 <span class="k">def</span> <span class="nf">before_request</span><span class="p">():</span>
-  <span class="n">g</span><span class="o">.</span><span class="n">gb_dir</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;GRAIN_DATABASE&#39;</span><span class="p">]</span>
+  <span class="n">g</span><span class="o">.</span><span class="n">sql</span> <span class="o">=</span> <span class="n">database</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+
+<span class="nd">@app</span><span class="o">.</span><span class="n">after_request</span>
+<span class="k">def</span> <span class="nf">after_request</span><span class="p">(</span><span class="n">response</span><span class="p">):</span>
+  <span class="n">g</span><span class="o">.</span><span class="n">sql</span> <span class="o">=</span> <span class="n">database</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+  <span class="k">return</span> <span class="n">response</span>
 
 <div class="viewcode-block" id="home_page"><a class="viewcode-back" href="../../views.html#imeall.views.home_page">[docs]</a><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">home_page</span><span class="p">():</span>
   <span class="sd">&quot;&quot;&quot;Overview of imeall database. Links to material views.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-
-  <span class="c1">#materials = os.listdir(g.gb_dir)</span>
   <span class="n">materials</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;MATERIALS&quot;</span><span class="p">]</span>
   <span class="k">return</span> <span class="n">render_template</span><span class="p">(</span><span class="s1">&#39;imeall.html&#39;</span><span class="p">,</span> <span class="n">materials</span><span class="o">=</span><span class="n">materials</span><span class="p">)</span></div>
 
@@ -82,7 +79,6 @@
 <span class="k">def</span> <span class="nf">material</span><span class="p">(</span><span class="n">material</span><span class="p">):</span>
   <span class="sd">&quot;&quot;&quot;View of available orientation axes for a particular material.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-
   <span class="n">path</span>         <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;GRAIN_DATABASE&#39;</span><span class="p">],</span> <span class="n">material</span><span class="p">)</span>
   <span class="n">url_path</span>     <span class="o">=</span> <span class="n">material</span>
   <span class="n">orientations</span> <span class="o">=</span> <span class="p">[]</span>
@@ -101,7 +97,7 @@
 
 <span class="c1">#can only handle three digit or_axis atm.</span>
   <span class="n">url_path</span> <span class="o">=</span> <span class="n">url_path</span><span class="o">+</span><span class="s1">&#39;/&#39;</span><span class="o">+</span><span class="n">orientation</span>
-  <span class="n">path</span>     <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">gb_dir</span><span class="p">,</span> <span class="n">url_path</span><span class="p">)</span>
+  <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;GRAIN_DATABASE&#39;</span><span class="p">],</span> <span class="n">url_path</span><span class="p">)</span>
 
 <span class="c1">#load serialized grain data</span>
   <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;or_axis.json&#39;</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">json_file</span><span class="p">:</span>
@@ -136,7 +132,7 @@
 <span class="sd">  &quot;&quot;&quot;</span>
 
   <span class="n">url_path</span>  <span class="o">=</span> <span class="n">url_path</span><span class="o">+</span><span class="s1">&#39;/&#39;</span><span class="o">+</span><span class="n">gbid</span>
-  <span class="n">path</span>      <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">gb_dir</span><span class="p">,</span> <span class="n">url_path</span><span class="p">)</span>
+  <span class="n">path</span>      <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;GRAIN_DATABASE&quot;</span><span class="p">],</span> <span class="n">url_path</span><span class="p">)</span>
   <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;gb.json&#39;</span><span class="p">),</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">json_file</span><span class="p">:</span>
     <span class="n">gb_info</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">json_file</span><span class="p">)</span>
   <span class="n">stuff</span> <span class="o">=</span> <span class="p">[]</span>
@@ -146,8 +142,9 @@
   <span class="n">subgrains</span>  <span class="o">=</span> <span class="p">[]</span>  
   <span class="n">subgrainsj</span> <span class="o">=</span> <span class="p">[]</span>
   <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">gb_path</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">json_files</span><span class="p">):</span>
-    <span class="n">subgrains</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">gb_path</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">)),</span> <span class="n">i</span><span class="p">])</span>
-    <span class="n">subgrainsj</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">gb_path</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">)))</span>
+    <span class="n">subgrains</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">gb_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)),</span> <span class="n">i</span><span class="p">])</span>
+    <span class="n">subgrainsj</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">gb_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)))</span>
+
 <span class="c1">#find lowest energy structure for every potential in the database</span>
   <span class="n">analyze</span>  <span class="o">=</span> <span class="n">GBAnalysis</span><span class="p">()</span>
   <span class="n">potparams</span> <span class="o">=</span> <span class="n">PotentialParameters</span><span class="p">()</span>
@@ -228,9 +225,9 @@
       <span class="k">else</span><span class="p">:</span>
 <span class="c1">#append file if it is a relevant with its route:</span>
         <span class="n">extension</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-        <span class="n">filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;GRAIN_DATABASE&#39;</span><span class="p">])</span>
+        <span class="n">filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">app</span><span class="o">.</span><span class="n">root_path</span><span class="p">)</span>
         <span class="k">if</span> <span class="p">(</span><span class="n">name</span> <span class="ow">in</span> <span class="n">vasp_files</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">extension</span> <span class="ow">in</span> <span class="n">valid_extensions</span><span class="p">):</span>
-          <span class="n">tree</span><span class="p">[</span><span class="s1">&#39;children&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">fullpath</span><span class="o">=</span><span class="n">url_for</span><span class="p">(</span><span class="s1">&#39;serve_struct&#39;</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="s1">&#39;apathtoafile&#39;</span><span class="p">,</span> <span class="n">textpath</span><span class="o">=</span><span class="n">filename</span><span class="p">)))</span>
+          <span class="n">tree</span><span class="p">[</span><span class="s1">&#39;children&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">fullpath</span> <span class="o">=</span> <span class="n">url_for</span><span class="p">(</span><span class="s1">&#39;serve_struct&#39;</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="s1">&#39;apathtoafile&#39;</span><span class="p">,</span> <span class="n">textpath</span><span class="o">=</span><span class="n">filename</span><span class="p">)))</span>
   <span class="k">return</span> <span class="n">tree</span></div>
 
 <span class="k">def</span> <span class="nf">extract_json</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">json_files</span><span class="p">):</span>
@@ -258,26 +255,24 @@
     <span class="n">ovito</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;OVITO&quot;</span><span class="p">]</span>
   <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
     <span class="n">flash</span><span class="p">(</span><span class="s1">&#39;No path to OVITO found in the environment&#39;</span><span class="p">)</span>
-  <span class="c1">#app.logger.debug(ovito, os.path.dirname(filename),  os.path.basename(filename))</span>
   <span class="n">job</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{0}</span><span class="s2"> </span><span class="si">{1}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ovito</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">filename</span><span class="p">))</span><span class="o">.</span><span class="n">split</span><span class="p">(),</span> <span class="n">cwd</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">filename</span><span class="p">))</span></div>
 
 
 <div class="viewcode-block" id="serve_struct"><a class="viewcode-back" href="../../views.html#imeall.views.serve_struct">[docs]</a><span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/struct/&lt;path:filename&gt;/&lt;path:textpath&gt;&#39;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">serve_struct</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">textpath</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;View for serving structure files to clients.</span>
+  <span class="sd">&quot;&quot;&quot;View for serving files to clients [png, json, xyz].</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-
   <span class="k">if</span> <span class="n">textpath</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;xyz&#39;</span><span class="p">):</span>
-    <span class="n">run_ovito</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;GRAIN_DATABASE&#39;</span><span class="p">],</span> <span class="n">textpath</span><span class="p">))</span>
-    <span class="n">flash</span><span class="p">(</span><span class="s1">&#39;running ovito&#39;</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">referrer</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;RUN_OVITO&quot;</span><span class="p">]:</span>
+      <span class="n">run_ovito</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;GRAIN_DATABASE&#39;</span><span class="p">],</span> <span class="n">textpath</span><span class="p">))</span>
+      <span class="n">flash</span><span class="p">(</span><span class="s1">&#39;running ovito&#39;</span><span class="p">)</span>
+      <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">referrer</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">send_file</span><span class="p">(</span><span class="n">textpath</span><span class="p">)</span>
   <span class="k">elif</span> <span class="n">textpath</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;json&#39;</span><span class="p">):</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;GRAIN_DATABASE&#39;</span><span class="p">],</span> <span class="n">textpath</span><span class="p">),</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-      <span class="n">json_dict</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">render_template</span><span class="p">(</span><span class="s1">&#39;json_dict.html&#39;</span><span class="p">,</span> <span class="n">json_dict</span><span class="o">=</span><span class="n">json_dict</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">send_file</span><span class="p">(</span><span class="n">textpath</span><span class="p">)</span>
   <span class="k">elif</span> <span class="n">textpath</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;png&#39;</span><span class="p">):</span>
-    <span class="nb">print</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;GRAIN_DATABASE&#39;</span><span class="p">],</span> <span class="n">textpath</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">send_file</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;GRAIN_DATABASE&#39;</span><span class="p">],</span> <span class="n">textpath</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">send_file</span><span class="p">(</span><span class="n">textpath</span><span class="p">)</span>
   <span class="k">else</span><span class="p">:</span>
     <span class="k">return</span> <span class="n">redirect</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">referrer</span><span class="p">)</span></div>
   
@@ -422,6 +417,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../generators.html">Generators</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../interstitials.html">Interstitials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../calculators.html">Calculators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
 </ul>
 
 <div class="relations">

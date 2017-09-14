@@ -326,7 +326,6 @@
         <span class="n">subgb_dict</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
       <span class="n">struct_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">subgb_model</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">subgb_model</span><span class="o">.</span><span class="n">gbid</span><span class="o">+</span><span class="s1">&#39;_traj.xyz&#39;</span><span class="p">)</span>
       <span class="n">struct_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">GRAIN_DATABASE</span><span class="p">,</span> <span class="n">struct_path</span><span class="p">)</span>
-      <span class="c1">#print struct_path</span>
       <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">struct_path</span><span class="p">)</span>
       <span class="k">try</span><span class="p">:</span>
         <span class="k">assert</span> <span class="n">subgb_model</span><span class="o">.</span><span class="n">converged</span><span class="o">==</span><span class="n">subgb_dict</span><span class="p">[</span><span class="s1">&#39;converged&#39;</span><span class="p">]</span>
@@ -745,7 +744,8 @@
     <span class="n">gb_check_conv</span><span class="p">(</span><span class="n">material</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">material</span><span class="p">,</span> <span class="n">or_axis</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">or_axis</span><span class="p">,</span> <span class="n">modify_db</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">modify</span><span class="p">)</span>
 
   <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">check_force</span><span class="p">:</span>
-    <span class="n">gb_check_force</span><span class="p">(</span><span class="n">material</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">material</span><span class="p">,</span> <span class="n">or_axis</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">or_axis</span><span class="p">,</span> <span class="n">modify_db</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">modify</span><span class="p">,</span> <span class="n">gb_start</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">gb_start</span><span class="p">,</span> <span class="n">sub_start</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">sub_start</span><span class="p">)</span>
+    <span class="n">gb_check_force</span><span class="p">(</span><span class="n">material</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">material</span><span class="p">,</span> <span class="n">or_axis</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">or_axis</span><span class="p">,</span> <span class="n">modify_db</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">modify</span><span class="p">,</span> <span class="n">gb_start</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">gb_start</span><span class="p">,</span> <span class="n">sub_start</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">sub_start</span><span class="p">,</span>
+                   <span class="n">gbid</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">gbid</span><span class="p">)</span>
 
   <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">insert</span><span class="p">:</span>
     <span class="k">assert</span> <span class="n">args</span><span class="o">.</span><span class="n">gbid</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span>
@@ -781,6 +781,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../generators.html">Generators</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../interstitials.html">Interstitials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../calculators.html">Calculators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
 </ul>
 
 <div class="relations">

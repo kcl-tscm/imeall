@@ -2,7 +2,6 @@ from ase import Atoms as aseAtoms
 from ase.io.vasp import write_vasp
 from ase.calculators.vasp import Vasp
 from pyspglib import spglib
-#from pylada.crystal import read as read_poscar
 from pylada_defects_2 import get_interstitials, write_interstitials, get_unique_wyckoff, get_all_interstitials
 from pylada_defects_2 import get_ints_in_prim_cell, get_unique_ints
 from quippy import Atoms, farray, frange, set_fortran_indexing

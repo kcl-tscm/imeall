@@ -78,12 +78,15 @@ The configuration file for the imeall package is located at</p>
 tree and the sql database are in non-standard locations modify the appropriate configuration variable:</p>
 <div class="code python highlight-default"><div class="highlight"><pre><span></span><span class="n">GRAIN_DATABASE</span> <span class="o">=</span> <span class="s1">&#39;/path/to/grain_database/&#39;</span>
 <span class="n">GRAIN_DATABASE_SQL</span> <span class="o">=</span> <span class="s1">&#39;/path/to/gb_database.db&#39;</span>
-<span class="n">SECRET_KEY</span> <span class="o">=</span> <span class="s1">&#39;mostsecret&#39;</span>
 <span class="n">MATERIALS</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;alphaFe&#39;</span><span class="p">]</span>
 <span class="n">RUN_OVITO</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="n">SECRET_KEY</span> <span class="o">=</span> <span class="s1">&#39;mostsecret&#39;</span>
 <span class="n">DEBUG</span> <span class="o">=</span> <span class="kc">True</span>
 </pre></div>
 </div>
+<p>Additional keys to set are <code class="docutils literal"><span class="pre">RUN_OVITO</span></code> which determines whether xyz files selected
+from the web interface are downloadable or should be launched directly in the ovito viewer,
+and the <code class="docutils literal"><span class="pre">Materials</span></code> list with the materials in the local database.</p>
 <p>A <a class="reference external" href="https://imeall.co.uk">representative subset</a> of the grain boundary database to download for
 testing is available from the <code class="docutils literal"><span class="pre">imeall</span></code> website hosted on the <a class="reference external" href="https://nomad-coe.eu">NOMAD</a> server.</p>
 </div>
@@ -119,6 +122,7 @@ testing is available from the <code class="docutils literal"><span class="pre">i
 <li class="toctree-l1"><a class="reference internal" href="generators.html">Generators</a></li>
 <li class="toctree-l1"><a class="reference internal" href="interstitials.html">Interstitials</a></li>
 <li class="toctree-l1"><a class="reference internal" href="calculators.html">Calculators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
 </ul>
 
 <div class="relations">
