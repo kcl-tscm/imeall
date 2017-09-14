@@ -285,7 +285,6 @@ def gb_check_conv(material='alphaFe', or_axis='001', modify_db=False):
         subgb_dict = json.load(f)
       struct_path = os.path.join(subgb_model.path, subgb_model.gbid+'_traj.xyz')
       struct_path = os.path.join(GRAIN_DATABASE, struct_path)
-      #print struct_path
       logging.debug(struct_path)
       try:
         assert subgb_model.converged==subgb_dict['converged']
@@ -704,7 +703,8 @@ if __name__=="__main__":
     gb_check_conv(material=args.material, or_axis=args.or_axis, modify_db=args.modify)
 
   if args.check_force:
-    gb_check_force(material=args.material, or_axis=args.or_axis, modify_db=args.modify, gb_start=args.gb_start, sub_start=args.sub_start)
+    gb_check_force(material=args.material, or_axis=args.or_axis, modify_db=args.modify, gb_start=args.gb_start, sub_start=args.sub_start,
+                   gbid=args.gbid)
 
   if args.insert:
     assert args.gbid != ''
