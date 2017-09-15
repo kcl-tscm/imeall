@@ -173,12 +173,10 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
-# Example configuration for intersphinx: refer to the Python standard library.
-#intersphinx_mapping = {'https://docs.python.org/': None}
 intersphinx_mapping = {'python':('https://docs.python.org/2.7', None),
                        'ase':('https://wiki.fysik.dtu.dk/ase/', None),
                        'flask':('http://flask.pocoo.org/docs/0.12/', None),
                        'quippy':('https://libatoms.github.io/QUIP/', None),
                        'numpy':('https://docs.scipy.org/doc/numpy/', None),
+                       'tess':('https://tess.readthedocs.io/en/latest/', None),
                        'peewee':('http://docs.peewee-orm.com/en/latest/', None)}
-

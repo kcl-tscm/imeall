@@ -18,14 +18,14 @@ vasp_files       = ['IBZKPT', 'INCAR', 'CHG', 'CHGCAR', 'DOSCAR', 'EIGENVAL',
                     'KPOINTS', 'OSZICAR', 'OUTCAR', 'PCDAT', 'POSCAR',
                     'POTCAR', 'WAVECAR', 'XDATCAR']
 
-@app.before_request
-def before_request():
-  g.sql = database.connect()
+#@app.before_request
+#def before_request():
+#  g.sql = database.connect()
 
-@app.after_request
-def after_request(response):
-  g.sql = database.close()
-  return response
+#@app.after_request
+#def after_request(response):
+#  g.sql = database.close()
+#  return response
 
 @app.route('/')
 def home_page():
@@ -184,9 +184,10 @@ def make_tree(path):
       else:
 #append file if it is a relevant with its route:
         extension = name.split(".")[-1]
-        filename = os.path.relpath(filename, app.root_path)
+        #filename = os.path.relpath(filename, app.root_path)
+        filename = os.path.relpath(filename, app.config['GRAIN_DATABASE'])
         if (name in vasp_files) or (extension in valid_extensions):
-          tree['children'].append(dict(name=name, fullpath = url_for('serve_struct', filename='apathtoafile', textpath=filename)))
+          tree['children'].append(dict(name=name, fullpath=url_for('serve_struct', textpath=filename)))
   return tree
 
 def extract_json(path, json_files):
@@ -217,8 +218,8 @@ def run_ovito(filename):
   job = subprocess.Popen("{0} {1}".format(ovito, os.path.basename(filename)).split(), cwd=os.path.dirname(filename))
 
 
-@app.route('/struct/<path:filename>/<path:textpath>')
-def serve_struct(filename, textpath=None):
+@app.route('/struct/<path:textpath>')
+def serve_struct(textpath=None):
   """View for serving files to clients [png, json, xyz].
   """
   if textpath.endswith('xyz'):
@@ -227,11 +228,11 @@ def serve_struct(filename, textpath=None):
       flash('running ovito')
       return redirect(request.referrer)
     else:
-      return send_file(textpath)
+      return send_file(os.path.join(app.config['GRAIN_DATABASE'], textpath))
   elif textpath.endswith('json'):
-    return send_file(textpath)
+    return send_file(os.path.join(app.config['GRAIN_DATABASE'], textpath))
   elif textpath.endswith('png'):
-    return send_file(textpath)
+    return send_file(os.path.join(app.config['GRAIN_DATABASE'], textpath))
   else:
     return redirect(request.referrer)
   

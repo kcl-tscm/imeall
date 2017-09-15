@@ -1,14 +1,17 @@
+import sys
 from ase import Atoms as aseAtoms
 from ase.io.vasp import write_vasp
 from ase.calculators.vasp import Vasp
 from pyspglib import spglib
-from pylada_defects_2 import get_interstitials, write_interstitials, get_unique_wyckoff, get_all_interstitials
-from pylada_defects_2 import get_ints_in_prim_cell, get_unique_ints
+from pylada_defects_2 import get_unique_wyckoff, get_all_interstitials, get_unique_ints
+from pylada_defects_2 import get_ints_in_prim_cell
 from quippy import Atoms, farray, frange, set_fortran_indexing
 
 import json
 import argparse
 import numpy as np
+
+sys.settrace
 
 def nearest_to_unique(at, unique_sites):
   """Given an :class:`ase.Atom` object and an array of site vectors finds
@@ -99,22 +102,21 @@ def decorate_interface(write_file=True):
   vasp = Vasp(**vasp_args)
   vasp.initialize(ats)
   write_vasp('POSCAR', vasp.atoms_sorted, symbol_count=vasp.symbol_count, vasp5=True)
-  #Remove pylada-light dependency
-  #struct = read_poscar.poscar('POSCAR')
   spg = spglib.get_spacegroup(ats, 0.1)
   sym = spglib.get_symmetry(ats)
   print 'Space Group: ', spg
   print 'Symmetry: ', sym 
-  unique_lattice_sites = get_unique_wyckoff(struct, ats)
+  unique_lattice_sites = get_unique_wyckoff(ats)
+  print unique_lattice_sites
   with open('unique_lattice_sites.json','w') as f:
     json.dump([list(u) for u in unique_lattice_sites], f)
-  interstitial_sites = get_all_interstitials(struct, unique_lattice_sites)
-  print 'Number of Interstitial Sites: ', len(interstitial_sites)
+  ints2 = get_all_interstitials(ats, unique_lattice_sites)
+  ints_prim = get_ints_in_prim_cell(ats, ints2)
   decorator = []
-  for site in interstitial_sites:
+  for site in ints_prim:
     if site[0]=='B':
       decorator.append(np.array(site[1]))
-  unique_interstitial_sites = get_unique_ints(struct, ats, decorator, ttol=0.5)
+  unique_interstitial_sites = get_unique_ints(ats, decorator, ttol=0.5)
   unique_list = []
   for unique in unique_interstitial_sites:
       unique_list.append(unique)
@@ -123,7 +125,7 @@ def decorate_interface(write_file=True):
   for unique in unique_interstitial_sites:
       ats.add_atoms(unique,1)
   #relabel atom ids for plotting in ovito
-  for i in frange(len(ats)):
+  for i in range(len(ats)):
     ats.id[i] = i
   if write_file:
     ats.write('hydrogenated_grain.xyz')

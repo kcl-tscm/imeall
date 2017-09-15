@@ -436,9 +436,7 @@ class GBAnalysis(object):
     pass
 
   def find_gb_json(self, path, j_list, filetype):
-    """Populates the list j_list with lists of the form
-    [/directory_path/, /subgb_file_path].
-
+    """ Populates the list j_list with lists of the form [/directory_path/, /subgb_file_path].
     Args:
       path     : root directory to begin recursive search
       j_list   : empty list  to populate
@@ -602,8 +600,8 @@ class GBAnalysis(object):
         max_path = [(gam[4], gam[5]) for gam in filter(lambda x: round(x[3], 5) == round(max_en, 5), gam_surfs)]
         min_path = '/'.join(min_path[0])+'_traj.xyz'
         max_path = '/'.join(max_path[0])+'_traj.xyz'
-        min_path = os.path.relpath(min_path, app.root_path)
-        max_path = os.path.relpath(max_path, app.root_path)
+        min_path = os.path.relpath(min_path, app.config['GRAIN_DATABASE'])
+        max_path = os.path.relpath(max_path, app.config['GRAIN_DATABASE'])
         gam_dict = {'max_en':max_en, 'min_en':min_en, 'min_coords':min_coords, 'max_coords':max_coords,
                     'min_path':min_path, 'max_path':max_path}
     else:
