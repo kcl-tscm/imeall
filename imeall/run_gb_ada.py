@@ -16,7 +16,7 @@ scratch = os.getcwd()
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-gbt","--gb_type", help="Specify type of boundary twist or tilt.", required=True)
-parser.add_argument("-ct","--calc_type", help="Potential used for calculation.", required=True) 
+parser.add_argument("-ct","--calc_type", help="Potential used for calculation. Default (PotBH). Dirname of potential.", required=True) 
 parser.add_argument("-p","--pattern", help="Job pattern to select grainboundaries.", default="001")
 parser.add_argument("-d","--delay", help="Time delay between job submissions.", type=int, default=60)
 parser.add_argument("-t","--tranchsize", help="Tranchsize.", type=int, default=2000)

@@ -136,8 +136,11 @@ def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200, force_tol = 
     for key, value in gb_dict.items():
       j_dict[key] = value
     json.dump(j_dict, outfile, indent=2)
-  os.remove(param_file)
-  os.remove(sparse_file)
+  if param_file == 'gp33b.xml':
+    os.remove(param_file)
+    os.remove(sparse_file)
+  else:
+   pass
 
 if __name__ == '__main__':
 #Command line tool for relaxing grainboundary structure

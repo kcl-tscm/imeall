@@ -1,7 +1,9 @@
 import sys
 import argparse
 import numpy as np
+from ase.optimize import FIRE
 from quippy import bcc
+from quippy import AtomsWriter
 from quippy.potential import Potential, Minim
 
 parser = argparse.ArgumentParser()
@@ -34,8 +36,15 @@ print fe_bulk.get_cell().round(5)
 print fe_bulk.properties.keys()
 print fe_bulk.properties
 
+fe_bulk.rattle()
+
+
+trajectory = AtomsWriter('minim.xyz')
+def traj_writer(dynamics):
+  trajectory.write(dynamics.atoms)
+
 minim   = Minim(fe_bulk, relax_positions=True, relax_cell=True)
-minim.run(fmax=1e-4)
+minim.run(fmax=1e-6)
 
 print 'After Relaxation'
 print 'Energy', fe_bulk.get_potential_energy()/len(fe_bulk)
