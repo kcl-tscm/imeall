@@ -4,71 +4,39 @@ import re
 import json
 import logging
 import subprocess
-from   imeall  import app
-from   flask   import Flask, request, session, g, redirect, url_for, abort,\
-                      render_template, flash, send_file, jsonify, make_response
-from   imeall.models import GBAnalysis
-from   gb_models     import serialize_vector, GRAIN_DATABASE, DATABASE, GrainBoundary, SubGrainBoundary,\
-                            deserialize_vector_int
-from   models        import PotentialParameters
-from   peewee        import fn
-# Unique key is BBBAAAACCC
-# Common axis=[BBB], misorientation angle=AAAA, and GB plane = (CCC).
-# temporary table should be replaced by database.
-# Associated with each Grain Boundary we need a (many) calculation(s) object(s)
-# these should have some tag i.e. DFT-VASP-PBE. So clearly a one to many
-# relationship.
-# One GrainBoundary table with grain_boundary id (unique tag), name, raw atom structure
-# coincident site lattice etc, and a bunch of pointers to a CalculationTable
-# Each CalculationTable will have its own unique tag (DFT-VASP-PBE) along with the properties
-# Calculate: total energy, forces, atoms, magnetic moments.
-# Table energies should be populated in eV:
-# Each calculation should have the atoms object attached to it.
-calculations      = {}
-calculations['0000000000'] = {'VASP-DFT-PBE' : {'E0':-8.23807, 'DFT-mag': 2.2238, 'nat':1}, 'IP-EAM-MISH':{'E0': -4.2701, 'nat':1}}
-calculations['1107053111'] = {'VASP-DFT-PBE' : {'E0':-406.154623782, 'nat':96, 'A': 27.7436434255}}
-calculations['1105048332'] = {'IP-EAM-MISH'  : {'E0':-382.847802363, 'nat':90, 'A':18.7825353894 }}
-calculations['1106000112'] = {'IP-EAM-MISH'  : {'E0':-196.171, 'nat':46, 'A': 9.80885920049}}
+from imeall import app
+from flask import Flask, request, session, g, redirect, url_for, abort,\
+                  render_template, flash, send_file, jsonify, make_response, safe_join
+from imeall.models import GBAnalysis
+from gb_models import serialize_vector, GRAIN_DATABASE, GrainBoundary, SubGrainBoundary,\
+                      deserialize_vector_int, database
+from models import PotentialParameters
 
-#files that Imeall server can wants to display in browser:
+#Files that Imeall server can display in browser:
 valid_extensions = ['xyz', 'json', 'mp4', 'png','day']
 vasp_files       = ['IBZKPT', 'INCAR', 'CHG', 'CHGCAR', 'DOSCAR', 'EIGENVAL', 
                     'KPOINTS', 'OSZICAR', 'OUTCAR', 'PCDAT', 'POSCAR',
                     'POTCAR', 'WAVECAR', 'XDATCAR']
-# Currently the database connection is just a path name to our grain boundary
-# database stored as a file tree. I don't necessarily see any reason not to exploit
-# the existing filesystem and tools associated for searching. Why?
-#   1) The nature of the work pattern is I'll want to be able to rummage around
-#      in the different grain directories and subgrain directories to run quippy
-#      scripts etc, or copy subgraindirs with DFT stuff in them.
-#      Any work generated during this should just reside in the
-#      directory and I will only make what I want visible to the imeall browser
-#      xyz files for structures/forces, POSCAR, svg files for images, and json
-#      the rest will be invisible.
-#   2) By storing everything in the file system and only making what I want
-#      visible we still preserve a hierarchical relationship for all the grain
-#      boundaries within a class of materials and for different classes of
-#      materials. This tree structure would resemble a collection of documents and
-#      could be mapped onto a NoSQL type of database or serialized and normalized 
-#      in a closure tree.
-@app.before_request
-def before_request():
-  g.gb_dir = app.config['GRAIN_DATABASE']
+
+#@app.before_request
+#def before_request():
+#  g.sql = database.connect()
+
+#@app.after_request
+#def after_request(response):
+#  g.sql = database.close()
+#  return response
 
 @app.route('/')
 def home_page():
+  """Overview of imeall database. Links to material views.
   """
-  :method: Overview of imeall database. Links to material specific
-  databases and the synchronization log.
-  """
-  materials = os.listdir(g.gb_dir)
+  materials = app.config["MATERIALS"]
   return render_template('imeall.html', materials=materials)
-
 
 @app.route('/<material>/')
 def material(material):
-  """
-  :method: Orientation axes for a particular material.
+  """View of available orientation axes for a particular material.
   """
   path         = os.path.join(app.config['GRAIN_DATABASE'], material)
   url_path     = material
@@ -83,38 +51,47 @@ def material(material):
 
 @app.route('/orientation/<path:url_path>/<orientation>/')
 def orientations(url_path, orientation):
+  """View to list different orientation axes in the material database.
   """
-  :method:`orientations` List different orientation axes in the material database.
-  """
-#Can only handle three digit or_axis atm.
+
+#can only handle three digit or_axis atm.
   url_path = url_path+'/'+orientation
-  path     = os.path.join(g.gb_dir, url_path)
+  path = os.path.join(app.config['GRAIN_DATABASE'], url_path)
+
 #load serialized grain data
   with open(os.path.join(path, 'or_axis.json'), 'r') as json_file:
     oraxis = json.load(json_file)
   oraxis = oraxis['oraxis']
-  grains = []
   gb_type = request.args.get('gb_type', 'tilt')
+
   if gb_type == 'tilt':
-    gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane != oraxis)
+    gbs   = (GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis)
+                          .where(GrainBoundary.boundary_plane !=oraxis)
+                          .order_by(GrainBoundary.angle))
   elif gb_type == 'twist':
-    gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane == oraxis)
+    gbs   = (GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis)
+                          .where(GrainBoundary.boundary_plane == oraxis)
+                          .order_by(GrainBoundary.angle))
   else:
-    gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis)
-#Only valid directories beginning with orientation axis will be shown.
+    gbs   = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).order_by(GrainBoundary.angle)
+
+#only valid directories beginning with orientation axis will be shown.
+  grains = []
   for gb in gbs:
-    grains.append(gb.gbid) 
-#Also dislocations of edge and screw fracture and plane type should be shown.
+    grains.append({'gbid':gb.gbid, 'angle':round(gb.angle*180/(3.14159), 2), 'bp':deserialize_vector_int(gb.boundary_plane)}) 
   return render_template('orientation.html', url_path=url_path, grains=grains)
 
 @app.route('/grain/<path:url_path>/<gbid>/')
 def grain_boundary(url_path, gbid):
+  """Top view for a canonical grain boundary. CSL 
+  lattice, and list of subgrain directories, and energies.
+
+  Todo: 
+    Replace make_tree with an SQL query.
   """
-  :method:`grain_boundary` Top view for a canonical grain boundary. CSL 
-  lattice, and list of subgrain directories, energies, etc.
-  """
+
   url_path  = url_path+'/'+gbid
-  path      = os.path.join(g.gb_dir, url_path)
+  path      = os.path.join(app.config["GRAIN_DATABASE"], url_path)
   with open(os.path.join(path, 'gb.json'),'r') as json_file:
     gb_info = json.load(json_file)
   stuff = []
@@ -124,11 +101,10 @@ def grain_boundary(url_path, gbid):
   subgrains  = []  
   subgrainsj = []
   for i, gb_path in enumerate(json_files):
-    try: 
-      subgrains.append([json.load(open(gb_path,'r')), i])
-      subgrainsj.append(json.load(open(gb_path,'r')))
-    except:
-      pass
+    subgrains.append([json.load(open(gb_path, 'r')), i])
+    subgrainsj.append(json.load(open(gb_path, 'r')))
+
+#find lowest energy structure for every potential in the database
   analyze  = GBAnalysis()
   potparams = PotentialParameters()
   paramfile_dict = potparams.paramfile_dict()
@@ -136,46 +112,35 @@ def grain_boundary(url_path, gbid):
   for potdir in paramfile_dict.keys():
     gam_dict[potdir] = analyze.pull_gamsurf(path=path, potential=potdir) 
   return render_template('grain_boundary.html', gbid=gbid, url_path=url_path,
-                          gb_info=gb_info, tree=tree, subgrains=subgrains, 
+                          gb_info=gb_info, flare_root=json.dumps(tree), subgrains=subgrains, 
                           subgrainsj=json.dumps(subgrainsj), gam_dict=gam_dict)
-
-@app.route("/db_sync/")
-def synchronization():
-  with open('./imeall/db_synclog','r') as f:
-    db_log = f.read().split('\n\n')
-  db_log.reverse()
-  return render_template('synchronization.html', db_log=db_log)
-
-@app.route("/log/")
-def _log_in():
-#Some combination of pexpect and the like should let us handle the automatic
-#accessing of the different servers we wish to sync to.
-#http://stackoverflow.com/questions/37783368/pass-post-data-to-a-script-flask
-#http://stackoverflow.com/questions/2387731/use-subprocess-to-send-a-password
-  return redirect(url_for("synchronization"))
 
 @app.route('/analysis/')
 def analysis():
+  """This view collates data from the grain boundary database
+  and forwards it to d3 analysis tools.
   """
-  :method:`analysis` 
-  This view collates data from the grainboundary database
-  and forwards it to d3 database.
-  """
+
 # User chooses what orientation angle to look at via a GET argument:
 # This should be a separate Table.
-  pot_param     = PotentialParameters()
+  pot_param = PotentialParameters()
   ener_per_atom = pot_param.gs_ener_per_atom()
-  or_axis       = request.args.get('or_axis', '001')
-  gb_type       = request.args.get('gb_type', 'tilt')
-  gbdat         = []
+  or_axis = request.args.get('oraxisselect', default='001')
+  gb_type = request.args.get('gbtypeselect', default='tilt')
+  material = request.args.get('materialselect', default='alphaFe')
+  gbdat = []
   oraxis = ','.join([c for c in or_axis])
 # Creates list of grain boundaries ordered by angle.
   for potential in ener_per_atom.keys():
 # GrainBoundary Energies in J/m^{2}
     if gb_type == 'tilt':
-      gbs = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane != oraxis)
+      gbs = (GrainBoundary.select()
+                         .where(GrainBoundary.orientation_axis==oraxis)
+                         .where(GrainBoundary.boundary_plane != oraxis))
     elif gb_type == 'twist':
-      gbs = GrainBoundary.select().where(GrainBoundary.orientation_axis==oraxis).where(GrainBoundary.boundary_plane == oraxis)
+      gbs = (GrainBoundary.select()
+                         .where(GrainBoundary.orientation_axis==oraxis)
+                         .where(GrainBoundary.boundary_plane == oraxis))
     else:
       sys.exit('Invalid gb_type!')
     for gb in gbs.order_by(GrainBoundary.angle):
@@ -188,26 +153,23 @@ def analysis():
       subgbs = [(16.02*(subgb['E_gb']-float(subgb['n_at']*ener_per_atom[potential]))/(2.0*subgb['area']), subgb) for subgb in subgbs]
       subgbs.sort(key = lambda x: x[0])
       if (len(subgbs) > 0):
-        if (subgbs[0][0] > 0.0):
+        if (subgbs[0][1]['converged'] == True and subgbs[0][0] < 3.0):
           gbdat.append({'param_file' : potential,
                       'or_axis'    : ' '.join(map(str, subgbs[0][1]['orientation_axis'].split(','))),
                       'angle'      : subgbs[0][1]['angle']*(180./(3.14159)),
                       'min_en'     : subgbs[0][0],
                       'bp'         : ' '.join(map(str, map(int, deserialize_vector_int(subgbs[0][1]['boundary_plane'])))),
-                      'url'        : 'http://137.73.5.224:5000/grain/alphaFe/'
-                                    +''.join(map(str, deserialize_vector_int(subgbs[0][1]['orientation_axis'])))
-                                    +'/' + gb.gbid})
-        else:
-          print gb.gbid, potential, subgbs[0][1]['gbid'], subgbs[0][1]['angle']*(180./(3.14159)), subgbs[0][0], subgbs[0][1]['path']
-          print subgbs[0][1]['area'], subgbs[0][1]['n_at']
+                      'url'        : 'http://127.0.0.1:5000/grain/alphaFe/'
+                                    + ''.join(map(str, deserialize_vector_int(subgbs[0][1]['orientation_axis'])))
+                                    + '/' + gb.gbid})
       else:
         pass
   return render_template('analysis.html', gbdat=json.dumps(gbdat))
 
 def make_tree(path):
+  """Recurse through subgrain directories collecting json and png files.
   """
-  :method:`make_tree` recurse through subgrain directories collecting json and png files.
-  """
+
   tree = dict(name=os.path.basename(path), children=[], fullpath='')
   try: 
     lst = os.listdir(path)
@@ -220,10 +182,12 @@ def make_tree(path):
       if os.path.isdir(filename):
         tree['children'].append(make_tree(filename))
       else:
-#append file if it is a relevantwith its route:
+#append file if it is a relevant with its route:
         extension = name.split(".")[-1]
-        if name in vasp_files or extension in valid_extensions:
-          tree['children'].append(dict(name=name, fullpath=filename))
+        #filename = os.path.relpath(filename, app.root_path)
+        filename = os.path.relpath(filename, app.config['GRAIN_DATABASE'])
+        if (name in vasp_files) or (extension in valid_extensions):
+          tree['children'].append(dict(name=name, fullpath=url_for('serve_struct', textpath=filename)))
   return tree
 
 def extract_json(path, json_files):
@@ -238,67 +202,80 @@ def extract_json(path, json_files):
       else:
         pass
 
-
-#Check for Ovito in different paths.
+#check for Ovito in different paths.
 def run_ovito(filename):
-  """ 
-  :method:`run_ovito` launches the Ovito application with the
-  associated grain boundary trajectory file loaded, the os command should
-  ensure we are in the working directory so that any modifications, or
-  videos generated will be saved in the correct place. ovito must be set
-  in environment.
+  """Launches the Ovito application with the
+  associated grain boundary trajectory file loaded. 
+  The alias 'ovito' must be set in environment. 
+  This function can only be used if running server 
+  locally with a local copy of the database.
   """
+
   try:
     ovito = os.environ["OVITO"]
   except KeyError:
     flash('No path to OVITO found in the environment')
-  if os.path.isfile(ovito):
-    print os.path.dirname(filename)
-#MORE SECURITY RISK IMEALL CANNOT BE ACCESSED GLOBALLY:
-    print os.path.dirname(filename), ovito, filename
-    job = subprocess.Popen("{0} {1}".format(ovito, filename).split(), cwd=os.path.dirname(filename))
-  else: 
-    return flash('OVITO not in PATH variable.')
+  job = subprocess.Popen("{0} {1}".format(ovito, os.path.basename(filename)).split(), cwd=os.path.dirname(filename))
+
+
+@app.route('/struct/<path:textpath>')
+def serve_struct(textpath=None):
+  """View for serving files to clients [png, json, xyz].
+  """
+  if textpath.endswith('xyz'):
+    if app.config["RUN_OVITO"]:
+      run_ovito(os.path.join(app.config['GRAIN_DATABASE'], textpath))
+      flash('running ovito')
+      return redirect(request.referrer)
+    else:
+      return send_file(os.path.join(app.config['GRAIN_DATABASE'], textpath))
+  elif textpath.endswith('json'):
+    return send_file(os.path.join(app.config['GRAIN_DATABASE'], textpath))
+  elif textpath.endswith('png'):
+    return send_file(os.path.join(app.config['GRAIN_DATABASE'], textpath))
+  else:
+    return redirect(request.referrer)
+  
 
 @app.route('/img/<path:filename>/<gbid>/<img_type>')
 def serve_img(filename, gbid, img_type):
+  """Serve image_file to the browser.
   """
-  :method:`serve_img` serve image_file to the browser.
-  """
-  print 'Calling serve img', gbid, img_type, filename
+
   img = os.path.join(filename,'{0}.png'.format(gbid))
   if img_type =='struct':
-    img  = app.config['GRAIN_DATABASE']+'/'+filename+'/{0}.png'.format(gbid)
+    img = app.config['GRAIN_DATABASE']+'/'+filename+'/{0}.png'.format(gbid)
   elif img_type =='csl':
-    img  = app.config['GRAIN_DATABASE']+'/'+filename+'/csl_{0}.svg'.format(gbid)
+    img = app.config['GRAIN_DATABASE']+'/'+filename+'/csl_{0}.svg'.format(gbid)
   elif img_type =='pot':
-    pot_dir = '/Users/lambert/pymodules/imeall/imeall/potentials'
-    img     = pot_dir+'/'+filename
-  elif img_type =='gen':
-    img  = app.config['GRAIN_DATABASE']+'/'+filename
+    pot_dir = os.path.join(app.root_path, 'potentials')
+    img = pot_dir+'/'+filename
+  elif img_type == 'gen':
+    img = app.config['GRAIN_DATABASE']+'/'+filename
   else:
     img = 'NO IMAGE'
   return send_file(img)
 
-@app.route('/textfile/<gbid>/<path:filename>')
-def serve_file(gbid, filename):
+@app.route('/servefile/')
+def serve_file(textpath):
+  """Serve different common file types to the browser.
   """
-  :method:`serve_file` serve different common file types to the browser.
-  """
-  textpath = request.args.get('textpath')
-  with open('{0}'.format(textpath),'r') as text_file:
+
+  with open('{0}'.format(textpath), 'r') as text_file:
     text = text_file.read()
-  if filename.split(".")[-1] == 'xyz':
-    text = text.split('\n')
-    run_ovito(textpath)
-    return render_template('text.html', text=text)
-  elif filename.endswith('json'):
+  if textpath.endswith('xyz'):
+    if app.config["RUN_OVITO"]:
+      run_ovito(textpath)
+      return render_template('text.html', text=text)
+    else:
+      return send_file(textpath)
+  elif textpath.endswith('json'):
     with open(textpath, 'r') as f:
       j_file = json.load(f)
     return render_template("render_json.html", j_file=j_file)
-  elif filename.endswith('png'):
+  elif textpath.endswith('png'):
     return send_file(textpath)
-  elif filename == 'OSZICAR':  
+  elif textpath == 'OSZICAR':  
     rmm_regex  = re.compile(r'RMM:\s+([-+0-9.E\s]+)')
     osz_list = rmm_regex.findall(text)
     osz = []
@@ -315,7 +292,7 @@ def serve_file(gbid, filename):
       else:
         break
     return render_template('oszicar.html', osz=json.dumps(osz))
-  elif filename.endswith('mp4'):
+  elif textpath.endswith('mp4'):
     subprocess.Popen('open {0}'.format(textpath).split()) 
     return render_template('text.html', text='Playing Video')
   else:
@@ -324,10 +301,9 @@ def serve_file(gbid, filename):
 
 @app.route('/eam_pot/<path:filename>')
 def eam_pot(filename):
+  """Uses matplotlib to inspect xml potential files in the database.
   """
-  :method:`eam_pot` Matplotlib to inspect xml potential files in the database.
-  Based on gist at https://gist.github.com/wilsaj/862153.
-  """
+
   import random
   import datetime
   import StringIO
@@ -341,8 +317,9 @@ def eam_pot(filename):
   fig = Figure()
   ax = fig.add_subplot(111)
   FVR = []
-  pot_dir  = '/Users/lambert/pymodules/imeall/imeall/potentials'
+  pot_dir  = os.path.join(app.root, 'potentials')
   pot_xml  = pot_dir+'/'+filename
+#Based on gist at https://gist.github.com/wilsaj/862153.
   with open(pot_xml, 'r') as f:
     tree = ET.parse(f)
   root = tree.getroot()

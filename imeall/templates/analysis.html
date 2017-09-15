@@ -31,13 +31,23 @@ path {
 </style>
 
 <h2> Grain Boundary Analysis </h2>
-<h3> Energy-Orientation Angle Relationship </h3>
-<h3> <a href='?or_axis=001'> 001 </a> </h3> 
-<h3> <a href='?or_axis=110'> 110 </a> </h3> 
-<h3> <a href='?or_axis=111'> 111 </a> </h3>
-<h3> Grainboundary type </h3>
-<h3> <a href='?gb_type=tilt'> Tilt </a> </h3> 
-<h3> <a href='?gb_type=twist'> Twist </a> </h3> 
+<div class="gboptions">
+<form name="gbdata_form" action="{{url_for('analysis')}}" method='GET'>
+  <select multiple id="materialselect" name="materialselect">
+    <option value="alphaFe"> alpha-Fe </option>
+  </select>
+  <select multiple id="oraxisselect" name="oraxisselect">
+	  <option value="001">001</option>
+	  <option value="110">110</option>
+	  <option value="111">111</option>
+  </select>
+  <select multiple id="gbtypeselect" name="gbtypeselect">
+	  <option value="tilt">Tilt</option>  
+	  {#<option value="twist">Twist</option>#}
+  </select>
+  <button type="submit" class="btn btn-default">Pull GB data</button>
+</form>
+</div>
 
 <script>
 // http://bl.ocks.org/d3noob/b3ff6ae1c120eea654b5
@@ -288,16 +298,4 @@ $( document ).ready(function(){
     .call(yAxis)
   });
 </script>
-
-<h2> EAM Potentials </h2>
-<p><button id="potentialbutton"> Show/Hide Potentials</button></p>
-<script>	
-	$("#potentialbutton").click(function() {
-		$("#potentials").toggle();
-	});
-</script>
-<style>
-#potentials {display: none;}
-</style>
-
 {% endblock body %}
