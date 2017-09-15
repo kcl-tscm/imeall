@@ -6,7 +6,8 @@ import logging
 import subprocess
 from imeall import app
 from flask import Flask, request, session, g, redirect, url_for, abort,\
-                  render_template, flash, send_file, jsonify, make_response, safe_join
+                  render_template, flash, send_file, jsonify, make_response, safe_join,\
+                  send_from_directory
 from imeall.models import GBAnalysis
 from gb_models import serialize_vector, GRAIN_DATABASE, DATABASE, GrainBoundary, SubGrainBoundary,\
                       deserialize_vector_int, database
@@ -228,11 +229,16 @@ def serve_struct(textpath=None):
       flash('running ovito')
       return redirect(request.referrer)
     else:
-      return send_file(os.path.join(app.config['GRAIN_DATABASE'], textpath))
+      if os.path.isfile(os.path.join(app.config['GRAIN_DATABASE'], textpath)):
+        return send_from_directory(app.config['GRAIN_DATABASE'], textpath, as_attachment=False)
+      else:
+        app.logger.info("Missing_Struct_File:"+textpath)
+        flash("Structure file missing. Forwarded to calculator to be recomputed.")
+        return redirect(request.referrer)
   elif textpath.endswith('json'):
-    return send_file(os.path.join(app.config['GRAIN_DATABASE'], textpath))
+    return send_from_directory(app.config['GRAIN_DATABASE'], textpath, as_attachment=False)
   elif textpath.endswith('png'):
-    return send_file(os.path.join(app.config['GRAIN_DATABASE'], textpath))
+    return send_from_directory(app.config['GRAIN_DATABASE'], textpath, as_attachment=False)
   else:
     return redirect(request.referrer)
   
