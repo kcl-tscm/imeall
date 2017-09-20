@@ -17,6 +17,7 @@ from quippy import set_fortran_indexing, fzeros, frange
 from quippy.io import AtomsWriter, AtomsReader, write
 from relax import relax_gb
 from slabmaker.slabmaker import build_tilt_sym_gb, build_twist_sym_gb
+from slabmaker.gengb_from_quat import QuaternionGB
 
 set_fortran_indexing(False)
 
@@ -133,7 +134,7 @@ class GBRelax(object):
     print 'Generate Job in:'
     print '\t', self.calc_dir
 
-  def gen_super_rbt(self, bp=[],v=[], rbt=[0.0, 0.0], sup_v=6, sup_bxv=2, rcut=2.0, gb_type="tilt"):
+  def gen_super_rbt(self, bp=[],v=[], angle=None, rbt=[0.0, 0.0], sup_v=6, sup_bxv=2, rcut=2.0, gb_type="tilt"):
     """
     Create a :class:`SubGrainBoundary` supercell with rigid body translations (rbt).
 
@@ -154,7 +155,12 @@ class GBRelax(object):
       grain = build_tilt_sym_gb(bp=bp, v=v, rbt=rbt)
       logging.debug('bp: {} v: {} rbt: {}'.format(bp, v, rbt))
     elif gb_type=="twist":
-      grain = build_twist_sym_gb(bp=[0,0,1], v=v, rbt=rbt)
+      #requires latt_vec from angle to orient crystal.
+      quatgb = QuaternionGB()
+      angle_list = quatgb.gen_sym_twist()
+      v = filter(lambda x: x[0] == round(180.*angle/np.pi, 2), angle_list)
+      print 'V', v[0]
+      grain = build_twist_sym_gb(bp=bp, v=v[0][1], rbt=rbt)
     #For RBT we build a top level dir with just the translated supercell and no deletion criterion
     m, n, grain  = self.gen_super(grain=grain, rbt=rbt, sup_v=sup_v, sup_bxv=sup_bxv,  rcut=0.0)
     self.name    = '{0}_v{1}bxv{2}_tv{3}bxv{4}'.format(self.gbid,
@@ -370,11 +376,13 @@ if __name__=='__main__':
 
       with open(os.path.join(job_dir,'gb.json')) as f:
         grain_dict = json.load(f)
+
       bp = grain_dict['boundary_plane']
       v = grain_dict['orientation_axis']
+      angle = grain_dict['angle']
       for i in np.linspace(0.125, 1.0):
         for j in np.linspace(0.125, 1.0):
-          gbrelax.gen_super_rbt(rcut=rcut, bp=bp, v=v, sup_v=sup_v, sup_bxv=sup_bxv, rbt=[i,j])
+          gbrelax.gen_super_rbt(rcut=rcut, bp=bp, v=v, angle=angle, sup_v=sup_v, sup_bxv=sup_bxv, rbt=[i,j])
           gbrelax.gen_pbs(time=time, queue=queue)
   elif args.from_script:
     job_dir = os.getcwd()
@@ -384,6 +392,7 @@ if __name__=='__main__':
     gbid = grain_dict['gbid']
     bp = grain_dict['boundary_plane']
     v = grain_dict['orientation_axis']
+    angle = grain_dict['angle']
     gbrelax = GBRelax(grain_dir=job_dir, gbid=gbid, calc_type=args.calc_type,
                       potential = 'IP EAM_ErcolAd', param_file=param_file)
     if args.gb_type=="twist":
@@ -396,7 +405,7 @@ if __name__=='__main__':
     i_v = float(args.i_v) 
     i_bxv = float(args.i_bxv)
 # Generate the appropriate grain boundary in this directory.
-    gbrelax.gen_super_rbt(rcut=rcut, bp=bp, v=v, sup_v=sup_v, sup_bxv=sup_bxv, rbt=[i_v, i_bxv], gb_type=args.gb_type)
+    gbrelax.gen_super_rbt(rcut=rcut, bp=bp, v=v, sup_v=sup_v, angle=angle, sup_bxv=sup_bxv, rbt=[i_v, i_bxv], gb_type=args.gb_type)
 # Switch to the appropriate subgrain directory.
     os.chdir(gbrelax.subgrain_dir)
 # Call the relax function from this directory, reads in the initial struct_file,

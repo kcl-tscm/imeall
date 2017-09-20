@@ -53,16 +53,22 @@ if args.gb_type=="tilt":
           jdirs.append((job, rc, i, j, job_index))
   jobdirs = filter(lambda x: os.path.isdir(x[0]), jdirs)
 elif args.gb_type=="twist":
-  jobdirs   = glob.glob('{}*'.format(args.pattern))
-  jobdirs   = filter(os.path.isdir, jobdirs[1:])
+  if args.input_file=="":
+    jobdirs   = glob.glob('{}*'.format(args.pattern))
+    jobdirs   = filter(os.path.isdir, jobdirs)
+  else:
+    with open(args.input_file, 'r') as f:
+      jobdirs = f.read().split()
+  print jobdirs
   jdirs     = []
   job_index = 0
   for job in jobdirs:
     for rc in np.arange(1.2, 2.3, 0.1):
-      #for i in np.arange(0.0, 0.50, 0.1):
-      #  for j in np.arange(0.0, 0.50, 0.1):
+      for i in np.arange(0.0, 0.50, 0.1):
+        for j in np.arange(0.0, 0.50, 0.1):
+          if i==j== 0.0: continue
           job_index += 1
-          jdirs.append((job, rc, 0.0, 0.0, job_index))
+          jdirs.append((job, rc, i, j, job_index))
   jobdirs = filter(lambda x: os.path.isdir(x[0]), jdirs)
 else:
   print "Only tilt or twist boundaries valid."

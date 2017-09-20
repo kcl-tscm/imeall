@@ -141,7 +141,7 @@ class QuaternionGB(object):
       orientation_axis(list[ints]): orientation axis in ints.
 
     Returns:
-      dict: Dictionary of 'x' axis co-ordinates keyed by angle rounded to two floating point numbers.
+      list: list of [angle, 'x'-axis-co-ordinates]
     """
     planequat_1, planequat_2 = self.or_axis_to_quat(orientation_axis)
     deg_list = []
