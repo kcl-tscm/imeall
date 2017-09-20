@@ -26,7 +26,7 @@ class BaseModel(Model):
     database = database
 
 class GrainBoundary(BaseModel):
-  """GrainBoundary is a peewee :py:class:`Model` of the canonical parent grain. 
+  """GrainBoundary is a peewee :peewee:class:`Model` of the canonical parent grain. 
   Model is connected to the SQL database of the grain boundaries. All vectors 
   are serialized to csv string for storage.
 
@@ -58,9 +58,8 @@ class SubGrainBoundary(BaseModel):
   SubGrainBoundary Model.
 
   Attributes:
-    path(str): relative to the grainboundary database root.
-    canonical_grain(:py:class:GrainBoundary): every :py:class:SubGrainBoundary 
-    is a subgrain of a :py:class:GrainBoundary.
+    path(str): relative to the `GRAIN_BOUNDARY` database root (set in the application instance/config.py file).
+    canonical_grain(:class:GrainBoundary): Each :class:`SubGrainBoundary`  has a parent :class:`GrainBoundary` model.
     rbt(str): rigid body translations.
     potential(str): Potential parameter file.
     rcut(float): atom deletion criterion.
@@ -259,7 +258,7 @@ def gb_check_conv(material='alphaFe', or_axis='001', modify_db=False):
     material: Which material to do check json/database convergence consistency on.
     or_axis: Which orientation axis to check.
     modify_db: Boolean. If True updates gb_model in database otherwise 
-    just prints inconsistent grain json/database value.
+      just prints inconsistent grain json/database value.
   """
 
   analyze  = GBAnalysis()
@@ -278,7 +277,7 @@ def gb_check_conv(material='alphaFe', or_axis='001', modify_db=False):
         subgb_dict = json.load(f)
       struct_path = os.path.join(subgb_model.path, subgb_model.gbid+'_traj.xyz')
       struct_path = os.path.join(GRAIN_DATABASE, struct_path)
-      logging.debug(struct_path)
+      app.logger.debug(struct_path)
       try:
         assert subgb_model.converged==subgb_dict['converged']
       except AssertionError:
@@ -504,7 +503,7 @@ def insert_subgrain(material='alphaFe', or_axis='110', gbid='1108397110', json_p
   print GB_model.gbid
   print subgb_dict 
   print SubGrainBoundary.create(**subgb_dict)        
-  logging.info('Created entry {}'.format(subgb_dict))
+  app.logger.info('Created entry {}'.format(subgb_dict))
   #except IntegrityError:
   #  logging.info('GB already in DB {}'.format(subgb_dict))
 
@@ -523,14 +522,13 @@ def populate_db(material='alphaFe', or_axis='001', gbid='', modify=False):
   if len(gbid) == 0:
     dir_str  = os.path.join(material, or_axis)
   else:
-    #pull specific grainboundary
     dir_str  = os.path.join(material, or_axis)
     dir_str  = os.path.join(dir_str, gbid)
-  logging.info('dir_str {}'.format(dir_str))
+  app.logger.info('dir_str {}'.format(dir_str))
   gb_files = []
   analyze.find_gb_json('{0}'.format(os.path.join(GRAIN_DATABASE, dir_str)), gb_files, 'gb.json')
   for gb in gb_files:
-    print gb[0], gb[1]
+    app.logger.info('{} {}'.format(gb[0], gb[1]))
     with open(gb[1], 'r') as f:
       gb_json = json.load(f)
     try:
@@ -566,11 +564,14 @@ def populate_db(material='alphaFe', or_axis='001', gbid='', modify=False):
         GB_model_object = GrainBoundary.create(**gb_dict)
       except IntegrityError:
         GB_model_object = GrainBoundary.select().where(GrainBoundary.gbid==gb_json['gbid']).get()
-        print 'GB already in database'
-        print gb_json['gbid']
+        app.logger.info('GB already in database: {}'.format(gb_json['gbid']))
     else:
-      GB_model_object = GrainBoundary.select().where(GrainBoundary.gbid==gb_json['gbid']).get()
-      print GB_model_object
+      try:
+        GB_model_object = GrainBoundary.select().where(GrainBoundary.gbid==gb_json['gbid']).get()
+        app.logger.info('Database Contains {}'.format(gb_json['gbid']))
+      except  GrainBoundary.DoesNotExist:
+        app.logger.info('Not in Database {}'.format(gb_json['gbid']))
+        GB_model_object = None
 
     subgb_files = []
     analyze.find_gb_json('{0}'.format(gb[0]), subgb_files, 'subgb.json')
@@ -581,18 +582,23 @@ def populate_db(material='alphaFe', or_axis='001', gbid='', modify=False):
         converged = subgb_json['converged']
       except KeyError:
         converged = False
+
       try:
         E_gb = subgb_json["E_gb"]
       except KeyError:
+        converged = False
         E_gb = 0.0
+
       try:
         E_gb_init=subgb_json["E_gb_init"]
       except KeyError:
         E_gb_init = 0.0
+
       try:
         gbid = subgb_json["gbid"]
       except KeyError:
         gbid = subgb_json["name"]
+
       try:
         area = subgb_json['A']
       except KeyError:
@@ -614,13 +620,14 @@ def populate_db(material='alphaFe', or_axis='001', gbid='', modify=False):
                     "E_gb"            : E_gb,
                     "notes"           : "",
                     "gbid"            : gbid}
-      try:
-        SubGrainBoundary.create(**subgb_dict)        
-        logging.info('Created entry {}'.format(subgb_dict))
-        print 'created entry', subgb_dict["potential"], subgb_dict["gbid"], subgb_dict["converged"]
-      except IntegrityError:
-        print 'dict exists', subgb_dict["potential"], subgb_dict["gbid"], subgb_dict["converged"]
-        logging.info('GB already in DB {}'.format(subgb_dict))
+      if modify:
+        try:
+          SubGrainBoundary.create(**subgb_dict)        
+          app.logger.info('Created SubGB entry {}'.format(subgb_dict))
+        except IntegrityError:
+          app.logger.info('SubGB already in DB {}'.format(subgb_dict))
+      else:
+        print subgb_dict
 
 if __name__=="__main__":
   parser = argparse.ArgumentParser()
