@@ -3,7 +3,7 @@ import spglib
 import numpy as np
 
 from ase.geometry import geometry
-from pylada_defects_2 import get_unique_ints, Voronoi
+from imeall.pylada_defect_port.pylada_defect import get_unique_ints, Voronoi
 from quippy import Atoms
 from quippy import set_fortran_indexing
 
