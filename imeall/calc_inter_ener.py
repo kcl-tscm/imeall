@@ -11,7 +11,7 @@ def h2_formation_energy(pot):
   equilibrium bond spacing.
 
   Args:
-    pot(:class:`quippy.Potential`): potential object.
+    pot(:quippy:class:`Potential`) potential object.
 
   Returns:
     float: Hydrogen molecule formation energy.
@@ -33,7 +33,7 @@ def get_interface_bounds(ats):
   of that interface in the original coordinates.
 
   Args:
-    ats (:class:`ase.Atoms`): Atoms object of full bi-crystal.
+    ats (:ase:class:`Atoms`): Atoms object of full bi-crystal.
 
   Returns: 
     gb_min, gm_max, z_width, min_at
