@@ -10,28 +10,27 @@ set_fortran_indexing(True)
 
 class ElasticDipole(object):
   def __init__(self):
-    """
-    :class:`ElasticDipole` contains methods for computing
+    """Contains methods for computing
     the elastic dipole tensor of a point defect in a material.
     """
     self.strain_tensor = [-0.01, -0.005, 0.0, 0.005, 0.01]
 
-  def defect_force_method(self, ats, defect, rcut=None):
-    """
-    Requires an interatomic potential that can calculate
-    the distinct contribution of a force from a particular atom,
-    i.e. EAM or Tightbinding model.
-
-    Args:
-      ats (:obj:`Atoms`): Atoms object of structure.
-      defect(:obj:`Atom`): Specifies the defect atom.
-      rcut (float): Cutoff radius to consider forces.
-
-    Todo:
-      *Implement this method
-    """
-    alpha_ij = self.calc_interatomic_force(defect_atom.index, ats)
-    return alpha_ij
+#  def defect_force_method(self, ats, defect, rcut=None):
+#    """
+#    Requires an interatomic potential that can calculate
+#    the distinct contribution of a force from a particular atom,
+#    i.e. EAM or Tightbinding model.
+#
+#    Args:
+#      ats (:py:class:`Atoms`): Atoms object of structure.
+#      defect(:py:class:`Atom`): Specifies the defect atom.
+#      rcut (float): Cutoff radius to consider forces.
+#
+#    Todo:
+#      Implement this method
+#    """
+#    alpha_ij = self.calc_interatomic_force(defect_atom.index, ats)
+#    return alpha_ij
     
   def relax_defect_cell(self, ats, output_name='defect_cell_relaxed.xyz', force_tol=0.0001, relax_cell=False):
     """
@@ -60,18 +59,16 @@ class ElasticDipole(object):
     return ats
   
   def compute_vacancy_dipole(self, defect, ats, pot=None, forces=np.array([])):
-    """
-    :method:`compute_vacancy_dipole` this method is valid where 
-             there is a clear distinction between the host lattice 
-             and the defect atom.
+    """Compute dipole tensor from induced forces.
+
     Args: 
-      defect (:obj:`Atom`): Atom object of defect atom.
-      ats (:obj:`Atoms`): If forces are required to be calculated atoms object must have defect, otherwise it is absent.
-      pot (:obj:`Potential`, optional): Potential for calculating interatomic forces if required,
-      forces(:obj:`numpy array`, optional): numpy array of forces if already available.
+      defect (:py:class:`Atom`): Atom object of defect atom.
+      ats (:py:class:`Atoms`): If forces are absent the :py:class:Atoms object must have defect present.
+      pot (:py:class:`Potential`, optional): Potential for calculating interatomic forces if required.
+      forces(:py:class:`numpy.array`, optional): numpy array of forces if already available.
 
     Returns: 
-      G 3x3 numpy array of G the dipole tensor.
+      3x3 numpy array of G the dipole tensor.
     """
     if not forces.any():
       print len(ats) 
@@ -101,14 +98,13 @@ class ElasticDipole(object):
 
 
 def find_h_atom(ats):
-  """
-  :method:`find_h_atom` finds the hydrogen atom and returns its `Atom` object.
+  """Finds the hydrogen atom in .xyz file and returns its :py:class:`Atom` object.
   
   Args:
-    ats(:obj:`Atoms`) object.
+    ats(:py:class:`Atoms`)
 
   Returns: 
-    :obj:`Atom` object.
+    :py:class:`Atom` object.
   """
   h_list = [at for at in ats if at.number==1]
   if len(h_list) > 1:
@@ -126,10 +122,10 @@ def calc_elast_dipole_eam(input_file, force_tol, relax_cell):
   Args:
     input_file (str): Name of .xyz file contains unitcell with defect.
     force_tol (float): Force tolerance to stop relaxation.
-    relax_cell (bool): Relax lattice vectors or not.
+    relax_cell (bool): Relax lattice vectors.
 
   Returns:
-    Elastic Dipole 3x3 numpy array tensor.
+    Elastic Dipole Tensor 3x3 numpy array.
   """
   try:
     POT_DIR = os.environ['POTDIR']
@@ -157,14 +153,16 @@ def calc_elast_dipole_eam(input_file, force_tol, relax_cell):
   return elastic.compute_vacancy_dipole(defect, ats.copy(), pot)
 
 def calc_elast_dipole_dft(input_file):
-  """
-  :method:`calc_elast_dipole_dft` from OUTCAR with one shot forces induced by removal of defect, and defect position from xyz file.
+  """Reads OUTCAR file in the same directory with one shot forces 
+  induced by removal of defect. Reads defect position 
+  from .xyz file (which contains the defect) defined by `input_file` 
+  calculates and returns the elastic dipole tensor of the defect.
 
   Args:
     input_file(str): name of input .xyz file containing defect cell.
 
   Returns:
-    `G' elastic dipole tensor as 3x3 numpy array.
+    Elastic Dipole Tensor 3x3 numpy array.
   """
   import ase.io.vasp as vs
   elastic = ElasticDipole()

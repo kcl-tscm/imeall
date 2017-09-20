@@ -1,0 +1,23 @@
+Generators
+==========
+
+Run Dynamics
+-------------
+The :mod:`imeall.slabmaker` the :mod:`imeall.run_dyn` modules are responsible 
+for generating the canonical `imeall.gb_models.GrainBoundary` structures and a representative spanning set of 
+microscopic initializations of the :class:`imeall.gb_models.SubGrainBoundary` structures for atomistic relaxation.
+
+Both modules also runs as a command line tool. To see the command line documentation:
+  ``python run_dyn.py -h``
+
+.. automodule:: imeall.run_dyn
+  :members:
+
+Relaxation
+----------
+The :mod:`imeall.relax` module handles relaxation of a :class:`SubGrainBoundary`. 
+This module also runs as a command line tool.
+
+.. automodule:: imeall.relax
+  :members:
+

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import logging
 logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
+from imeall import app
 import os
 import sys
 import glob
@@ -16,7 +17,7 @@ scratch = os.getcwd()
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-gbt","--gb_type", help="Specify type of boundary twist or tilt.", required=True)
-parser.add_argument("-ct","--calc_type", help="Potential used for calculation.", required=True) 
+parser.add_argument("-ct","--calc_type", help="Potential used for calculation. Dirname of potential.", required=True) 
 parser.add_argument("-p","--pattern", help="Job pattern to select grainboundaries.", default="001")
 parser.add_argument("-d","--delay", help="Time delay between job submissions.", type=int, default=60)
 parser.add_argument("-s","--start_num", help="Job_num to start at.", type=int, default=0)
@@ -52,14 +53,22 @@ if args.gb_type=="tilt":
           jdirs.append((job, rc, i, j, job_index))
   jobdirs = filter(lambda x: os.path.isdir(x[0]), jdirs)
 elif args.gb_type=="twist":
-  jobdirs   = glob.glob('{}*'.format(args.pattern))
-  jobdirs   = filter(os.path.isdir, jobdirs[1:])
+  if args.input_file=="":
+    jobdirs   = glob.glob('{}*'.format(args.pattern))
+    jobdirs   = filter(os.path.isdir, jobdirs)
+  else:
+    with open(args.input_file, 'r') as f:
+      jobdirs = f.read().split()
+  print jobdirs
   jdirs     = []
   job_index = 0
   for job in jobdirs:
-    for rc in np.arange(1.1, 2.3, 0.1):
-      job_index += 1
-      jdirs.append((job, rc, 0.0, 0.0, job_index))
+    for rc in np.arange(1.2, 2.3, 0.1):
+      for i in np.arange(0.0, 0.50, 0.1):
+        for j in np.arange(0.0, 0.50, 0.1):
+          if i==j== 0.0: continue
+          job_index += 1
+          jdirs.append((job, rc, i, j, job_index))
   jobdirs = filter(lambda x: os.path.isdir(x[0]), jdirs)
 else:
   print "Only tilt or twist boundaries valid."
@@ -95,7 +104,7 @@ for job_tract in chunker(jobdirs, args.tranchsize):
       print 'Running in Serial'
       gb_args = '-ct {calc_type} -rc {rc} -i_v {i_v} -i_bxv {i_bxv} -gbt {gb_type}'.format(rc=job[1], i_v=job[2], i_bxv=job[3],
                 gb_type=args.gb_type, calc_type=args.calc_type)
-      gb_args = "python /Users/lambert/pymodules/imeall/imeall/run_dyn.py {}".format(gb_args)
+      gb_args = "python {imeall_path}/run_dyn.py {gb_args}".format(imeall_path=app.root_path, gb_args=gb_args)
       print job, gb_args
       job = subprocess.Popen(gb_args.split())
       job.wait()

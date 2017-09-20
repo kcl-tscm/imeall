@@ -10,8 +10,8 @@ from   models   import GBAnalysis, PotentialParameters
 from   gb_models import GrainBoundary, SubGrainBoundary
 
 
-GRAIN_DATABASE = "/home/lambert/pymodules/imeall/imeall/grain_boundaries/"
-DATABASE       = "/home/lambert/pymodules/imeall/imeall/gb_database.db"
+GRAIN_DATABASE = app.config["GRAIN_DATABASE"]
+DATABASE       = app.config["GRAIN_DATABASE_SQL"]
 database       = SqliteDatabase(DATABASE)
 
 class Inspector(object):
@@ -94,7 +94,7 @@ class Inspector(object):
 if __name__=="__main__":
   parser    = argparse.ArgumentParser()
   parser.add_argument("-p", "--potential", help="potential to pull from database.", default="PotBH.xml")
-  parser.add_argument("-d", "--directory", help="name of potential directory.", default="EAM_Dud")
+  parser.add_argument("-d", "--directory", help="name of potential directory.", default="PotBH")
   parser.add_argument("-o", "--or_axis",   help="orientation axis to pull from database.", default="001")
   parser.add_argument("-c", "--converged", help="print list of unconverged grains.", action="store_true")
   parser.add_argument("-l", "--list_pot_dir", help="print subgrains in the PotDir.", action="store_true")

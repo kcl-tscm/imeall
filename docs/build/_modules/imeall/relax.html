@@ -1,0 +1,257 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>imeall.relax &#8212; Imeall 0.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for imeall.relax</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">ase.io</span>        
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="kn">from</span>   <span class="nn">pprint</span> <span class="k">import</span> <span class="n">pprint</span>
+<span class="kn">from</span>   <span class="nn">cStringIO</span>           <span class="k">import</span> <span class="n">StringIO</span>
+<span class="kn">from</span>   <span class="nn">ase.optimize.sciopt</span> <span class="k">import</span> <span class="n">SciPyFminCG</span>
+<span class="kn">from</span>   <span class="nn">quippy</span>              <span class="k">import</span> <span class="n">Atoms</span><span class="p">,</span> <span class="n">Potential</span><span class="p">,</span> <span class="n">frange</span><span class="p">,</span> <span class="n">set_fortran_indexing</span>
+<span class="kn">from</span>   <span class="nn">ase.constraints</span>     <span class="k">import</span> <span class="n">UnitCellFilter</span><span class="p">,</span> <span class="n">StrainFilter</span>
+<span class="kn">from</span>   <span class="nn">quippy.io</span>           <span class="k">import</span> <span class="n">AtomsWriter</span><span class="p">,</span> <span class="n">AtomsReader</span><span class="p">,</span> <span class="n">write</span>
+<span class="kn">from</span>   <span class="nn">ase.optimize</span>        <span class="k">import</span> <span class="n">BFGS</span><span class="p">,</span> <span class="n">FIRE</span><span class="p">,</span> <span class="n">LBFGS</span><span class="p">,</span> <span class="n">MDMin</span><span class="p">,</span> <span class="n">QuasiNewton</span>
+
+<span class="n">set_fortran_indexing</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+
+<div class="viewcode-block" id="relax_gb"><a class="viewcode-back" href="../../generators.html#imeall.relax.relax_gb">[docs]</a><span class="k">def</span> <span class="nf">relax_gb</span><span class="p">(</span><span class="n">gb_file</span><span class="o">=</span><span class="s1">&#39;file_name&#39;</span><span class="p">,</span> <span class="n">traj_steps</span><span class="o">=</span><span class="mi">120</span><span class="p">,</span> <span class="n">total_steps</span><span class="o">=</span><span class="mi">1200</span><span class="p">,</span> <span class="n">force_tol</span> <span class="o">=</span> <span class="mf">0.05</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Method to relax a grain_boundary bicrystal structure.</span>
+<span class="sd">  </span>
+<span class="sd">  Args:</span>
+<span class="sd">    gb_file(str): gbid.</span>
+<span class="sd">    traj_steps(int): number of steps between print trajectories.</span>
+<span class="sd">    total_steps(int): total number of force relaxation steps.</span>
+<span class="sd">    force_tol(float): Force relaxation criterion in ev/A. </span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    :class:`ase.Atoms` Object</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">def</span> <span class="nf">converged</span><span class="p">(</span><span class="n">grain</span><span class="p">,</span> <span class="n">smax</span><span class="p">,</span> <span class="n">fmax</span><span class="p">):</span>
+    <span class="n">maxstress</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">grain</span><span class="o">.</span><span class="n">get_stress</span><span class="p">()</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
+    <span class="n">rmsforces</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">grain</span><span class="o">.</span><span class="n">get_forces</span><span class="p">()</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">**</span><span class="mf">0.5</span>
+    <span class="n">maxforce</span>  <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">rmsforces</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">maxforce</span> <span class="o">&lt;</span> <span class="n">fmax</span> <span class="ow">and</span> <span class="n">maxstress</span> <span class="o">&lt;</span> <span class="n">smax</span><span class="p">:</span>
+      <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">return</span> <span class="kc">False</span>
+
+  <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;subgb.json&#39;</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">outfile</span><span class="p">:</span>
+    <span class="n">j_dict</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">outfile</span><span class="p">)</span>
+  <span class="k">try</span><span class="p">:</span>
+    <span class="n">POT_DIR</span>     <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;POTDIR&#39;</span><span class="p">]</span>
+  <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="s2">&quot;Please set POTDIR in os environment. `export POTDIR=&#39;path/to/potfiles/`&quot;</span><span class="p">)</span>
+  <span class="k">try</span><span class="p">:</span> 
+    <span class="n">param_file</span> <span class="o">=</span> <span class="n">j_dict</span><span class="p">[</span><span class="s1">&#39;param_file&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">param_file</span> <span class="o">==</span> <span class="s1">&#39;iron_mish.xml&#39;</span><span class="p">:</span>
+      <span class="n">eam_pot</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">POT_DIR</span><span class="p">,</span> <span class="s1">&#39;iron_mish.xml&#39;</span><span class="p">)</span>
+      <span class="n">r_scale</span> <span class="o">=</span> <span class="mf">1.0129007626</span>
+    <span class="k">elif</span> <span class="n">param_file</span> <span class="o">==</span> <span class="s1">&#39;Fe_Mendelev.xml&#39;</span><span class="p">:</span>
+      <span class="n">eam_pot</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">POT_DIR</span><span class="p">,</span> <span class="s1">&#39;Fe_Mendelev.xml&#39;</span><span class="p">)</span>
+      <span class="n">r_scale</span> <span class="o">=</span> <span class="mf">1.00894848312</span>
+    <span class="k">elif</span> <span class="n">param_file</span> <span class="o">==</span> <span class="s1">&#39;PotBH.xml&#39;</span><span class="p">:</span>
+      <span class="n">eam_pot</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">POT_DIR</span><span class="p">,</span> <span class="s1">&#39;PotBH.xml&#39;</span><span class="p">)</span>
+      <span class="n">r_scale</span> <span class="o">=</span> <span class="mf">1.00894848312</span>
+    <span class="k">elif</span> <span class="n">param_file</span> <span class="o">==</span> <span class="s1">&#39;Fe_Ackland.xml&#39;</span><span class="p">:</span>
+      <span class="n">eam_pot</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">POT_DIR</span><span class="p">,</span><span class="s1">&#39;Fe_Ackland.xml&#39;</span><span class="p">)</span>
+      <span class="n">r_scale</span> <span class="o">=</span> <span class="mf">1.00894185389</span>
+    <span class="k">elif</span> <span class="n">param_file</span> <span class="o">==</span> <span class="s1">&#39;Fe_Dudarev.xml&#39;</span><span class="p">:</span>
+      <span class="n">eam_pot</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">POT_DIR</span><span class="p">,</span><span class="s1">&#39;Fe_Dudarev.xml&#39;</span><span class="p">)</span>
+      <span class="n">r_scale</span> <span class="o">=</span> <span class="mf">1.01279093417</span> 
+    <span class="k">elif</span> <span class="n">param_file</span> <span class="o">==</span> <span class="s1">&#39;gp33b.xml&#39;</span><span class="p">:</span>
+      <span class="n">eam_pot</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">POT_DIR</span><span class="p">,</span><span class="s1">&#39;gp33b.xml&#39;</span><span class="p">)</span>
+      <span class="n">sparse_file</span> <span class="o">=</span> <span class="s1">&#39;gp33b.xml.sparseX.GAP_2016_10_3_60_19_29_10_8911&#39;</span>
+      <span class="n">eam_pot_sparse</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">POT_DIR</span><span class="p">,</span> <span class="n">sparse_file</span><span class="p">)</span>
+      <span class="n">shutil</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">eam_pot</span><span class="p">,</span> <span class="s1">&#39;./&#39;</span><span class="p">)</span>
+      <span class="n">shutil</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">eam_pot_sparse</span><span class="p">,</span> <span class="s1">&#39;./&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="nb">print</span> <span class="s1">&#39;No paramfile found!&#39;</span>
+      <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">()</span>
+  <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+    <span class="nb">print</span> <span class="s1">&#39;No EAM potential file with that name. Relax failed.&#39;</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">()</span>
+  
+  <span class="nb">print</span> <span class="s1">&#39;Using: &#39;</span><span class="p">,</span> <span class="n">eam_pot</span>
+  <span class="n">pot_file</span>    <span class="o">=</span> <span class="n">eam_pot</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+  <span class="nb">print</span> <span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">.xyz&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">gb_file</span><span class="p">)</span>
+  <span class="nb">print</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+  <span class="n">grain</span>       <span class="o">=</span> <span class="n">AtomsReader</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">.xyz&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">gb_file</span><span class="p">))[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+  <span class="k">if</span> <span class="n">param_file</span> <span class="o">!=</span> <span class="s1">&#39;gp33b.xml&#39;</span><span class="p">:</span>
+    <span class="n">pot</span>         <span class="o">=</span> <span class="n">Potential</span><span class="p">(</span><span class="s1">&#39;IP EAM_ErcolAd do_rescale_r=T r_scale=</span><span class="si">{0}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">r_scale</span><span class="p">),</span> <span class="n">param_filename</span><span class="o">=</span><span class="n">eam_pot</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">pot</span>         <span class="o">=</span> <span class="n">Potential</span><span class="p">(</span><span class="s1">&#39;IP GAP&#39;</span><span class="p">,</span> <span class="n">param_filename</span><span class="o">=</span><span class="n">eam_pot</span><span class="p">)</span>
+
+  <span class="n">grain</span><span class="o">.</span><span class="n">set_calculator</span><span class="p">(</span><span class="n">pot</span><span class="p">)</span>
+  <span class="n">grain</span><span class="o">.</span><span class="n">info</span><span class="p">[</span><span class="s1">&#39;adsorbate_info&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+  <span class="n">E_gb_init</span>   <span class="o">=</span> <span class="n">grain</span><span class="o">.</span><span class="n">get_potential_energy</span><span class="p">()</span>
+  <span class="n">traj_file</span>   <span class="o">=</span> <span class="n">gb_file</span>
+  <span class="k">if</span> <span class="s1">&#39;traj&#39;</span> <span class="ow">in</span> <span class="n">traj_file</span><span class="p">:</span>
+    <span class="n">out</span>       <span class="o">=</span> <span class="n">AtomsWriter</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">.xyz&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">traj_file</span><span class="p">)))</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">out</span>       <span class="o">=</span> <span class="n">AtomsWriter</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">_traj.xyz&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">traj_file</span><span class="p">)))</span>
+  <span class="n">strain_mask</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span>
+  <span class="n">ucf</span>         <span class="o">=</span> <span class="n">UnitCellFilter</span><span class="p">(</span><span class="n">grain</span><span class="p">,</span> <span class="n">strain_mask</span><span class="p">)</span>
+  <span class="n">opt</span>         <span class="o">=</span> <span class="n">FIRE</span><span class="p">(</span><span class="n">ucf</span><span class="p">)</span>
+  <span class="n">cell</span> <span class="o">=</span> <span class="n">grain</span><span class="o">.</span><span class="n">get_cell</span><span class="p">()</span>
+  <span class="n">A</span>    <span class="o">=</span> <span class="n">cell</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">cell</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+  <span class="n">H</span>    <span class="o">=</span> <span class="n">cell</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span>
+  <span class="c1">#Calculation dumps total energyenergy and grainboundary area data to json file.</span>
+  <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;subgb.json&#39;</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">gb_dict</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+  <span class="c1">#Write an initial dict so we know if the system has been initialized but the calculation is not finished.</span>
+  <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;subgb.json&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">outfile</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">gb_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+      <span class="n">j_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+    <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">j_dict</span><span class="p">,</span> <span class="n">outfile</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+  <span class="n">CONVERGED</span> <span class="o">=</span> <span class="kc">False</span>
+  <span class="n">FORCE_TOL</span> <span class="o">=</span> <span class="n">force_tol</span>
+
+<span class="c1">#default to 5 if traj_steps = 120, otherwise increases</span>
+  <span class="n">num_iters</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">total_steps</span><span class="p">)</span><span class="o">/</span><span class="nb">float</span><span class="p">(</span><span class="n">traj_steps</span><span class="p">))</span>
+  <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;num_iters: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">num_iters</span><span class="p">))</span>
+  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_iters</span><span class="p">):</span>
+    <span class="n">opt</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">fmax</span><span class="o">=</span><span class="n">FORCE_TOL</span><span class="p">,</span> <span class="n">steps</span><span class="o">=</span><span class="n">traj_steps</span><span class="p">)</span>
+    <span class="n">out</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">grain</span><span class="p">)</span>
+    <span class="n">force_array</span> <span class="o">=</span> <span class="n">grain</span><span class="o">.</span><span class="n">get_forces</span><span class="p">()</span>
+    <span class="n">max_force_II</span> <span class="o">=</span> <span class="nb">max</span><span class="p">([</span><span class="nb">max</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">force_array</span><span class="p">])</span>
+    <span class="n">max_forces</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">fx</span><span class="o">**</span><span class="mi">2</span><span class="o">+</span><span class="n">fy</span><span class="o">**</span><span class="mi">2</span><span class="o">+</span><span class="n">fz</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="k">for</span> <span class="n">fx</span><span class="p">,</span> <span class="n">fy</span><span class="p">,</span> <span class="n">fz</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">grain</span><span class="o">.</span><span class="n">properties</span><span class="p">[</span><span class="s1">&#39;force&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> 
+                  <span class="n">grain</span><span class="o">.</span><span class="n">properties</span><span class="p">[</span><span class="s1">&#39;force&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">grain</span><span class="o">.</span><span class="n">properties</span><span class="p">[</span><span class="s1">&#39;force&#39;</span><span class="p">][</span><span class="mi">2</span><span class="p">])]</span>
+    <span class="k">if</span> <span class="nb">max</span><span class="p">(</span><span class="n">max_forces</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">FORCE_TOL</span><span class="p">:</span>
+      <span class="n">CONVERGED</span> <span class="o">=</span> <span class="kc">True</span>
+      <span class="k">break</span>
+  <span class="n">out</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+  <span class="n">gb_dict</span><span class="p">[</span><span class="s1">&#39;converged&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">CONVERGED</span>
+  <span class="n">E_gb</span>    <span class="o">=</span> <span class="n">grain</span><span class="o">.</span><span class="n">get_potential_energy</span><span class="p">()</span>
+  <span class="n">gb_dict</span><span class="p">[</span><span class="s1">&#39;E_gb&#39;</span><span class="p">]</span>      <span class="o">=</span> <span class="n">E_gb</span>
+  <span class="n">gb_dict</span><span class="p">[</span><span class="s1">&#39;E_gb_init&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">E_gb_init</span> 
+  <span class="n">gb_dict</span><span class="p">[</span><span class="s1">&#39;area&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">A</span> 
+  <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;subgb.json&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">outfile</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">gb_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+      <span class="n">j_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+    <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">j_dict</span><span class="p">,</span> <span class="n">outfile</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+  <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">param_file</span><span class="p">)</span>
+  <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">sparse_file</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">grain</span></div>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+<span class="c1">#Command line tool for relaxing grainboundary structure</span>
+  <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
+  <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-inp&#39;</span><span class="p">,</span> <span class="s1">&#39;--input_file&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;name of input structure file&#39;</span><span class="p">)</span>
+  <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-ts&#39;</span><span class="p">,</span>  <span class="s1">&#39;--traj_steps&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Number of steps to write trajectory to file&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">120</span><span class="p">)</span>
+  <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-f&#39;</span><span class="p">,</span>  <span class="s1">&#39;--force_tol&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Force tolerance for minimization&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">float</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+  <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+  <span class="n">input_file</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">input_file</span>
+  <span class="n">relax_gb</span><span class="p">(</span><span class="n">gb_file</span><span class="o">=</span><span class="n">input_file</span><span class="p">,</span> <span class="n">traj_steps</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">traj_steps</span><span class="p">,</span> <span class="n">force_tol</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">force_tol</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Imeall</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../intro.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../imeall.html">Imeall Package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../models.html">Models and Queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../views.html">Views</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../slabmaker.html">Slabmaker</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../generators.html">Generators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../interstitials.html">Interstitials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../calculators.html">Calculators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Henry Lambert, Adam Fekete, James Kermode, Alessandro De Vita.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

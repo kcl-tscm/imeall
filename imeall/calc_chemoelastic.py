@@ -4,18 +4,25 @@ import argparse
 import subprocess
 import numpy as np
 import ase.units as units
-from quippy import Atoms, Potential, AtomsReader, set_fortran_indexing
+
+
+from imeall import app
 from imeall.models import PotentialParameters
+from quippy import Atoms, Potential, AtomsReader, set_fortran_indexing
 
 set_fortran_indexing(False)
 def strain_energy(ats, cursor_step=0.2):
+  """Create an array tracking the accumulation of energy above the bulk energy along the z-axis.
+  For interfacial structures this has pronounced speakes in the region of the interface.
+
+  Args: 
+    ats(:py:class:`Atoms`) object with a potential calculator attached.
+    cursor_step(float): step distance along z to add atomic energies to the cumulative energy.
+
+  Returns: 
+    list: Cumulative energy distribution along the z-axis.
   """
-  method: `strain_energy` create an array tracking the accumulation of energy above the bulk.
-           For interfacial structures this has pronounced speakes in the region of the interface.
-  parameters: ats `Atoms` object with a potential calculator attached.
-              cursor_step: step distance along z to add atomic energies to the cumulative energy.
-  returns: an array of numbers.
-  """
+
   cell = ats.get_cell()
   A = cell[0][0]*cell[1][1]
   z_height = cell[2][2]
@@ -34,12 +41,18 @@ def strain_energy(ats, cursor_step=0.2):
   return elastic_energy
 
 def calc_chemomechanical(ats):
+  """Calculate elastic and chemical contributions to the total energy.
+  Requires :py:class:`Atoms` object with a :py:class:`Potential` capable of returning a per atom energy.
+  :py:class:`Atoms` object must have at least structure_type and 
+  local_energy properties. For a bcc lattice structure_type=3. 
+
+  Args: 
+    ats(:py:class:`Atoms`):  
+
+  Returns: 
+    list:[(chemical_energy/total_energy)*gb_energy, (elastic_energy/total_energy)*gb_energy, gb_energy]
   """
-  method:`calc_chemomechanical` requires atoms object with a potential capable of return a per atom energy.
-         `Atoms` object must have at least structure_type and local_energy properties. For a bcc lattice structure_type=3. 
-  parameters: ats `Atoms` object.
-  returns: a list of [(chemical_energy/total_energy)*gb_energy, (elastic_energy/total_energy)*gb_energy, gb_energy]
-  """
+
 #case quip types to numpy arrays stack and transpose
   loc_en = np.array(ats.properties['local_energy'])
   struct_type = np.array(ats.properties['structure_type'])
@@ -63,10 +76,16 @@ def calc_chemomechanical(ats):
   return [(chemical_energy/total_energy)*gb_energy, (elastic_energy/total_energy)*gb_energy, gb_energy]
 
 def calc_chemoelast(input_file):
+  """Adds the structure type using an ovitos script to the :py:class:`Atoms` object
+  and calculates the breakdown of the energy contributions.
+
+  Args:
+    input_file(str):Relaxed grain boundary structure file.
+
+  Returns: 
+    list(float):[(chemical_energy/total_energy)*gb_energy, (elastic_energy/total_energy)*gb_energy, gb_energy]
   """
-  method: Adds the structure type using ovitos script to the atoms object and calculates the breakdown of energy contributions.
-  returns: a list of [(chemical_energy/total_energy)*gb_energy, (elastic_energy/total_energy)*gb_energy, gb_energy]
-  """
+
   potparam = PotentialParameters()
   ener_bulk_dict = potparam.gs_ener_per_atom()
   r_scale_dict = potparam.eam_rscale()
@@ -89,7 +108,8 @@ def calc_chemoelast(input_file):
     for x in elastic_energy:
       print >> f, x[0], x[1]
 #generates output.xyz
-  args_str =  'ovitos /Users/lambert/pymodules/imeall/imeall/ovito_scripts/attach_cna.py -i {input_file}'.format(input_file='full.xyz').split()
+  imeall_root = os.path.join(app.root_path, 'ovito_scripts/attach_cna.py')
+  args_str =  'ovitos {imeall_root} -i {input_file}'.format(imeall_root=app.root_path, input_file='full.xyz').split()
   job = subprocess.Popen(args_str)
   job.wait()
   ats = Atoms('output.xyz')

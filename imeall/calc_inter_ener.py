@@ -5,14 +5,24 @@ import argparse
 from ase.optimize import FIRE
 from quippy import Atoms, Potential, frange
 
-#calc_inter_diss_ener.py calculates intersitial dissolution energy
 def h2_formation_energy(pot):
+  """
+  Given a potential calculate the H2 formation energy and
+  equilibrium bond spacing.
+
+  Args:
+    pot(:class:`quippy.Potential`): potential object.
+
+  Returns:
+    float: Hydrogen molecule formation energy.
+  """
   h2 = aseAtoms('H2', positions=[[0, 0, 0],[0, 0, 0.7]])
   h2 = Atoms(h2)
   h2.set_calculator(pot)
   opt = BFGS(h2)
   opt.run(fmax=0.0001)
   E_h2  = h2.get_potential_energy()
+  return E_h2
 
 def calc_egb(json_dict):
   return json_dict['E_gb']
@@ -23,7 +33,7 @@ def get_interface_bounds(ats):
   of that interface in the original coordinates.
 
   Args:
-    ats (:obj:`Atoms`): Atoms object of full bi-crystal.
+    ats (:class:`ase.Atoms`): Atoms object of full bi-crystal.
 
   Returns: 
     gb_min, gm_max, z_width, min_at
@@ -47,7 +57,18 @@ def get_interface_bounds(ats):
   at_min = zint.positions[:,2].min() - gb_min
   return gb_min, gb_max, z_width, at_min
 
-def apply_strain(ats, mode, num):
+def apply_strain(ats, mode, st_num):
+  """Apply a deformation mode to :class:`ase.Atoms` object. 
+
+  Args:
+    mode(str): Options are shear, stretch, hydrostatic.
+    st_num(float): Strain applied as a percentage.
+
+  Returns:
+   :class:`ase.Atoms` 
+
+  """
+
   e1 = np.array([1,0,0])
   e2 = np.array([0,1,0])
   e3 = np.array([0,0,1])

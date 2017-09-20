@@ -1,0 +1,301 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Calculators &#8212; Imeall 0.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Examples" href="examples.html" />
+    <link rel="prev" title="Interstitials" href="interstitials.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="calculators">
+<h1>Calculators<a class="headerlink" href="#calculators" title="Permalink to this headline">¶</a></h1>
+<p>Routines for calculating a variety of intrinsic properties of grain boundaries,
+and quantities relating to impurities present at boundaries.</p>
+<span class="target" id="module-imeall.calc_bulk_dissolution_energy"></span><dl class="function">
+<dt id="imeall.calc_bulk_dissolution_energy.calc_bulk_dissolution">
+<code class="descclassname">imeall.calc_bulk_dissolution_energy.</code><code class="descname">calc_bulk_dissolution</code><span class="sig-paren">(</span><em>args</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/calc_bulk_dissolution_energy.html#calc_bulk_dissolution"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.calc_bulk_dissolution_energy.calc_bulk_dissolution" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the bulk dissolution energy for hydrogen
+in a tetrahedral position in bcc iron.
+:param args: determine applied strain to unit cell.
+:type args: list</p>
+</dd></dl>
+
+<span class="target" id="module-imeall.calc_chemoelastic"></span><dl class="function">
+<dt id="imeall.calc_chemoelastic.calc_chemoelast">
+<code class="descclassname">imeall.calc_chemoelastic.</code><code class="descname">calc_chemoelast</code><span class="sig-paren">(</span><em>input_file</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/calc_chemoelastic.html#calc_chemoelast"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.calc_chemoelastic.calc_chemoelast" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds the structure type using an ovitos script to the <code class="xref py py-class docutils literal"><span class="pre">Atoms</span></code> object
+and calculates the breakdown of the energy contributions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>input_file</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Relaxed grain boundary structure file.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">[(chemical_energy/total_energy)*gb_energy, (elastic_energy/total_energy)*gb_energy, gb_energy]</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">list(<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)">float</a>)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.calc_chemoelastic.calc_chemomechanical">
+<code class="descclassname">imeall.calc_chemoelastic.</code><code class="descname">calc_chemomechanical</code><span class="sig-paren">(</span><em>ats</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/calc_chemoelastic.html#calc_chemomechanical"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.calc_chemoelastic.calc_chemomechanical" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate elastic and chemical contributions to the total energy.
+Requires <code class="xref py py-class docutils literal"><span class="pre">Atoms</span></code> object with a <code class="xref py py-class docutils literal"><span class="pre">Potential</span></code> capable of returning a per atom energy.
+<code class="xref py py-class docutils literal"><span class="pre">Atoms</span></code> object must have at least structure_type and
+local_energy properties. For a bcc lattice structure_type=3.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>ats</strong> (<code class="xref py py-class docutils literal"><span class="pre">Atoms</span></code>) – </td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">[(chemical_energy/total_energy)*gb_energy, (elastic_energy/total_energy)*gb_energy, gb_energy]</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">list</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.calc_chemoelastic.strain_energy">
+<code class="descclassname">imeall.calc_chemoelastic.</code><code class="descname">strain_energy</code><span class="sig-paren">(</span><em>ats</em>, <em>cursor_step=0.2</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/calc_chemoelastic.html#strain_energy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.calc_chemoelastic.strain_energy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an array tracking the accumulation of energy above the bulk energy along the z-axis.
+For interfacial structures this has pronounced speakes in the region of the interface.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>ats</strong> (<code class="xref py py-class docutils literal"><span class="pre">Atoms</span></code>) – </li>
+<li><strong>cursor_step</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – step distance along z to add atomic energies to the cumulative energy.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Cumulative energy distribution along the z-axis.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">list</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<span class="target" id="module-imeall.calc_elast_dipole"></span><dl class="function">
+<dt id="imeall.calc_elast_dipole.calc_elast_dipole_dft">
+<code class="descclassname">imeall.calc_elast_dipole.</code><code class="descname">calc_elast_dipole_dft</code><span class="sig-paren">(</span><em>input_file</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/calc_elast_dipole.html#calc_elast_dipole_dft"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.calc_elast_dipole.calc_elast_dipole_dft" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads OUTCAR file in the same directory with one shot forces
+induced by removal of defect. Reads defect position
+from .xyz file (which contains the defect) defined by <cite>input_file</cite>
+calculates and returns the elastic dipole tensor of the defect.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>input_file</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – name of input .xyz file containing defect cell.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Elastic Dipole Tensor 3x3 numpy array.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.calc_elast_dipole.calc_elast_dipole_eam">
+<code class="descclassname">imeall.calc_elast_dipole.</code><code class="descname">calc_elast_dipole_eam</code><span class="sig-paren">(</span><em>input_file</em>, <em>force_tol</em>, <em>relax_cell</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/calc_elast_dipole.html#calc_elast_dipole_eam"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.calc_elast_dipole.calc_elast_dipole_eam" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate elastic dipole using an Embedded Atom Potential.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>input_file</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Name of .xyz file contains unitcell with defect.</li>
+<li><strong>force_tol</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Force tolerance to stop relaxation.</li>
+<li><strong>relax_cell</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) – Relax lattice vectors.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">Elastic Dipole Tensor 3x3 numpy array.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.calc_elast_dipole.find_h_atom">
+<code class="descclassname">imeall.calc_elast_dipole.</code><code class="descname">find_h_atom</code><span class="sig-paren">(</span><em>ats</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/calc_elast_dipole.html#find_h_atom"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.calc_elast_dipole.find_h_atom" title="Permalink to this definition">¶</a></dt>
+<dd><p>Finds the hydrogen atom in .xyz file and returns its <code class="xref py py-class docutils literal"><span class="pre">Atom</span></code> object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>ats</strong> (<code class="xref py py-class docutils literal"><span class="pre">Atoms</span></code>) – </td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><code class="xref py py-class docutils literal"><span class="pre">Atom</span></code> object.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="imeall.calc_elast_dipole.ElasticDipole">
+<em class="property">class </em><code class="descclassname">imeall.calc_elast_dipole.</code><code class="descname">ElasticDipole</code><a class="reference internal" href="_modules/imeall/calc_elast_dipole.html#ElasticDipole"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.calc_elast_dipole.ElasticDipole" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="imeall.calc_elast_dipole.ElasticDipole.compute_vacancy_dipole">
+<code class="descname">compute_vacancy_dipole</code><span class="sig-paren">(</span><em>defect</em>, <em>ats</em>, <em>pot=None</em>, <em>forces=array([]</em>, <em>dtype=float64)</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/calc_elast_dipole.html#ElasticDipole.compute_vacancy_dipole"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.calc_elast_dipole.ElasticDipole.compute_vacancy_dipole" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute dipole tensor from induced forces.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>defect</strong> (<code class="xref py py-class docutils literal"><span class="pre">Atom</span></code>) – Atom object of defect atom.</li>
+<li><strong>ats</strong> (<code class="xref py py-class docutils literal"><span class="pre">Atoms</span></code>) – If forces are absent the :py:class:Atoms object must have defect present.</li>
+<li><strong>pot</strong> (<code class="xref py py-class docutils literal"><span class="pre">Potential</span></code>, optional) – Potential for calculating interatomic forces if required.</li>
+<li><strong>forces</strong> (<code class="xref py py-class docutils literal"><span class="pre">numpy.array</span></code>, optional) – numpy array of forces if already available.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">3x3 numpy array of G the dipole tensor.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="imeall.calc_elast_dipole.ElasticDipole.relax_defect_cell">
+<code class="descname">relax_defect_cell</code><span class="sig-paren">(</span><em>ats</em>, <em>output_name='defect_cell_relaxed.xyz'</em>, <em>force_tol=0.0001</em>, <em>relax_cell=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/calc_elast_dipole.html#ElasticDipole.relax_defect_cell"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.calc_elast_dipole.ElasticDipole.relax_defect_cell" title="Permalink to this definition">¶</a></dt>
+<dd><p>Accepts atoms object with an attached calculator.Minimize forces.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>ats</strong> (<code class="xref py py-obj docutils literal"><span class="pre">Atoms</span></code>) – Atoms with defect to relax.</li>
+<li><strong>output_name</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a><em>, </em><em>optional</em>) – Filename to print relaxed atoms structure to.</li>
+<li><strong>force_tol</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a><em>, </em><em>optional</em>) – Force tolerance to stop relaxation.</li>
+<li><strong>relax_cell</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a><em>, </em><em>optional</em>) – Relax lattice parameters.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">A relaxed Atoms object.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><code class="xref py py-class docutils literal"><span class="pre">Atoms</span></code></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-imeall.calc_gap"></span></div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Imeall</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="imeall.html">Imeall Package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Models and Queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="views.html">Views</a></li>
+<li class="toctree-l1"><a class="reference internal" href="slabmaker.html">Slabmaker</a></li>
+<li class="toctree-l1"><a class="reference internal" href="generators.html">Generators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="interstitials.html">Interstitials</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Calculators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="interstitials.html" title="previous chapter">Interstitials</a></li>
+      <li>Next: <a href="examples.html" title="next chapter">Examples</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Henry Lambert, Adam Fekete, James Kermode, Alessandro De Vita.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/calculators.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
