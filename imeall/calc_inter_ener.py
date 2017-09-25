@@ -80,7 +80,7 @@ def apply_strain(ats, mode, st_num):
     print 'Hydrostatic strain', num
     print 'strain tensor', strain_tensor
   elif mode == 'stretch':
-    strain_tensor = np.tensordot(e2, e2, axes=0)
+    strain_tensor = np.tensordot(e3, e3, axes=0)
     strain_tensor = np.eye(3) + num*strain_tensor
     cell = strain_tensor*cell
     print 'Stretch strain'
