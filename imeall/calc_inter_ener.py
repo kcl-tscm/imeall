@@ -11,7 +11,7 @@ def h2_formation_energy(pot):
   equilibrium bond spacing.
 
   Args:
-    pot(:class:`quippy.Potential`): potential object.
+    pot(:quippy:class:`Potential`) potential object.
 
   Returns:
     float: Hydrogen molecule formation energy.
@@ -33,7 +33,7 @@ def get_interface_bounds(ats):
   of that interface in the original coordinates.
 
   Args:
-    ats (:class:`ase.Atoms`): Atoms object of full bi-crystal.
+    ats (:ase:class:`Atoms`): Atoms object of full bi-crystal.
 
   Returns: 
     gb_min, gm_max, z_width, min_at
@@ -68,26 +68,27 @@ def apply_strain(ats, mode, st_num):
    :class:`ase.Atoms` 
 
   """
+
   e1 = np.array([1,0,0])
   e2 = np.array([0,1,0])
   e3 = np.array([0,0,1])
   cell = ats.get_cell()
   if mode == 'hydrostatic':
-    strain_tensor = np.eye(3) + st_num*np.eye(3)
+    strain_tensor = np.eye(3) + num*np.eye(3)
     cell = cell*strain_tensor
     ats.set_cell(cell, scale_atoms=True)
-    print 'Hydrostatic strain', st_num
+    print 'Hydrostatic strain', num
     print 'strain tensor', strain_tensor
   elif mode == 'stretch':
-    strain_tensor = np.tensordot(e2, e2, axes=0)
-    strain_tensor = np.eye(3) + st_num*strain_tensor
+    strain_tensor = np.tensordot(e3, e3, axes=0)
+    strain_tensor = np.eye(3) + num*strain_tensor
     cell = strain_tensor*cell
     print 'Stretch strain'
     print 'Cell:', cell
     ats.set_cell(cell, scale_atoms=True)
   elif mode == 'shear':
     strain_tensor = np.tensordot(e1, e2, axes=0)
-    strain_tensor = np.eye(3) + st_num*strain_tensor
+    strain_tensor = np.eye(3) + num*strain_tensor
     cell = strain_tensor.dot(cell)
     print 'Shear Strain', strain_tensor
     print 'Cell:', cell
@@ -99,7 +100,6 @@ def apply_strain(ats, mode, st_num):
 alat = 2.83
 #bulk_sites = [tetrahedral site and octahedral]
 bulk_sites = map(lambda x: alat*x, [np.array([0.25, 0.0, 0.5]), np.array([0,0,0.5])])
-
 POT_DIR = os.environ['POTDIR']
 eam_pot = os.path.join(POT_DIR, 'PotBH.xml')
 r_scale = 1.00894848312
@@ -110,7 +110,7 @@ if __name__=='__main__':
   parser = argparse.ArgumentParser() 
   parser.add_argument('-m','--modes', nargs='+', help='Type of strain mode: shear, stretch, or hydrostatic.', default=['shear', 'stretch'])
   parser.add_argument('-r','--rescale', help='interstitial site needs to be rescaled into lattice', action='store_true')
-  parser.add_argument('-s','--st_nums', nargs='+', help='Type of strain mode: shear, stretch, or hydrostatic.', default=[-0.01, -0.005, 0.0, 0.005, 0.01], type=float)
+  parser.add_argument('-n','--nums', nargs='+', help='Type of strain mode: shear, stretch, or hydrostatic.', default=[-0.01, -0.005, 0.0, 0.005, 0.01], type=float)
   parser.add_argument('-f','--force_tol', help='Force Tolerance', default=0.05, type=float)
   args = parser.parse_args()
   with open('unique_h_sites.json','r') as f:
@@ -123,13 +123,13 @@ if __name__=='__main__':
 
   force_tol = args.force_tol
   E_h2 = -4.73831215121
-  E_gb = subgb_dict['E_gb']
+  #E_gb = subgb_dict['E_gb']
   all_h_ats = ats.copy()
   for mode in args.modes:
-    for st_num in args.st_nums:
-      g = open('h_site_ener_{}_{}.txt'.format(mode, str(st_num)), 'w')
+    for num in args.nums:
+      g = open('h_site_ener_{}_{}.txt'.format(mode, str(num)), 'w')
       s_ats = ats.copy()
-      s_ats = apply_strain(s_ats, mode, st_num)
+      s_ats = apply_strain(s_ats, mode, num)
       s_ats.set_calculator(pot)
       E_gb = s_ats.get_potential_energy()
       for h_site in h_sites:
