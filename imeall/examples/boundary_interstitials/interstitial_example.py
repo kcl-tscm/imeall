@@ -1,7 +1,14 @@
+import os
+from imeall import app
 from imeall.calc_eseg import  gen_interface
 from imeall.calc_inter_dist import decorate_interface
-from imeall.calc_inter_ener import gen_interface_bounds
-from imeall import app
+from imeall.calc_inter_ener import get_interface_bounds, apply_strain
+
+
+from ase.optimize import FIRE
+from quippy import Atoms, Potential
+
+import json
 
 
 #can calculate dissolution energy for different strain modes.
@@ -29,7 +36,7 @@ if __name__=='__main__':
   s_ats = apply_strain(s_ats, mode, num)
   s_ats.set_calculator(pot)
   E_gb = s_ats.get_potential_energy()
-  for h_site in h_sites:
+  for h_site in h_sites[:50]:
     h_ats = s_ats.copy()
     h_site_tmp = list(h_site)
     #-1.0 to subtract vacuum added in calc_eseg.py at_min to account for diff between gb_min and lowest atom.
@@ -40,7 +47,6 @@ if __name__=='__main__':
     opt.run(fmax = force_tol)
     E_gbh = h_ats.get_potential_energy()
     h_at_rel = filter(lambda x:x.number == 1, h_ats)
-    all_h_ats.add_atoms(h_at_rel[0].position, 1)
     #print position of relaxed h atom and the interstitial energies.
     print >> g, h_at_rel[0].position, E_gbh, E_gbh - E_gb - 0.5*E_h2
     g.flush()

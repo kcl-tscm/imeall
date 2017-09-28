@@ -1,0 +1,24 @@
+{
+  "A": 25.32636555252253, 
+  "gbid": "0013687130", 
+  "sigma_csl": 0, 
+  "H": 71.63191355813414, 
+  "n_at": 20, 
+  "orientation_axis": [
+    0, 
+    0, 
+    1
+  ], 
+  "boundary_plane": [
+    1.0, 
+    3.0, 
+    0.0
+  ], 
+  "coincident_sites": 4, 
+  "angle": 0.6435028952103092, 
+  "type": "symmetric tilt boundary", 
+  "zplanes": [
+    17.0036, 
+    52.8258
+  ]
+}
