@@ -89,9 +89,9 @@ boundary bicrystal with <code class="xref py py-func docutils literal"><span cla
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>orientation_axis</strong> (<em>list</em><em>[</em><em>ints</em><em>]</em>) – orientation axis in ints.</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Dictionary of ‘x’ axis co-ordinates keyed by angle rounded to two floating point numbers.</td>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">list of [angle, ‘x’-axis-co-ordinates]</td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/2.7/library/stdtypes.html#dict" title="(in Python v2.7)">dict</a></td>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">list</td>
 </tr>
 </tbody>
 </table>
@@ -194,15 +194,11 @@ to alat and chem_symbol.</p>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><dl class="docutils">
-<dt>if target_dir==None returns [z_planes, len(dups), n_grain_unit, grain_c]</dt>
-<dd><p class="first last">i.e the location of the interfacial planes, the number of duplicate atoms
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">if target_dir==None returns [z_planes, len(dups), n_grain_unit, grain_c]
+i.e the location of the interfacial planes, the number of duplicate atoms
 when the grain is built, the
-number of atoms in the canonical unit cell, and the bicrystal <a class="reference external" href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="(in ASE v)"><code class="xref py py-class docutils literal"><span class="pre">ase.Atoms</span></code></a> object.</p>
-</dd>
-</dl>
-<p>else returns <a class="reference external" href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="(in ASE v)"><code class="xref py py-class docutils literal"><span class="pre">ase.Atoms</span></code></a>.</p>
-</p>
+number of atoms in the canonical unit cell, and the bicrystal <a class="reference external" href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="(in ASE v)"><code class="xref py py-class docutils literal"><span class="pre">ase.Atoms</span></code></a> object.
+else returns <a class="reference external" href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="(in ASE v)"><code class="xref py py-class docutils literal"><span class="pre">ase.Atoms</span></code></a>.</p>
 </td>
 </tr>
 </tbody>

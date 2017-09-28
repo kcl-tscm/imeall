@@ -26,7 +26,7 @@ class BaseModel(Model):
     database = database
 
 class GrainBoundary(BaseModel):
-  """GrainBoundary is a peewee :peewee:class:`Model` of the canonical parent grain. 
+  """GrainBoundary is a peewee :peewee:`Model` of the canonical parent grain. 
   Model is connected to the SQL database of the grain boundaries. All vectors 
   are serialized to csv string for storage.
 

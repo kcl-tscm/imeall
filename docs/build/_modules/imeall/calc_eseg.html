@@ -39,17 +39,20 @@
           <div class="body" role="main">
             
   <h1>Source code for imeall.calc_eseg</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">ase</span> <span class="k">import</span> <span class="n">Atoms</span> <span class="k">as</span> <span class="n">aseAtoms</span>
+<span></span><span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">ase</span> <span class="k">import</span> <span class="n">Atoms</span> <span class="k">as</span> <span class="n">aseAtoms</span>
 <span class="kn">from</span> <span class="nn">ase.io.vasp</span> <span class="k">import</span> <span class="n">write_vasp</span>
 <span class="kn">from</span> <span class="nn">ase.calculators.vasp</span> <span class="k">import</span> <span class="n">Vasp</span>
 <span class="kn">from</span> <span class="nn">pyspglib</span> <span class="k">import</span> <span class="n">spglib</span>
-<span class="kn">from</span> <span class="nn">pylada_defects_2</span> <span class="k">import</span> <span class="n">get_interstitials</span><span class="p">,</span> <span class="n">write_interstitials</span><span class="p">,</span> <span class="n">get_unique_wyckoff</span><span class="p">,</span> <span class="n">get_all_interstitials</span>
-<span class="kn">from</span> <span class="nn">pylada_defects_2</span> <span class="k">import</span> <span class="n">get_ints_in_prim_cell</span><span class="p">,</span> <span class="n">get_unique_ints</span>
+<span class="kn">from</span> <span class="nn">pylada_defects_2</span> <span class="k">import</span> <span class="n">get_unique_wyckoff</span><span class="p">,</span> <span class="n">get_all_interstitials</span><span class="p">,</span> <span class="n">get_unique_ints</span>
+<span class="kn">from</span> <span class="nn">pylada_defects_2</span> <span class="k">import</span> <span class="n">get_ints_in_prim_cell</span>
 <span class="kn">from</span> <span class="nn">quippy</span> <span class="k">import</span> <span class="n">Atoms</span><span class="p">,</span> <span class="n">farray</span><span class="p">,</span> <span class="n">frange</span><span class="p">,</span> <span class="n">set_fortran_indexing</span>
 
 <span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">import</span> <span class="nn">argparse</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="n">sys</span><span class="o">.</span><span class="n">settrace</span>
 
 <div class="viewcode-block" id="nearest_to_unique"><a class="viewcode-back" href="../../interstitials.html#imeall.calc_eseg.nearest_to_unique">[docs]</a><span class="k">def</span> <span class="nf">nearest_to_unique</span><span class="p">(</span><span class="n">at</span><span class="p">,</span> <span class="n">unique_sites</span><span class="p">):</span>
   <span class="sd">&quot;&quot;&quot;Given an :class:`ase.Atom` object and an array of site vectors finds</span>
@@ -140,22 +143,21 @@
   <span class="n">vasp</span> <span class="o">=</span> <span class="n">Vasp</span><span class="p">(</span><span class="o">**</span><span class="n">vasp_args</span><span class="p">)</span>
   <span class="n">vasp</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="n">ats</span><span class="p">)</span>
   <span class="n">write_vasp</span><span class="p">(</span><span class="s1">&#39;POSCAR&#39;</span><span class="p">,</span> <span class="n">vasp</span><span class="o">.</span><span class="n">atoms_sorted</span><span class="p">,</span> <span class="n">symbol_count</span><span class="o">=</span><span class="n">vasp</span><span class="o">.</span><span class="n">symbol_count</span><span class="p">,</span> <span class="n">vasp5</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-  <span class="c1">#Remove pylada-light dependency</span>
-  <span class="c1">#struct = read_poscar.poscar(&#39;POSCAR&#39;)</span>
   <span class="n">spg</span> <span class="o">=</span> <span class="n">spglib</span><span class="o">.</span><span class="n">get_spacegroup</span><span class="p">(</span><span class="n">ats</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)</span>
   <span class="n">sym</span> <span class="o">=</span> <span class="n">spglib</span><span class="o">.</span><span class="n">get_symmetry</span><span class="p">(</span><span class="n">ats</span><span class="p">)</span>
   <span class="nb">print</span> <span class="s1">&#39;Space Group: &#39;</span><span class="p">,</span> <span class="n">spg</span>
   <span class="nb">print</span> <span class="s1">&#39;Symmetry: &#39;</span><span class="p">,</span> <span class="n">sym</span> 
-  <span class="n">unique_lattice_sites</span> <span class="o">=</span> <span class="n">get_unique_wyckoff</span><span class="p">(</span><span class="n">struct</span><span class="p">,</span> <span class="n">ats</span><span class="p">)</span>
+  <span class="n">unique_lattice_sites</span> <span class="o">=</span> <span class="n">get_unique_wyckoff</span><span class="p">(</span><span class="n">ats</span><span class="p">)</span>
+  <span class="nb">print</span> <span class="n">unique_lattice_sites</span>
   <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;unique_lattice_sites.json&#39;</span><span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
     <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">([</span><span class="nb">list</span><span class="p">(</span><span class="n">u</span><span class="p">)</span> <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">unique_lattice_sites</span><span class="p">],</span> <span class="n">f</span><span class="p">)</span>
-  <span class="n">interstitial_sites</span> <span class="o">=</span> <span class="n">get_all_interstitials</span><span class="p">(</span><span class="n">struct</span><span class="p">,</span> <span class="n">unique_lattice_sites</span><span class="p">)</span>
-  <span class="nb">print</span> <span class="s1">&#39;Number of Interstitial Sites: &#39;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">interstitial_sites</span><span class="p">)</span>
+  <span class="n">ints2</span> <span class="o">=</span> <span class="n">get_all_interstitials</span><span class="p">(</span><span class="n">ats</span><span class="p">,</span> <span class="n">unique_lattice_sites</span><span class="p">)</span>
+  <span class="n">ints_prim</span> <span class="o">=</span> <span class="n">get_ints_in_prim_cell</span><span class="p">(</span><span class="n">ats</span><span class="p">,</span> <span class="n">ints2</span><span class="p">)</span>
   <span class="n">decorator</span> <span class="o">=</span> <span class="p">[]</span>
-  <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="n">interstitial_sites</span><span class="p">:</span>
+  <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="n">ints_prim</span><span class="p">:</span>
     <span class="k">if</span> <span class="n">site</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">==</span><span class="s1">&#39;B&#39;</span><span class="p">:</span>
       <span class="n">decorator</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">site</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
-  <span class="n">unique_interstitial_sites</span> <span class="o">=</span> <span class="n">get_unique_ints</span><span class="p">(</span><span class="n">struct</span><span class="p">,</span> <span class="n">ats</span><span class="p">,</span> <span class="n">decorator</span><span class="p">,</span> <span class="n">ttol</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+  <span class="n">unique_interstitial_sites</span> <span class="o">=</span> <span class="n">get_unique_ints</span><span class="p">(</span><span class="n">ats</span><span class="p">,</span> <span class="n">decorator</span><span class="p">,</span> <span class="n">ttol</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
   <span class="n">unique_list</span> <span class="o">=</span> <span class="p">[]</span>
   <span class="k">for</span> <span class="n">unique</span> <span class="ow">in</span> <span class="n">unique_interstitial_sites</span><span class="p">:</span>
       <span class="n">unique_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">unique</span><span class="p">)</span>
@@ -164,7 +166,7 @@
   <span class="k">for</span> <span class="n">unique</span> <span class="ow">in</span> <span class="n">unique_interstitial_sites</span><span class="p">:</span>
       <span class="n">ats</span><span class="o">.</span><span class="n">add_atoms</span><span class="p">(</span><span class="n">unique</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
   <span class="c1">#relabel atom ids for plotting in ovito</span>
-  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">frange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ats</span><span class="p">)):</span>
+  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ats</span><span class="p">)):</span>
     <span class="n">ats</span><span class="o">.</span><span class="n">id</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
   <span class="k">if</span> <span class="n">write_file</span><span class="p">:</span>
     <span class="n">ats</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;hydrogenated_grain.xyz&#39;</span><span class="p">)</span>

@@ -8,18 +8,16 @@ The database adopts a general indexing system that allows for the storage of arb
 for any crystalline material.
 
 The package functions on a number of levels depending on the user's requirements. The data in the Imeall database
-can be accessed and inspected purely via the `Imeall <url>`_ webframework. Alternatively the Imeall package
-can be installed locally and the tools for searching, analysing, and extending the structures in the 
-database can be used by independent workers.
+can be accessed and inspected purely via the `Imeall <https://labdev-nomad.esc.rzg.mpg.de/industry-project-imeall/>`_ 
+webframework. Alternatively the Imeall package can be installed locally and the tools for searching, 
+analysing, and extending the structures in the database can be used by independent workers.
 
 The database is intended to provide a unifying computational framework for the study of the chemical 
 and mechanical properties of interface structures in materials. Allowing for the study of interfacial energetics,
 strain fields, and interactions with defects and interstitials.
 
-Follow the instructions for `index.Installation`_  and see the description paper `Imeall <arxiv.org>`_ of the 
-package for examples of its applications.
+Follow the instructions for :doc:`Installation <intro>`.
 
-A number of `Examples`_ are available to demonstrate the various capabilities of the package and some applications.
-A test `database`_ of structures is also available to run some of the example applications.
-
+A number of :doc:`Examples <examples>` are available in the package repository to demonstrate the 
+various capabilities of the package and some applications.
 

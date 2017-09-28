@@ -67,11 +67,12 @@ def build_tilt_sym_gb(gbid='', bp=[3,3,2], v=[1,-1,0], min_spacing=12.0,
 
   Returns:
     if target_dir==None returns [z_planes, len(dups), n_grain_unit, grain_c] 
-      i.e the location of the interfacial planes, the number of duplicate atoms 
-      when the grain is built, the
-      number of atoms in the canonical unit cell, and the bicrystal :class:`ase.Atoms` object.
+    i.e the location of the interfacial planes, the number of duplicate atoms 
+    when the grain is built, the
+    number of atoms in the canonical unit cell, and the bicrystal :class:`ase.Atoms` object.
     else returns :class:`ase.Atoms`.
   """
+
   #bpxv [boundary plane]X[orientation axis] cross product. Gives y axis of bicrystal.
   bpxv = [(bp[1]*v[2]-v[1]*bp[2]),(bp[2]*v[0]-bp[0]*v[2]),(bp[0]*v[1]- v[0]*bp[1])]
   grain_a = BodyCenteredCubic(directions=[v, bpxv, bp],

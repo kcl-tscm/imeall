@@ -61,7 +61,7 @@ take a new grain boundary profile picture for multiple directories,
 update the gb.json information if a new grain boundary property is desired.</p>
 <dl class="method">
 <dt id="imeall.models.GBMaintenance.add_key_to_dict">
-<code class="descname">add_key_to_dict</code><span class="sig-paren">(</span><em>dirname</em>, <em>new_key</em>, <em>new_value</em>, <em>dict_type='subgb.json'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/models.html#GBMaintenance.add_key_to_dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.models.GBMaintenance.add_key_to_dict" title="Permalink to this definition">¶</a></dt>
+<code class="descname">add_key_to_dict</code><span class="sig-paren">(</span><em>dirname</em>, <em>new_key</em>, <em>new_value</em>, <em>dict_type='subgb.json'</em>, <em>modify=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/models.html#GBMaintenance.add_key_to_dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.models.GBMaintenance.add_key_to_dict" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add single key to .json dictionary.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -72,6 +72,7 @@ update the gb.json information if a new grain boundary property is desired.</p>
 <li><strong>new_key</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – key to add to dictionary.</li>
 <li><strong>new_value</strong> (<em>generic</em>) – value to add to dictionary.</li>
 <li><strong>dict_type</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a><em>, </em><em>optional</em>) – Type of json dict ‘subgb.json’ or ‘gb.json’.</li>
+<li><strong>modify</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) – If True json file will be overwritten.</li>
 </ul>
 </td>
 </tr>
@@ -235,7 +236,7 @@ and <code class="xref py py-class docutils literal"><span class="pre">imeall.gb_
 <dl class="class">
 <dt id="imeall.gb_models.GrainBoundary">
 <em class="property">class </em><code class="descclassname">imeall.gb_models.</code><code class="descname">GrainBoundary</code><span class="sig-paren">(</span><em>*args</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/gb_models.html#GrainBoundary"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.gb_models.GrainBoundary" title="Permalink to this definition">¶</a></dt>
-<dd><p>GrainBoundary is a peewee <a class="reference external" href="http://docs.peewee-orm.com/en/latest/peewee/api.html#Model" title="(in peewee v2.10.1)"><code class="xref py py-class docutils literal"><span class="pre">Model</span></code></a> of the canonical parent grain.
+<dd><p>GrainBoundary is a peewee <a href="#id1"><span class="problematic" id="id2">:peewee:`Model`</span></a> of the canonical parent grain.
 Model is connected to the SQL database of the grain boundaries. All vectors
 are serialized to csv string for storage.</p>
 <dl class="attribute">
@@ -289,19 +290,13 @@ are serialized to csv string for storage.</p>
 <dl class="attribute">
 <dt id="SubGrainBoundary.path">
 <code class="descname">path</code><a class="headerlink" href="#SubGrainBoundary.path" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>str</em> – relative to the grainboundary database root.</p>
+<dd><p><em>str</em> – relative to the <cite>GRAIN_BOUNDARY</cite> database root (set in the application instance/config.py file).</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt>
 <code class="descname">canonical_grain(</code></dt>
-<dd><p>py:class:GrainBoundary): every :py:class:SubGrainBoundary</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt>
-<code class="descname">is a subgrain of a</code></dt>
-<dd><p>py:class:GrainBoundary.</p>
+<dd><p>class:GrainBoundary): Each <code class="xref py py-class docutils literal"><span class="pre">SubGrainBoundary</span></code>  has a parent <code class="xref py py-class docutils literal"><span class="pre">GrainBoundary</span></code> model.</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -484,8 +479,8 @@ will be updated.</p>
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>material</strong> – Which material to do check json/database convergence consistency on.</li>
 <li><strong>or_axis</strong> – Which orientation axis to check.</li>
-<li><strong>modify_db</strong> – Boolean. If True updates gb_model in database otherwise</li>
-<li><strong>prints inconsistent grain json/database value.</strong> (<em>just</em>) – </li>
+<li><strong>modify_db</strong> – Boolean. If True updates gb_model in database otherwise
+just prints inconsistent grain json/database value.</li>
 </ul>
 </td>
 </tr>

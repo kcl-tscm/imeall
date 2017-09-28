@@ -379,7 +379,7 @@
         <span class="k">pass</span>
     <span class="k">return</span> <span class="n">num_deleted_files</span></div>
 
-<div class="viewcode-block" id="GBMaintenance.add_key_to_dict"><a class="viewcode-back" href="../../models.html#imeall.models.GBMaintenance.add_key_to_dict">[docs]</a>  <span class="k">def</span> <span class="nf">add_key_to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dirname</span><span class="p">,</span> <span class="n">new_key</span><span class="p">,</span> <span class="n">new_value</span><span class="p">,</span> <span class="n">dict_type</span><span class="o">=</span><span class="s1">&#39;subgb.json&#39;</span><span class="p">):</span>
+<div class="viewcode-block" id="GBMaintenance.add_key_to_dict"><a class="viewcode-back" href="../../models.html#imeall.models.GBMaintenance.add_key_to_dict">[docs]</a>  <span class="k">def</span> <span class="nf">add_key_to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dirname</span><span class="p">,</span> <span class="n">new_key</span><span class="p">,</span> <span class="n">new_value</span><span class="p">,</span> <span class="n">dict_type</span><span class="o">=</span><span class="s1">&#39;subgb.json&#39;</span><span class="p">,</span> <span class="n">modify</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Add single key to .json dictionary.</span>
 
 <span class="sd">    Args:</span>
@@ -387,18 +387,23 @@
 <span class="sd">      new_key(str): key to add to dictionary.</span>
 <span class="sd">      new_value(generic): value to add to dictionary.</span>
 <span class="sd">      dict_type(str, optional): Type of json dict &#39;subgb.json&#39; or &#39;gb.json&#39;.</span>
+<span class="sd">      modify(bool): If True json file will be overwritten.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">      dict: Updated json dictionary.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirname</span><span class="p">,</span> <span class="n">dict_type</span><span class="p">)</span>
+    <span class="n">json_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dirname</span><span class="p">,</span> <span class="n">dict_type</span><span class="p">)</span>
     <span class="n">new_json</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">json_path</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">json_old</span><span class="p">:</span>
       <span class="n">old_json</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">json_old</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">old_json</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
       <span class="n">new_json</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">old_json</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+    <span class="c1">#modify key or add it </span>
     <span class="n">new_json</span><span class="p">[</span><span class="n">new_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_value</span>
+    <span class="k">if</span> <span class="n">modify</span><span class="p">:</span>
+      <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">json_path</span><span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">json_new_file</span><span class="p">:</span>
+        <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">new_json</span><span class="p">,</span> <span class="n">json_new_file</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">new_json</span></div>
 
 <div class="viewcode-block" id="GBMaintenance.update_json"><a class="viewcode-back" href="../../models.html#imeall.models.GBMaintenance.update_json">[docs]</a>  <span class="k">def</span> <span class="nf">update_json</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">json_path</span><span class="p">,</span> <span class="n">new_keys</span><span class="o">=</span><span class="p">[],</span> <span class="n">new_values</span><span class="o">=</span><span class="p">[],</span> <span class="n">dryrun</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
@@ -472,9 +477,7 @@
     <span class="k">pass</span>
 
   <span class="k">def</span> <span class="nf">find_gb_json</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">j_list</span><span class="p">,</span> <span class="n">filetype</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Populates the list j_list with lists of the form</span>
-<span class="sd">    [/directory_path/, /subgb_file_path].</span>
-
+    <span class="sd">&quot;&quot;&quot; Populates the list j_list with lists of the form [/directory_path/, /subgb_file_path].</span>
 <span class="sd">    Args:</span>
 <span class="sd">      path     : root directory to begin recursive search</span>
 <span class="sd">      j_list   : empty list  to populate</span>
@@ -638,8 +641,8 @@
         <span class="n">max_path</span> <span class="o">=</span> <span class="p">[(</span><span class="n">gam</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="n">gam</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span> <span class="k">for</span> <span class="n">gam</span> <span class="ow">in</span> <span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="mi">5</span><span class="p">)</span> <span class="o">==</span> <span class="nb">round</span><span class="p">(</span><span class="n">max_en</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span> <span class="n">gam_surfs</span><span class="p">)]</span>
         <span class="n">min_path</span> <span class="o">=</span> <span class="s1">&#39;/&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">min_path</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">+</span><span class="s1">&#39;_traj.xyz&#39;</span>
         <span class="n">max_path</span> <span class="o">=</span> <span class="s1">&#39;/&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">max_path</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">+</span><span class="s1">&#39;_traj.xyz&#39;</span>
-        <span class="n">min_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span><span class="n">min_path</span><span class="p">,</span> <span class="n">app</span><span class="o">.</span><span class="n">root_path</span><span class="p">)</span>
-        <span class="n">max_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span><span class="n">max_path</span><span class="p">,</span> <span class="n">app</span><span class="o">.</span><span class="n">root_path</span><span class="p">)</span>
+        <span class="n">min_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span><span class="n">min_path</span><span class="p">,</span> <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;GRAIN_DATABASE&#39;</span><span class="p">])</span>
+        <span class="n">max_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span><span class="n">max_path</span><span class="p">,</span> <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;GRAIN_DATABASE&#39;</span><span class="p">])</span>
         <span class="n">gam_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;max_en&#39;</span><span class="p">:</span><span class="n">max_en</span><span class="p">,</span> <span class="s1">&#39;min_en&#39;</span><span class="p">:</span><span class="n">min_en</span><span class="p">,</span> <span class="s1">&#39;min_coords&#39;</span><span class="p">:</span><span class="n">min_coords</span><span class="p">,</span> <span class="s1">&#39;max_coords&#39;</span><span class="p">:</span><span class="n">max_coords</span><span class="p">,</span>
                     <span class="s1">&#39;min_path&#39;</span><span class="p">:</span><span class="n">min_path</span><span class="p">,</span> <span class="s1">&#39;max_path&#39;</span><span class="p">:</span><span class="n">max_path</span><span class="p">}</span>
     <span class="k">else</span><span class="p">:</span>

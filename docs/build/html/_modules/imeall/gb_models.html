@@ -60,21 +60,14 @@
 
 <span class="n">set_fortran_indexing</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
 <span class="n">GRAIN_DATABASE</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;GRAIN_DATABASE&#39;</span><span class="p">]</span>
+<span class="n">database</span> <span class="o">=</span> <span class="n">SqliteDatabase</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;GRAIN_DATABASE_SQL&#39;</span><span class="p">])</span>
 
-<span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span><span class="n">filename</span><span class="o">=</span><span class="s1">&#39;example.log&#39;</span><span class="p">,</span><span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
-
-<span class="k">try</span><span class="p">:</span> 
-  <span class="n">DATABASE</span>   <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;GBDATABASE&#39;</span><span class="p">]</span>
-<span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
-  <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="s2">&quot;NO SQL GBDATABASE in Environment&quot;</span><span class="p">)</span>
-
-<span class="n">database</span>       <span class="o">=</span> <span class="n">SqliteDatabase</span><span class="p">(</span><span class="n">DATABASE</span><span class="p">)</span>
 <span class="k">class</span> <span class="nc">BaseModel</span><span class="p">(</span><span class="n">Model</span><span class="p">):</span>
   <span class="k">class</span> <span class="nc">Meta</span><span class="p">():</span>
     <span class="n">database</span> <span class="o">=</span> <span class="n">database</span>
 
 <div class="viewcode-block" id="GrainBoundary"><a class="viewcode-back" href="../../models.html#imeall.gb_models.GrainBoundary">[docs]</a><span class="k">class</span> <span class="nc">GrainBoundary</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;GrainBoundary is a peewee :py:class:`Model` of the canonical parent grain. </span>
+  <span class="sd">&quot;&quot;&quot;GrainBoundary is a peewee :peewee:`Model` of the canonical parent grain. </span>
 <span class="sd">  Model is connected to the SQL database of the grain boundaries. All vectors </span>
 <span class="sd">  are serialized to csv string for storage.</span>
 
@@ -106,9 +99,8 @@
 <span class="sd">  SubGrainBoundary Model.</span>
 
 <span class="sd">  Attributes:</span>
-<span class="sd">    path(str): relative to the grainboundary database root.</span>
-<span class="sd">    canonical_grain(:py:class:GrainBoundary): every :py:class:SubGrainBoundary </span>
-<span class="sd">    is a subgrain of a :py:class:GrainBoundary.</span>
+<span class="sd">    path(str): relative to the `GRAIN_BOUNDARY` database root (set in the application instance/config.py file).</span>
+<span class="sd">    canonical_grain(:class:GrainBoundary): Each :class:`SubGrainBoundary`  has a parent :class:`GrainBoundary` model.</span>
 <span class="sd">    rbt(str): rigid body translations.</span>
 <span class="sd">    potential(str): Potential parameter file.</span>
 <span class="sd">    rcut(float): atom deletion criterion.</span>
@@ -307,7 +299,7 @@
 <span class="sd">    material: Which material to do check json/database convergence consistency on.</span>
 <span class="sd">    or_axis: Which orientation axis to check.</span>
 <span class="sd">    modify_db: Boolean. If True updates gb_model in database otherwise </span>
-<span class="sd">    just prints inconsistent grain json/database value.</span>
+<span class="sd">      just prints inconsistent grain json/database value.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
 
   <span class="n">analyze</span>  <span class="o">=</span> <span class="n">GBAnalysis</span><span class="p">()</span>
@@ -326,7 +318,7 @@
         <span class="n">subgb_dict</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
       <span class="n">struct_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">subgb_model</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">subgb_model</span><span class="o">.</span><span class="n">gbid</span><span class="o">+</span><span class="s1">&#39;_traj.xyz&#39;</span><span class="p">)</span>
       <span class="n">struct_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">GRAIN_DATABASE</span><span class="p">,</span> <span class="n">struct_path</span><span class="p">)</span>
-      <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">struct_path</span><span class="p">)</span>
+      <span class="n">app</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">struct_path</span><span class="p">)</span>
       <span class="k">try</span><span class="p">:</span>
         <span class="k">assert</span> <span class="n">subgb_model</span><span class="o">.</span><span class="n">converged</span><span class="o">==</span><span class="n">subgb_dict</span><span class="p">[</span><span class="s1">&#39;converged&#39;</span><span class="p">]</span>
       <span class="k">except</span> <span class="ne">AssertionError</span><span class="p">:</span>
@@ -552,7 +544,7 @@
   <span class="nb">print</span> <span class="n">GB_model</span><span class="o">.</span><span class="n">gbid</span>
   <span class="nb">print</span> <span class="n">subgb_dict</span> 
   <span class="nb">print</span> <span class="n">SubGrainBoundary</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="o">**</span><span class="n">subgb_dict</span><span class="p">)</span>        
-  <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Created entry </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">subgb_dict</span><span class="p">))</span>
+  <span class="n">app</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Created entry </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">subgb_dict</span><span class="p">))</span>
   <span class="c1">#except IntegrityError:</span>
   <span class="c1">#  logging.info(&#39;GB already in DB {}&#39;.format(subgb_dict))</span>
 
@@ -571,14 +563,13 @@
   <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">gbid</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
     <span class="n">dir_str</span>  <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">material</span><span class="p">,</span> <span class="n">or_axis</span><span class="p">)</span>
   <span class="k">else</span><span class="p">:</span>
-    <span class="c1">#pull specific grainboundary</span>
     <span class="n">dir_str</span>  <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">material</span><span class="p">,</span> <span class="n">or_axis</span><span class="p">)</span>
     <span class="n">dir_str</span>  <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dir_str</span><span class="p">,</span> <span class="n">gbid</span><span class="p">)</span>
-  <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;dir_str </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dir_str</span><span class="p">))</span>
+  <span class="n">app</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;dir_str </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dir_str</span><span class="p">))</span>
   <span class="n">gb_files</span> <span class="o">=</span> <span class="p">[]</span>
   <span class="n">analyze</span><span class="o">.</span><span class="n">find_gb_json</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">GRAIN_DATABASE</span><span class="p">,</span> <span class="n">dir_str</span><span class="p">)),</span> <span class="n">gb_files</span><span class="p">,</span> <span class="s1">&#39;gb.json&#39;</span><span class="p">)</span>
   <span class="k">for</span> <span class="n">gb</span> <span class="ow">in</span> <span class="n">gb_files</span><span class="p">:</span>
-    <span class="nb">print</span> <span class="n">gb</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">gb</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1"> </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">gb</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">gb</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">gb</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
       <span class="n">gb_json</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
@@ -614,11 +605,14 @@
         <span class="n">GB_model_object</span> <span class="o">=</span> <span class="n">GrainBoundary</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="o">**</span><span class="n">gb_dict</span><span class="p">)</span>
       <span class="k">except</span> <span class="n">IntegrityError</span><span class="p">:</span>
         <span class="n">GB_model_object</span> <span class="o">=</span> <span class="n">GrainBoundary</span><span class="o">.</span><span class="n">select</span><span class="p">()</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">GrainBoundary</span><span class="o">.</span><span class="n">gbid</span><span class="o">==</span><span class="n">gb_json</span><span class="p">[</span><span class="s1">&#39;gbid&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
-        <span class="nb">print</span> <span class="s1">&#39;GB already in database&#39;</span>
-        <span class="nb">print</span> <span class="n">gb_json</span><span class="p">[</span><span class="s1">&#39;gbid&#39;</span><span class="p">]</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;GB already in database: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">gb_json</span><span class="p">[</span><span class="s1">&#39;gbid&#39;</span><span class="p">]))</span>
     <span class="k">else</span><span class="p">:</span>
-      <span class="n">GB_model_object</span> <span class="o">=</span> <span class="n">GrainBoundary</span><span class="o">.</span><span class="n">select</span><span class="p">()</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">GrainBoundary</span><span class="o">.</span><span class="n">gbid</span><span class="o">==</span><span class="n">gb_json</span><span class="p">[</span><span class="s1">&#39;gbid&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
-      <span class="nb">print</span> <span class="n">GB_model_object</span>
+      <span class="k">try</span><span class="p">:</span>
+        <span class="n">GB_model_object</span> <span class="o">=</span> <span class="n">GrainBoundary</span><span class="o">.</span><span class="n">select</span><span class="p">()</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">GrainBoundary</span><span class="o">.</span><span class="n">gbid</span><span class="o">==</span><span class="n">gb_json</span><span class="p">[</span><span class="s1">&#39;gbid&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Database Contains </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">gb_json</span><span class="p">[</span><span class="s1">&#39;gbid&#39;</span><span class="p">]))</span>
+      <span class="k">except</span>  <span class="n">GrainBoundary</span><span class="o">.</span><span class="n">DoesNotExist</span><span class="p">:</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Not in Database </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">gb_json</span><span class="p">[</span><span class="s1">&#39;gbid&#39;</span><span class="p">]))</span>
+        <span class="n">GB_model_object</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="n">subgb_files</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">analyze</span><span class="o">.</span><span class="n">find_gb_json</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{0}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">gb</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">subgb_files</span><span class="p">,</span> <span class="s1">&#39;subgb.json&#39;</span><span class="p">)</span>
@@ -629,18 +623,23 @@
         <span class="n">converged</span> <span class="o">=</span> <span class="n">subgb_json</span><span class="p">[</span><span class="s1">&#39;converged&#39;</span><span class="p">]</span>
       <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
         <span class="n">converged</span> <span class="o">=</span> <span class="kc">False</span>
+
       <span class="k">try</span><span class="p">:</span>
         <span class="n">E_gb</span> <span class="o">=</span> <span class="n">subgb_json</span><span class="p">[</span><span class="s2">&quot;E_gb&quot;</span><span class="p">]</span>
       <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+        <span class="n">converged</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="n">E_gb</span> <span class="o">=</span> <span class="mf">0.0</span>
+
       <span class="k">try</span><span class="p">:</span>
         <span class="n">E_gb_init</span><span class="o">=</span><span class="n">subgb_json</span><span class="p">[</span><span class="s2">&quot;E_gb_init&quot;</span><span class="p">]</span>
       <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
         <span class="n">E_gb_init</span> <span class="o">=</span> <span class="mf">0.0</span>
+
       <span class="k">try</span><span class="p">:</span>
         <span class="n">gbid</span> <span class="o">=</span> <span class="n">subgb_json</span><span class="p">[</span><span class="s2">&quot;gbid&quot;</span><span class="p">]</span>
       <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
         <span class="n">gbid</span> <span class="o">=</span> <span class="n">subgb_json</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span>
+
       <span class="k">try</span><span class="p">:</span>
         <span class="n">area</span> <span class="o">=</span> <span class="n">subgb_json</span><span class="p">[</span><span class="s1">&#39;A&#39;</span><span class="p">]</span>
       <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
@@ -662,13 +661,14 @@
                     <span class="s2">&quot;E_gb&quot;</span>            <span class="p">:</span> <span class="n">E_gb</span><span class="p">,</span>
                     <span class="s2">&quot;notes&quot;</span>           <span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
                     <span class="s2">&quot;gbid&quot;</span>            <span class="p">:</span> <span class="n">gbid</span><span class="p">}</span>
-      <span class="k">try</span><span class="p">:</span>
-        <span class="n">SubGrainBoundary</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="o">**</span><span class="n">subgb_dict</span><span class="p">)</span>        
-        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Created entry </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">subgb_dict</span><span class="p">))</span>
-        <span class="nb">print</span> <span class="s1">&#39;created entry&#39;</span><span class="p">,</span> <span class="n">subgb_dict</span><span class="p">[</span><span class="s2">&quot;potential&quot;</span><span class="p">],</span> <span class="n">subgb_dict</span><span class="p">[</span><span class="s2">&quot;gbid&quot;</span><span class="p">],</span> <span class="n">subgb_dict</span><span class="p">[</span><span class="s2">&quot;converged&quot;</span><span class="p">]</span>
-      <span class="k">except</span> <span class="n">IntegrityError</span><span class="p">:</span>
-        <span class="nb">print</span> <span class="s1">&#39;dict exists&#39;</span><span class="p">,</span> <span class="n">subgb_dict</span><span class="p">[</span><span class="s2">&quot;potential&quot;</span><span class="p">],</span> <span class="n">subgb_dict</span><span class="p">[</span><span class="s2">&quot;gbid&quot;</span><span class="p">],</span> <span class="n">subgb_dict</span><span class="p">[</span><span class="s2">&quot;converged&quot;</span><span class="p">]</span>
-        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;GB already in DB </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">subgb_dict</span><span class="p">))</span></div>
+      <span class="k">if</span> <span class="n">modify</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+          <span class="n">SubGrainBoundary</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="o">**</span><span class="n">subgb_dict</span><span class="p">)</span>        
+          <span class="n">app</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Created SubGB entry </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">subgb_dict</span><span class="p">))</span>
+        <span class="k">except</span> <span class="n">IntegrityError</span><span class="p">:</span>
+          <span class="n">app</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;SubGB already in DB </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">subgb_dict</span><span class="p">))</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span> <span class="n">subgb_dict</span></div>
 
 <span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
   <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
