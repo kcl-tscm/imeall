@@ -100,7 +100,6 @@ def apply_strain(ats, mode, st_num):
 alat = 2.83
 #bulk_sites = [tetrahedral site and octahedral]
 bulk_sites = map(lambda x: alat*x, [np.array([0.25, 0.0, 0.5]), np.array([0,0,0.5])])
-
 POT_DIR = os.environ['POTDIR']
 eam_pot = os.path.join(POT_DIR, 'PotBH.xml')
 r_scale = 1.00894848312

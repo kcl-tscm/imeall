@@ -3,9 +3,8 @@ from ase import Atoms as aseAtoms
 from ase.io.vasp import write_vasp
 from ase.calculators.vasp import Vasp
 from pyspglib import spglib
-from pylada_defects_2 import get_unique_wyckoff, get_all_interstitials, get_unique_ints
-from pylada_defects_2 import get_ints_in_prim_cell
 from quippy import Atoms, farray, frange, set_fortran_indexing
+from calc_inter_dist  import decorate_interface
 
 import json
 import argparse
@@ -80,61 +79,9 @@ def gen_interface():
   write_vasp('POSCAR', vasp.atoms_sorted, symbol_count=vasp.symbol_count, vasp5=True)
   return int_ats
 
-def decorate_interface(write_file=True):
-  """Reads `interface.xyz` file written by 
-  :py:func:`gen_interface`, and uses modified pylada_defect module to decorate
-  all unique interstitial defect positions.
-  This routine also `generates unique_lattice_sites.json` and `unique_h_sites.json`
-  which contain the unique wyckoff positions in the original interface lattice
-  and the unique hydrogen interstitials in a modified interfacial coordinate system.
-
-  Args:
-    write_file (bool, optional) : If True, generates `hydrogenated_grain.xyz` file.
-
-  Returns:
-    :class:`ase.Atoms`: Interface atoms decorated with hydrogen.
-  """
-  ats = Atoms('interface.xyz')
-  vasp_args = dict(xc='PBE', amix=0.01, amin=0.001, bmix=0.001, amix_mag=0.01, bmix_mag=0.001,
-                   kpts=[3, 3, 3], kpar=9, lreal='auto', ibrion=-1, nsw=0, nelmdl=-15, ispin=2,
-                   nelm=100, algo='VeryFast', npar=24, lplane=False, lwave=False, lcharg=False, istart=0,
-                   voskown=0, ismear=1, sigma=0.1, isym=2)
-  vasp = Vasp(**vasp_args)
-  vasp.initialize(ats)
-  write_vasp('POSCAR', vasp.atoms_sorted, symbol_count=vasp.symbol_count, vasp5=True)
-  spg = spglib.get_spacegroup(ats, 0.1)
-  sym = spglib.get_symmetry(ats)
-  print 'Space Group: ', spg
-  print 'Symmetry: ', sym 
-  unique_lattice_sites = get_unique_wyckoff(ats)
-  print unique_lattice_sites
-  with open('unique_lattice_sites.json','w') as f:
-    json.dump([list(u) for u in unique_lattice_sites], f)
-  ints2 = get_all_interstitials(ats, unique_lattice_sites)
-  ints_prim = get_ints_in_prim_cell(ats, ints2)
-  decorator = []
-  for site in ints_prim:
-    if site[0]=='B':
-      decorator.append(np.array(site[1]))
-  unique_interstitial_sites = get_unique_ints(ats, decorator, ttol=0.5)
-  unique_list = []
-  for unique in unique_interstitial_sites:
-      unique_list.append(unique)
-  with open('unique_h_sites.json', 'w') as f:
-    json.dump([list(u) for u in unique_list], f)
-  for unique in unique_interstitial_sites:
-      ats.add_atoms(unique,1)
-  #relabel atom ids for plotting in ovito
-  for i in range(len(ats)):
-    ats.id[i] = i
-  if write_file:
-    ats.write('hydrogenated_grain.xyz')
-  return ats
-
 if __name__=='__main__':
   parser = argparse.ArgumentParser()
   parser.add_argument('--gen_interface','-g',help='create a slab of the interfacial region.', action='store_true')
-  parser.add_argument('--decorate_interface','-d',help='decorate the slab of interfacial region with unique hydrogens at the interstitials.', action='store_true')
   args = parser.parse_args()
 
   if args.gen_interface:
@@ -142,3 +89,4 @@ if __name__=='__main__':
 
   if args.decorate_interface:
     decorate_interface()
+
