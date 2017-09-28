@@ -74,21 +74,21 @@ def apply_strain(ats, mode, st_num):
   e3 = np.array([0,0,1])
   cell = ats.get_cell()
   if mode == 'hydrostatic':
-    strain_tensor = np.eye(3) + num*np.eye(3)
+    strain_tensor = np.eye(3) + st_num*np.eye(3)
     cell = cell*strain_tensor
     ats.set_cell(cell, scale_atoms=True)
-    print 'Hydrostatic strain', num
+    print 'Hydrostatic strain', st_num
     print 'strain tensor', strain_tensor
   elif mode == 'stretch':
     strain_tensor = np.tensordot(e3, e3, axes=0)
-    strain_tensor = np.eye(3) + num*strain_tensor
+    strain_tensor = np.eye(3) + st_num*strain_tensor
     cell = strain_tensor*cell
     print 'Stretch strain'
     print 'Cell:', cell
     ats.set_cell(cell, scale_atoms=True)
   elif mode == 'shear':
     strain_tensor = np.tensordot(e1, e2, axes=0)
-    strain_tensor = np.eye(3) + num*strain_tensor
+    strain_tensor = np.eye(3) + st_num*strain_tensor
     cell = strain_tensor.dot(cell)
     print 'Shear Strain', strain_tensor
     print 'Cell:', cell
