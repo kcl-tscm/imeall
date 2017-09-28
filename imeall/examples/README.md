@@ -1,8 +1,3 @@
-checkout_structures:
-  Demonstrates how to checkout all minimum energy structures for [001] alphaFe tilt symmetric
-  grain boundaries for subsequent analysis.
-    $python checkout_dirs.py
-
 query_test:
   Demonstrates a simple query to the database to pull the 
   minimum energy values for a user chosen potential 
@@ -24,3 +19,8 @@ gen_grainboundaries:
 
 boundary_interstitials:
   Generate a list of interstitial sites for a particular and obtain their energetics.
+
+checkout_structures:
+  Demonstrates how to checkout all minimum energy structures for [001] alphaFe tilt symmetric
+  grain boundaries for subsequent analysis (requires local copy of database).
+    $python checkout_dirs.py
