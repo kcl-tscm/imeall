@@ -29,7 +29,7 @@
     <li> (Mis)Orientation Angle: {{ (gb_info.angle*(180.0/3.14159265)) | round(3,'floor') }} </li>
     <li> Number of Atoms in Unit Cell: {{ gb_info.n_at }} </li>
     <li> Coincident Sites: {{ gb_info.coincident_sites }} </li>
-    <li> Sigma({{ (gb_info.n_at/gb_info.coincident_sites) | round(2, 'floor') }})</li>
+    {#<li> Sigma({{ (gb_info.n_at/gb_info.coincident_sites) | round(2, 'floor') }})</li>#}
   </ul>
 
   <div class="min_max_structs">

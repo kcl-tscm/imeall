@@ -1,3 +1,8 @@
+To run all the examples type:
+  ``python run_all_examples.py``
+
+The examples can be run individually as well.
+
 query_test:
   Demonstrates a simple query to the database to pull the 
   minimum energy values for a user chosen potential 
