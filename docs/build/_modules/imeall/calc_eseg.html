@@ -44,9 +44,8 @@
 <span class="kn">from</span> <span class="nn">ase.io.vasp</span> <span class="k">import</span> <span class="n">write_vasp</span>
 <span class="kn">from</span> <span class="nn">ase.calculators.vasp</span> <span class="k">import</span> <span class="n">Vasp</span>
 <span class="kn">from</span> <span class="nn">pyspglib</span> <span class="k">import</span> <span class="n">spglib</span>
-<span class="kn">from</span> <span class="nn">pylada_defects_2</span> <span class="k">import</span> <span class="n">get_unique_wyckoff</span><span class="p">,</span> <span class="n">get_all_interstitials</span><span class="p">,</span> <span class="n">get_unique_ints</span>
-<span class="kn">from</span> <span class="nn">pylada_defects_2</span> <span class="k">import</span> <span class="n">get_ints_in_prim_cell</span>
 <span class="kn">from</span> <span class="nn">quippy</span> <span class="k">import</span> <span class="n">Atoms</span><span class="p">,</span> <span class="n">farray</span><span class="p">,</span> <span class="n">frange</span><span class="p">,</span> <span class="n">set_fortran_indexing</span>
+<span class="kn">from</span> <span class="nn">calc_inter_dist</span>  <span class="k">import</span> <span class="n">decorate_interface</span>
 
 <span class="kn">import</span> <span class="nn">json</span>
 <span class="kn">import</span> <span class="nn">argparse</span>
@@ -121,61 +120,9 @@
   <span class="n">write_vasp</span><span class="p">(</span><span class="s1">&#39;POSCAR&#39;</span><span class="p">,</span> <span class="n">vasp</span><span class="o">.</span><span class="n">atoms_sorted</span><span class="p">,</span> <span class="n">symbol_count</span><span class="o">=</span><span class="n">vasp</span><span class="o">.</span><span class="n">symbol_count</span><span class="p">,</span> <span class="n">vasp5</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
   <span class="k">return</span> <span class="n">int_ats</span></div>
 
-<div class="viewcode-block" id="decorate_interface"><a class="viewcode-back" href="../../interstitials.html#imeall.calc_eseg.decorate_interface">[docs]</a><span class="k">def</span> <span class="nf">decorate_interface</span><span class="p">(</span><span class="n">write_file</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Reads `interface.xyz` file written by </span>
-<span class="sd">  :py:func:`gen_interface`, and uses modified pylada_defect module to decorate</span>
-<span class="sd">  all unique interstitial defect positions.</span>
-<span class="sd">  This routine also `generates unique_lattice_sites.json` and `unique_h_sites.json`</span>
-<span class="sd">  which contain the unique wyckoff positions in the original interface lattice</span>
-<span class="sd">  and the unique hydrogen interstitials in a modified interfacial coordinate system.</span>
-
-<span class="sd">  Args:</span>
-<span class="sd">    write_file (bool, optional) : If True, generates `hydrogenated_grain.xyz` file.</span>
-
-<span class="sd">  Returns:</span>
-<span class="sd">    :class:`ase.Atoms`: Interface atoms decorated with hydrogen.</span>
-<span class="sd">  &quot;&quot;&quot;</span>
-  <span class="n">ats</span> <span class="o">=</span> <span class="n">Atoms</span><span class="p">(</span><span class="s1">&#39;interface.xyz&#39;</span><span class="p">)</span>
-  <span class="n">vasp_args</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">xc</span><span class="o">=</span><span class="s1">&#39;PBE&#39;</span><span class="p">,</span> <span class="n">amix</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">amin</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">bmix</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">amix_mag</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">bmix_mag</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span>
-                   <span class="n">kpts</span><span class="o">=</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">kpar</span><span class="o">=</span><span class="mi">9</span><span class="p">,</span> <span class="n">lreal</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">ibrion</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">nsw</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">nelmdl</span><span class="o">=-</span><span class="mi">15</span><span class="p">,</span> <span class="n">ispin</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-                   <span class="n">nelm</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">algo</span><span class="o">=</span><span class="s1">&#39;VeryFast&#39;</span><span class="p">,</span> <span class="n">npar</span><span class="o">=</span><span class="mi">24</span><span class="p">,</span> <span class="n">lplane</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">lwave</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">lcharg</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">istart</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-                   <span class="n">voskown</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ismear</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">isym</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
-  <span class="n">vasp</span> <span class="o">=</span> <span class="n">Vasp</span><span class="p">(</span><span class="o">**</span><span class="n">vasp_args</span><span class="p">)</span>
-  <span class="n">vasp</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="n">ats</span><span class="p">)</span>
-  <span class="n">write_vasp</span><span class="p">(</span><span class="s1">&#39;POSCAR&#39;</span><span class="p">,</span> <span class="n">vasp</span><span class="o">.</span><span class="n">atoms_sorted</span><span class="p">,</span> <span class="n">symbol_count</span><span class="o">=</span><span class="n">vasp</span><span class="o">.</span><span class="n">symbol_count</span><span class="p">,</span> <span class="n">vasp5</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-  <span class="n">spg</span> <span class="o">=</span> <span class="n">spglib</span><span class="o">.</span><span class="n">get_spacegroup</span><span class="p">(</span><span class="n">ats</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)</span>
-  <span class="n">sym</span> <span class="o">=</span> <span class="n">spglib</span><span class="o">.</span><span class="n">get_symmetry</span><span class="p">(</span><span class="n">ats</span><span class="p">)</span>
-  <span class="nb">print</span> <span class="s1">&#39;Space Group: &#39;</span><span class="p">,</span> <span class="n">spg</span>
-  <span class="nb">print</span> <span class="s1">&#39;Symmetry: &#39;</span><span class="p">,</span> <span class="n">sym</span> 
-  <span class="n">unique_lattice_sites</span> <span class="o">=</span> <span class="n">get_unique_wyckoff</span><span class="p">(</span><span class="n">ats</span><span class="p">)</span>
-  <span class="nb">print</span> <span class="n">unique_lattice_sites</span>
-  <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;unique_lattice_sites.json&#39;</span><span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-    <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">([</span><span class="nb">list</span><span class="p">(</span><span class="n">u</span><span class="p">)</span> <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">unique_lattice_sites</span><span class="p">],</span> <span class="n">f</span><span class="p">)</span>
-  <span class="n">ints2</span> <span class="o">=</span> <span class="n">get_all_interstitials</span><span class="p">(</span><span class="n">ats</span><span class="p">,</span> <span class="n">unique_lattice_sites</span><span class="p">)</span>
-  <span class="n">ints_prim</span> <span class="o">=</span> <span class="n">get_ints_in_prim_cell</span><span class="p">(</span><span class="n">ats</span><span class="p">,</span> <span class="n">ints2</span><span class="p">)</span>
-  <span class="n">decorator</span> <span class="o">=</span> <span class="p">[]</span>
-  <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="n">ints_prim</span><span class="p">:</span>
-    <span class="k">if</span> <span class="n">site</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">==</span><span class="s1">&#39;B&#39;</span><span class="p">:</span>
-      <span class="n">decorator</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">site</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
-  <span class="n">unique_interstitial_sites</span> <span class="o">=</span> <span class="n">get_unique_ints</span><span class="p">(</span><span class="n">ats</span><span class="p">,</span> <span class="n">decorator</span><span class="p">,</span> <span class="n">ttol</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
-  <span class="n">unique_list</span> <span class="o">=</span> <span class="p">[]</span>
-  <span class="k">for</span> <span class="n">unique</span> <span class="ow">in</span> <span class="n">unique_interstitial_sites</span><span class="p">:</span>
-      <span class="n">unique_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">unique</span><span class="p">)</span>
-  <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;unique_h_sites.json&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
-    <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">([</span><span class="nb">list</span><span class="p">(</span><span class="n">u</span><span class="p">)</span> <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">unique_list</span><span class="p">],</span> <span class="n">f</span><span class="p">)</span>
-  <span class="k">for</span> <span class="n">unique</span> <span class="ow">in</span> <span class="n">unique_interstitial_sites</span><span class="p">:</span>
-      <span class="n">ats</span><span class="o">.</span><span class="n">add_atoms</span><span class="p">(</span><span class="n">unique</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
-  <span class="c1">#relabel atom ids for plotting in ovito</span>
-  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ats</span><span class="p">)):</span>
-    <span class="n">ats</span><span class="o">.</span><span class="n">id</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
-  <span class="k">if</span> <span class="n">write_file</span><span class="p">:</span>
-    <span class="n">ats</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;hydrogenated_grain.xyz&#39;</span><span class="p">)</span>
-  <span class="k">return</span> <span class="n">ats</span></div>
-
 <span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
   <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
   <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--gen_interface&#39;</span><span class="p">,</span><span class="s1">&#39;-g&#39;</span><span class="p">,</span><span class="n">help</span><span class="o">=</span><span class="s1">&#39;create a slab of the interfacial region.&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">)</span>
-  <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--decorate_interface&#39;</span><span class="p">,</span><span class="s1">&#39;-d&#39;</span><span class="p">,</span><span class="n">help</span><span class="o">=</span><span class="s1">&#39;decorate the slab of interfacial region with unique hydrogens at the interstitials.&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">)</span>
   <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
 
   <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">gen_interface</span><span class="p">:</span>
@@ -183,6 +130,7 @@
 
   <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">decorate_interface</span><span class="p">:</span>
     <span class="n">decorate_interface</span><span class="p">()</span>
+
 </pre></div>
 
           </div>
@@ -201,7 +149,7 @@
 
 <h3>Navigation</h3>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../intro.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../imeall.html">Imeall Package</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../models.html">Models and Queries</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../views.html">Views</a></li>

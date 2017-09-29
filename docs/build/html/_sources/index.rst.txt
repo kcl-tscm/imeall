@@ -22,7 +22,7 @@ Contents
 .. toctree::
    :maxdepth: 2
 
-   intro.rst
+   installation.rst
    imeall.rst
    models.rst
    views.rst

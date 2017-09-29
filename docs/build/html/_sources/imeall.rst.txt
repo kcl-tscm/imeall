@@ -16,7 +16,7 @@ The database is intended to provide a unifying computational framework for the s
 and mechanical properties of interface structures in materials. Allowing for the study of interfacial energetics,
 strain fields, and interactions with defects and interstitials.
 
-Follow the instructions for :doc:`Installation <intro>`.
+Follow the instructions for :doc:`Installation <installation>`.
 
 A number of :doc:`Examples <examples>` are available in the package repository to demonstrate the 
 various capabilities of the package and some applications.

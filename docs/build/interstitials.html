@@ -49,29 +49,6 @@ and package has been adapated to work with the ase interface from the
 Please see and cite the <a class="reference external" href="https://doi.org/10.1016/j.commatsci.2016.12.040">publication</a>
 describing this package.</p>
 <span class="target" id="module-imeall.calc_eseg"></span><dl class="function">
-<dt id="imeall.calc_eseg.decorate_interface">
-<code class="descclassname">imeall.calc_eseg.</code><code class="descname">decorate_interface</code><span class="sig-paren">(</span><em>write_file=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/calc_eseg.html#decorate_interface"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.calc_eseg.decorate_interface" title="Permalink to this definition">¶</a></dt>
-<dd><p>Reads <cite>interface.xyz</cite> file written by
-<a class="reference internal" href="#imeall.calc_eseg.gen_interface" title="imeall.calc_eseg.gen_interface"><code class="xref py py-func docutils literal"><span class="pre">gen_interface()</span></code></a>, and uses modified pylada_defect module to decorate
-all unique interstitial defect positions.
-This routine also <cite>generates unique_lattice_sites.json</cite> and <cite>unique_h_sites.json</cite>
-which contain the unique wyckoff positions in the original interface lattice
-and the unique hydrogen interstitials in a modified interfacial coordinate system.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>write_file</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a><em>, </em><em>optional</em>) – If True, generates <cite>hydrogenated_grain.xyz</cite> file.</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Interface atoms decorated with hydrogen.</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="(in ASE v)"><code class="xref py py-class docutils literal"><span class="pre">ase.Atoms</span></code></a></td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
 <dt id="imeall.calc_eseg.gen_interface">
 <code class="descclassname">imeall.calc_eseg.</code><code class="descname">gen_interface</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/calc_eseg.html#gen_interface"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.calc_eseg.gen_interface" title="Permalink to this definition">¶</a></dt>
 <dd><p>Selects an interfacial region of a bicrystal
@@ -151,7 +128,7 @@ of that interface in the original coordinates.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>ats</strong> (<a class="reference external" href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="(in ASE v)"><code class="xref py py-class docutils literal"><span class="pre">ase.Atoms</span></code></a>) – Atoms object of full bi-crystal.</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>ats</strong> (<a href="#id1"><span class="problematic" id="id2">:ase:class:`Atoms`</span></a>) – Atoms object of full bi-crystal.</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">gb_min, gm_max, z_width, min_at</td>
 </tr>
@@ -168,7 +145,7 @@ equilibrium bond spacing.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>pot</strong> (<code class="xref py py-class docutils literal"><span class="pre">quippy.Potential</span></code>) – potential object.</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>pot</strong> (<a href="#id3"><span class="problematic" id="id4">:quippy:class:`Potential`</span></a>) – </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Hydrogen molecule formation energy.</td>
 </tr>
@@ -197,7 +174,7 @@ equilibrium bond spacing.</p>
 
 <h3>Navigation</h3>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="intro.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="imeall.html">Imeall Package</a></li>
 <li class="toctree-l1"><a class="reference internal" href="models.html">Models and Queries</a></li>
 <li class="toctree-l1"><a class="reference internal" href="views.html">Views</a></li>

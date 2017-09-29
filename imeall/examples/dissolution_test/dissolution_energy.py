@@ -5,7 +5,7 @@ from ase.optimize import BFGS, FIRE
 from ase.constraints import UnitCellFilter
 from ase.lattice.cubic import BodyCenteredCubic
 from ase import Atoms as aseAtoms
-from fracture.hydrify_cracktips import Hydrify
+from imeall.hydrogenate import Hydrify
 
 from quippy import Atoms, Potential, AtomsReader
 
