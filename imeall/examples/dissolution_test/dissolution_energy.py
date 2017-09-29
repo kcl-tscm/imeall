@@ -8,8 +8,9 @@ from ase import Atoms as aseAtoms
 from imeall.hydrogenate import Hydrify
 
 from quippy import Atoms, Potential, AtomsReader
+from imeall import app
 
-POT_DIR = os.environ['POTDIR']
+POT_DIR = os.path.join(app.root_path, 'potentials')
 eam_pot = os.path.join(POT_DIR, 'PotBH.xml')
 r_scale = 1.00894848312
 pot = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=eam_pot)

@@ -41,7 +41,7 @@ def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200, force_tol = 
   with open('subgb.json', 'r') as outfile:
     j_dict = json.load(outfile)
   try:
-    POT_DIR     = os.environ['POTDIR']
+    POT_DIR = os.path.join(app.root_path, 'potentials')
   except KeyError:
     sys.exit("Please set POTDIR in os environment. `export POTDIR='path/to/potfiles/`")
   try: 

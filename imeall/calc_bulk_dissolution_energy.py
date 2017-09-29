@@ -10,6 +10,7 @@ from ase import Atoms as aseAtoms
 from fracture.hydrify_cracktips import Hydrify
 
 from quippy import Atoms, Potential, AtomsReader
+from imeall import app
 
 
 def calc_bulk_dissolution(args):
@@ -18,7 +19,7 @@ def calc_bulk_dissolution(args):
   Args:
     args(list): determine applied strain to unit cell.
   """
-  POT_DIR = os.environ['POTDIR']
+  POT_DIR = os.path.join(app.root_path, 'potentials')
   eam_pot = os.path.join(POT_DIR, 'PotBH.xml')
   r_scale = 1.00894848312
   pot = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=eam_pot)
