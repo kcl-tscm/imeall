@@ -2,7 +2,6 @@ import sys
 from ase import Atoms as aseAtoms
 from ase.io.vasp import write_vasp
 from ase.calculators.vasp import Vasp
-from pyspglib import spglib
 from quippy import Atoms, farray, frange, set_fortran_indexing
 from calc_inter_dist  import decorate_interface
 
