@@ -13,4 +13,7 @@ files_to_remove = ['POSCAR',
 'unique_lattice_sites.json']
 
 for f in files_to_remove:
-  os.remove(f)
+  try:
+    os.remove(f)
+  except OSError:
+    pass
