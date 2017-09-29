@@ -161,7 +161,11 @@ To check error logs (useful for debugging web framework).
 To set up an ssh port:
   ssh -L 5000:localhost:8888 imeall
 
+To set the image running:
+docker run -d -p 5000:5000 -v /home/lambert/pymodules/imeall/imeall/grain_boundaries:/opt/imeall/grain_boundaries:ro manuscript-imeall
 
+
+docker exec -it sleepy_dubinsky bash
 
 #The docker logs print to stderr.
 docker logs c631c5dccd91 >stdout.log 2>stderr.log
