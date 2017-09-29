@@ -69,13 +69,13 @@ def gen_interface():
   zint.write('interface.xyz')
   #Write POSCAR to use interstitial site generator:
   ats = Atoms('interface.xyz')
-  vasp_args=dict(xc='PBE', amix=0.01, amin=0.001, bmix=0.001, amix_mag=0.01, bmix_mag=0.001,
-               kpts=[3, 3, 3], kpar=9, lreal='auto', ibrion=-1, nsw=0, nelmdl=-15, ispin=2,
-               nelm=100, algo='VeryFast', npar=24, lplane=False, lwave=False, lcharg=False, istart=0,
-               voskown=0, ismear=1, sigma=0.1, isym=2)
-  vasp = Vasp(**vasp_args)
-  vasp.initialize(ats)
-  write_vasp('POSCAR', vasp.atoms_sorted, symbol_count=vasp.symbol_count, vasp5=True)
+  #vasp_args=dict(xc='PBE', amix=0.01, amin=0.001, bmix=0.001, amix_mag=0.01, bmix_mag=0.001,
+  #             kpts=[3, 3, 3], kpar=9, lreal='auto', ibrion=-1, nsw=0, nelmdl=-15, ispin=2,
+  #             nelm=100, algo='VeryFast', npar=24, lplane=False, lwave=False, lcharg=False, istart=0,
+  #             voskown=0, ismear=1, sigma=0.1, isym=2)
+  #vasp = Vasp(**vasp_args)
+  #vasp.initialize(ats)
+  #write_vasp('POSCAR', vasp.atoms_sorted, symbol_count=vasp.symbol_count, vasp5=True)
   return int_ats
 
 if __name__=='__main__':
