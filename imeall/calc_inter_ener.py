@@ -4,6 +4,7 @@ import numpy as np
 import argparse
 from ase.optimize import FIRE
 from quippy import Atoms, Potential, frange
+from imeall import app
 
 def h2_formation_energy(pot):
   """
