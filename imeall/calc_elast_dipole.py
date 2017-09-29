@@ -73,9 +73,6 @@ class ElasticDipole(object):
     if not forces.any():
       print len(ats) 
       ats.remove_atoms([defect.index+1])
-      for at in ats:
-        print at
-      print len(ats)
       ats.set_calculator(pot)
       forces = ats.get_forces()
       ats.write('relaxed_cell_removed_defect.xyz')
@@ -186,7 +183,7 @@ if __name__ == '__main__':
   args = parser.parse_args()
 
   if args.calc_type == 'EAM':
-    print calc_elast_dipole_eam(args.input_file, args.force_tol, args.relax_cell)
+    print calc_elast_dipole_eam(args.input_file, args.force_tol, args.relax_cell).round(3)
   elif args.calc_type == 'DFT':
     print calc_elast_dipole_dft(args.input_file)
   else:
