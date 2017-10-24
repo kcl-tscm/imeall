@@ -47,13 +47,6 @@ h_pos = subgb_dict['site']
 print (h_pos)
 #disloc_fin, disloc_ini, bulk = sd.make_barrier_configurations(calculator=lammps, cylinder_r=cylinder_r)
 gb_cell = AtomsReader('interstitial_traj.xyz')[-1]
-
-vasp_args = dict(xc='PBE', amix=0.01, amin=0.001, bmix=0.001, amix_mag=0.01, bmix_mag=0.001,
-                 kpts=[1, 1, 1], kpar=1, lreal='auto', nelmdl=-15, ispin=2, prec='Accurate',
-                 nelm=100, algo='VeryFast', lplane=False, lwave=False, lcharg=True, istart=0, 
-                 magmom=2.6*len(gb_cell), maxmix=30, #https://www.vasp.at/vasp-workshop/slides/handsonIV.pdf #for badly behaved clusters.
-                 voskown=0, ismear=1, sigma=0.1, isym=2) # possibly try iwavpr=12, should be faster if it works
-
 x, y, z = gb_cell.positions.T
 radius1 = np.sqrt((x - h_pos[0])**2 + (y-h_pos[1])**2 + (z-h_pos[2])**2)
 
@@ -66,6 +59,12 @@ print ("\nNumber of atoms in qm region of %.1f" % qm_radius +
 print ("together with the buffer of %.1f" % (qm_radius + buff ) +
                                 "A %i" % np.count_nonzero(qm_buffer_mask))
 
+magmoms=[2.6 for _ in range(np.count_nonzero(qm_buffer_mask))]
+vasp_args = dict(xc='PBE', amix=0.01, amin=0.001, bmix=0.001, amix_mag=0.01, bmix_mag=0.001,
+                 kpts=[1, 1, 1], kpar=1, lreal='auto', nelmdl=-15, ispin=2, prec='Accurate',
+                 nelm=100, algo='VeryFast', lplane=False, lwave=False, lcharg=False, istart=0, 
+                 magmom=magmoms, maxmix=30, #https://www.vasp.at/vasp-workshop/slides/handsonIV.pdf #for badly behaved clusters.
+                 voskown=0, ismear=1, sigma=0.1, isym=2) # possibly try iwavpr=12, should be faster if it works
 
 #parallel config.
 procs = 24
