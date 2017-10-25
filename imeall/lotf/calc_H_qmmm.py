@@ -61,10 +61,10 @@ print ("together with the buffer of %.1f" % (qm_radius + buff ) +
 
 magmoms=[2.6 for _ in range(np.count_nonzero(qm_buffer_mask))]
 vasp_args = dict(xc='PBE', amix=0.01, amin=0.001, bmix=0.001, amix_mag=0.01, bmix_mag=0.001,
-                 kpts=[1, 1, 1], kpar=1, lreal='auto', nelmdl=-15, ispin=2, prec='Accurate',
-                 nelm=100, algo='VeryFast', lplane=False, lwave=False, lcharg=False, istart=0, 
-                 magmom=magmoms, maxmix=30, #https://www.vasp.at/vasp-workshop/slides/handsonIV.pdf #for badly behaved clusters.
-                 voskown=0, ismear=1, sigma=0.1, isym=2) # possibly try iwavpr=12, should be faster if it works
+                 kpts=[1, 1, 1], kpar=1, lreal='auto', nelmdl=-15, ispin=2, prec='High',
+                 nelm=150, algo='Fast', lplane=False, lwave=False, lcharg=False, istart=0, addgrid=True,
+                 magmom=magmoms, maxmix=30, ediff=1.e-4, #https://www.vasp.at/vasp-workshop/slides/handsonIV.pdf #for badly behaved clusters.
+                 voskown=0, ismear=1, sigma=0.1, isym=0) # possibly try iwavpr=12, should be faster if it works
 
 #parallel config.
 procs = 24
@@ -90,6 +90,18 @@ if args.use_socket:
 else:
   pass
 
+#For rescaling bulk and dft bulk moduli examples from Ni.
+#dft_alat = 3.19
+#dft_Ecoh = -8.48
+#dft_C11 = 488
+#dft_C12 = 200
+#dft_C44 = 137
+#alpha = dft_alat/eam_alat
+#eam_alat, eam_C11, eam_C12, eam_C44 = sd.get_elastic_constants(calculator=mm_pot)
+#eam_bulk_mod = (eam_C11 + 2.0*eam_C12)/3.0
+#dft_bulk_mod = (dft_C11 + 2.0*dft_C12)/3.0
+#beta = eam_bulk_mod/dft_bulk_mod/alpha/alpha/alpha
+
 qmmm_pot = ForceMixingCarvingCalculator(gb_cell, qm_region_mask,
                                         mm_pot, #mm_pot_mod, #for testing
                                         qm_pot, 
@@ -101,6 +113,7 @@ def pass_trajectory_context(trajectory, dynamics):
   def traj_writer(dynamics):
       trajectory.write(dynamics.atoms)
   return traj_writer
+
 trajectory = AtomsWriter('gb_traj.xyz')
 
 opt = FIRE(gb_cell)

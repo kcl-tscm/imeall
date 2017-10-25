@@ -16,15 +16,17 @@ from ForceMixerCarver import ForceMixingCarvingCalculator
 from matscipy.socketcalc import VaspClient, SocketCalculator
 
 from quippy import AtomsReader, AtomsWriter
-from quippy import Potential
+from quippy import Potential, set_fortran_indexing
 
 from imeall.calc_elast_dipole import find_h_atom
+
+set_fortran_indexing(True)
 
 class NEBAnalysis(object):
   def __init__(self):
     pass
 
-  def save_barriers(self, images, prefix="", neb):
+  def save_barriers(self, images, neb, prefix=""):
     """ Saves the NEB results and plots energy barrier.
     Arguments:
       images :: 
@@ -84,6 +86,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--buff", "-b", type=float, default=6.0)
 parser.add_argument("--qm_radius", "-q", type=float, default=5.0)
 parser.add_argument("--use_socket", "-u", type=bool, default=True)
+parser.add_argument("--input", "-inp", help=".xyz input filename.")
 args=parser.parse_args()
 
 buff = args.buff
@@ -94,16 +97,10 @@ eam_pot = os.path.join(POT_DIR, 'PotBH.xml')
 r_scale = 1.00894848312
 mm_pot = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=eam_pot)
 
-
-with open('subgb.json','r') as f:
-  subgb_dict = json.load(f)
-
-
-h_pos = subgb_dict['site']
-print (h_pos)
-
 #disloc_fin, disloc_ini, bulk = sd.make_barrier_configurations(calculator=lammps, cylinder_r=cylinder_r)
-gb_cell = AtomsReader('interstitial_traj.xyz')[-1]
+gb_cell = AtomsReader('bcc_h.xyz')[-1]
+defect = find_h_atom(gb_cell)
+h_pos = defect.position
 
 x, y, z = gb_cell.positions.T
 radius1 = np.sqrt((x - h_pos[0])**2 + (y-h_pos[1])**2 + (z-h_pos[2])**2)
@@ -146,7 +143,6 @@ if args.use_socket:
 else:
   pass
 
-
 qmmm_pot = ForceMixingCarvingCalculator(gb_cell, qm_region_mask,
                                         mm_pot, #mm_pot_mod, #for testing
                                         qm_pot,
@@ -166,18 +162,15 @@ opt.attach(pass_trajectory_context(trajectory, opt), 1, opt)
 gb_cell.set_calculator(qmmm_pot)
 opt.run(fmax=1.0e-3)
 gb_cell.write('dft_edip_H_relaxed.xyz')
-sock_calc.shutdown()
 
 #One shot calculation of forces with defect removed.
-trajectory = AtomsWriter('gb_traj_fin.xyz')
 gb_cell = AtomsReader('dft_edip_H_relaxed.xyz')[-1]
 #Remove defect
 defect = find_h_atom(gb_cell)
 gb_cell.remove_atoms([defect.index+1])
-gb_cell = remove_h_atom(gb_cell)
 #Get forces
 gb_cell.set_calculator(qmmm_pot)
 gb_cell.get_forces()
 gb_cell.write('dft_edip_forces.xyz')
-sock_calc.shutdown()
 
+sock_calc.shutdown()
