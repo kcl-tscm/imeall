@@ -79,26 +79,26 @@ def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200, force_tol = 
   pot_file    = eam_pot.split('/')[-1]
   print '{0}.xyz'.format(gb_file)
   print os.getcwd()
-  grain       = AtomsReader('{0}.xyz'.format(gb_file))[-1]
+  grain = AtomsReader('{0}.xyz'.format(gb_file))[-1]
   if param_file != 'gp33b.xml':
-    pot         = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=eam_pot)
+    pot = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=eam_pot)
   else:
-    pot         = Potential('IP GAP', param_filename=eam_pot)
+    pot = Potential('IP GAP', param_filename=eam_pot)
 
   grain.set_calculator(pot)
   grain.info['adsorbate_info'] = None
   E_gb_init   = grain.get_potential_energy()
   traj_file   = gb_file
   if 'traj' in traj_file:
-    out       = AtomsWriter('{0}'.format('{0}.xyz'.format(traj_file)))
+    out = AtomsWriter('{0}'.format('{0}.xyz'.format(traj_file)))
   else:
-    out       = AtomsWriter('{0}'.format('{0}_traj.xyz'.format(traj_file)))
+    out = AtomsWriter('{0}'.format('{0}_traj.xyz'.format(traj_file)))
   strain_mask = [0,0,1,0,0,0]
-  ucf         = UnitCellFilter(grain, strain_mask)
-  opt         = FIRE(ucf)
+  ucf = UnitCellFilter(grain, strain_mask)
+  opt = FIRE(ucf)
   cell = grain.get_cell()
-  A    = cell[0][0]*cell[1][1]
-  H    = cell[2][2]
+  A = cell[0][0]*cell[1][1]
+  H = cell[2][2]
   #Calculation dumps total energyenergy and grainboundary area data to json file.
   with open('subgb.json','r') as f:
     gb_dict = json.load(f)
@@ -148,7 +148,7 @@ if __name__ == '__main__':
 #Command line tool for relaxing grainboundary structure
   parser = argparse.ArgumentParser()
   parser.add_argument('-inp', '--input_file', help='name of input structure file')
-  parser.add_argument('-ts',  '--traj_steps', help='Number of steps to write trajectory to file', type=int, default=120)
+  parser.add_argument('-ts',  '--traj_steps', help='Number of steps to write trajectory to file', type=int, default=1200)
   parser.add_argument('-f',  '--force_tol', help='Force tolerance for minimization', type=float, default=0.05)
   args = parser.parse_args()
   input_file = args.input_file

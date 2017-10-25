@@ -71,7 +71,6 @@ class ElasticDipole(object):
       3x3 numpy array of G the dipole tensor.
     """
     if not forces.any():
-      print len(ats) 
       ats.remove_atoms([defect.index+1])
       ats.set_calculator(pot)
       forces = ats.get_forces()

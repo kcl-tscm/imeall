@@ -116,6 +116,8 @@ if __name__=='__main__':
     out_atoms  = vasp.read_vasp('POSCAR')
     gamma_surf.atoms = out_atoms
 
+  out_atoms.write('poscar.xyz')
+
   totens     = map(float, toten_regex.findall(outcar))
   iterations = iter_regex.findall(outcar)
   
