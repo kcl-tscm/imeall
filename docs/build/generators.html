@@ -1,0 +1,232 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Generators &#8212; Imeall 0.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Interstitials" href="interstitials.html" />
+    <link rel="prev" title="Slabmaker" href="slabmaker.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="generators">
+<h1>Generators<a class="headerlink" href="#generators" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="run-dynamics">
+<h2>Run Dynamics<a class="headerlink" href="#run-dynamics" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="xref py py-mod docutils literal"><span class="pre">imeall.slabmaker</span></code> the <a class="reference internal" href="#module-imeall.run_dyn" title="imeall.run_dyn"><code class="xref py py-mod docutils literal"><span class="pre">imeall.run_dyn</span></code></a> modules are responsible
+for generating the canonical <cite>imeall.gb_models.GrainBoundary</cite> structures and a representative spanning set of
+microscopic initializations of the <a class="reference internal" href="models.html#imeall.gb_models.SubGrainBoundary" title="imeall.gb_models.SubGrainBoundary"><code class="xref py py-class docutils literal"><span class="pre">imeall.gb_models.SubGrainBoundary</span></code></a> structures for atomistic relaxation.</p>
+<dl class="docutils">
+<dt>Both modules also runs as a command line tool. To see the command line documentation:</dt>
+<dd><code class="docutils literal"><span class="pre">python</span> <span class="pre">run_dyn.py</span> <span class="pre">-h</span></code></dd>
+</dl>
+<span class="target" id="module-imeall.run_dyn"></span><dl class="class">
+<dt id="imeall.run_dyn.Capturing">
+<em class="property">class </em><code class="descclassname">imeall.run_dyn.</code><code class="descname">Capturing</code><a class="reference internal" href="_modules/imeall/run_dyn.html#Capturing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.run_dyn.Capturing" title="Permalink to this definition">¶</a></dt>
+<dd><p><a class="reference internal" href="#imeall.run_dyn.Capturing" title="imeall.run_dyn.Capturing"><code class="xref py py-class docutils literal"><span class="pre">Capturing</span></code></a> wraps a function to capture output for redirection.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="imeall.run_dyn.ImeallIO">
+<em class="property">class </em><code class="descclassname">imeall.run_dyn.</code><code class="descname">ImeallIO</code><a class="reference internal" href="_modules/imeall/run_dyn.html#ImeallIO"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.run_dyn.ImeallIO" title="Permalink to this definition">¶</a></dt>
+<dd><p><a class="reference internal" href="#imeall.run_dyn.ImeallIO" title="imeall.run_dyn.ImeallIO"><code class="xref py py-class docutils literal"><span class="pre">ImeallIO</span></code></a> contains methods for searching the Imeall Directory tree,
+and creating new <a class="reference internal" href="models.html#imeall.gb_models.GrainBoundary" title="imeall.gb_models.GrainBoundary"><code class="xref py py-class docutils literal"><span class="pre">imeall.gb_models.GrainBoundary</span></code></a> and <a class="reference internal" href="models.html#imeall.gb_models.SubGrainBoundary" title="imeall.gb_models.SubGrainBoundary"><code class="xref py py-class docutils literal"><span class="pre">imeall.gb_models.SubGrainBoundary</span></code></a> directories.
+Each <code class="xref py py-class docutils literal"><span class="pre">SubGrainBoundary</span></code> directory contains supercells of the parent canonical
+<code class="xref py py-class docutils literal"><span class="pre">GrainBoundary</span></code>.</p>
+<dl class="method">
+<dt id="imeall.run_dyn.ImeallIO.find_subdir">
+<code class="descname">find_subdir</code><span class="sig-paren">(</span><em>target_dir</em>, <em>calc_suffix</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/run_dyn.html#ImeallIO.find_subdir"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.run_dyn.ImeallIO.find_subdir" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find if named directory is in target directory.
+:param target_dir: directory to search.
+:type target_dir: str
+:param calc_suffix: name of directory to look for.
+:type calc_suffix: str</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">directory location and name.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="imeall.run_dyn.ImeallIO.load_json">
+<code class="descname">load_json</code><span class="sig-paren">(</span><em>json_file</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/run_dyn.html#ImeallIO.load_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.run_dyn.ImeallIO.load_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Helper function to return gb_data as dict.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>json_file</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – name of gb.json or subgb.json file.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">grain boundary data dictionary.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/2.7/library/stdtypes.html#dict" title="(in Python v2.7)">dict</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="imeall.run_dyn.ImeallIO.make_dir">
+<code class="descname">make_dir</code><span class="sig-paren">(</span><em>target_dir</em>, <em>dir_name</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/run_dyn.html#ImeallIO.make_dir"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.run_dyn.ImeallIO.make_dir" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create <code class="xref py py-class docutils literal"><span class="pre">GrainBoundary</span></code> directory if it does not exist and
+return the concatenated string name.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>target_dir</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – target directory.</li>
+<li><strong>dir_name</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – name of new directory in target directory.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">target directory name.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)">str</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="relaxation">
+<h2>Relaxation<a class="headerlink" href="#relaxation" title="Permalink to this headline">¶</a></h2>
+<p>The <a class="reference internal" href="#module-imeall.relax" title="imeall.relax"><code class="xref py py-mod docutils literal"><span class="pre">imeall.relax</span></code></a> module handles relaxation of a <code class="xref py py-class docutils literal"><span class="pre">SubGrainBoundary</span></code>.
+This module also runs as a command line tool.</p>
+<span class="target" id="module-imeall.relax"></span><dl class="function">
+<dt id="imeall.relax.relax_gb">
+<code class="descclassname">imeall.relax.</code><code class="descname">relax_gb</code><span class="sig-paren">(</span><em>gb_file='file_name'</em>, <em>traj_steps=120</em>, <em>total_steps=1200</em>, <em>force_tol=0.05</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/relax.html#relax_gb"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.relax.relax_gb" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to relax a grain_boundary bicrystal structure.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>gb_file</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – gbid.</li>
+<li><strong>traj_steps</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) – number of steps between print trajectories.</li>
+<li><strong>total_steps</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) – total number of force relaxation steps.</li>
+<li><strong>force_tol</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Force relaxation criterion in ev/A.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="(in ASE v)"><code class="xref py py-class docutils literal"><span class="pre">ase.Atoms</span></code></a> Object</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Imeall</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="imeall.html">Imeall Package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Models and Queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="views.html">Views</a></li>
+<li class="toctree-l1"><a class="reference internal" href="slabmaker.html">Slabmaker</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Generators</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#run-dynamics">Run Dynamics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#relaxation">Relaxation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="interstitials.html">Interstitials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="calculators.html">Calculators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="slabmaker.html" title="previous chapter">Slabmaker</a></li>
+      <li>Next: <a href="interstitials.html" title="next chapter">Interstitials</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Henry Lambert, Adam Fekete, James Kermode, Alessandro De Vita.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/generators.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

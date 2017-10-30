@@ -38,6 +38,9 @@ XYZ](https://libatoms.github.io/QUIP/io.html#module-ase.io.extxyz) files.
   - [QUIP](https://libatoms.github.io/QUIP/quippy.html)
   - [OVITO](https://www.ovito.org)
 
+## Documentation
+Full documentation can be found [here](http://montmorency.github.io/imeall/).
+
 ## Using Imeall
 0. To get the development branch of Imeall:
 ```

@@ -1,13 +1,13 @@
 import os
-import re
 import sys
+import argparse
 import glob
 import json
 import logging
-import argparse
 import numpy as np
+import re
+import shutil
 import slabmaker.slabmaker as slabmaker
-
 
 from  quippy import Atoms
 from  scipy.spatial import Voronoi, voronoi_plot_2d
@@ -29,16 +29,24 @@ except ImportError:
 # files.
 
 class PotentialParameters(object):
+  """Contains parameter dictionaries for basic properties associated with
+  interatomic potentials in the database.
+
+  The ground state energy per atom for bulk iron
+  for the different inter-atomic potentials used in the Imeall Database. 
+  It also contains the values required to rescale the relaxed lattice parameters 
+  for bulk iron predicted by the inter-atomic potentials 
+  to the target DFT value.
   """
-  :class:`PotentialParameters` contains the ground state energy per atom for bulk iron
-  of the different EAM potentials used in the Imeall Database. It also contains
-  the values required to rescale the relaxed lattice parameters for bulk iron predicted by
-  the EAM potentials to the target DFT value.
-  """
+
   def __init__(self):
     self.name = 'Potential Parameters'
 
   def gs_ener_per_atom(self): 
+    """
+    Returns:
+      eperat(dict): {'parameter file': energy per atom (eV)}
+    """
     eperat = {'Fe_Mendelev.xml' : -4.12243503431,
               'PotBH.xml'       : -4.01298214176,
               'iron_mish.xml'   : -4.28000356875,
@@ -50,6 +58,12 @@ class PotentialParameters(object):
     return eperat
 
   def eam_rscale(self): 
+    """Dictionary of rescaling parameters of EAM to approximate pbe DFT value of 2.83.
+
+    Returns:
+      rscale:{parameter file: rscale parameter} 
+    """
+
     rscale = {'Fe_Mendelev.xml' : 1.00894848312,
               'PotBH.xml'       : 1.00894848312,
               'iron_mish.xml'   : 1.0129007626,
@@ -61,11 +75,12 @@ class PotentialParameters(object):
     return rscale
 
   def paramfile_dict(self):
-    """
-    Dictionary Mapping directories to quip xml files.
+    """Dictionary Mapping directory names to quip xml files.
+
     Returns: 
-      {potential_directory:potential_file}
+      dict: {potential_directory:potential_file}
     """
+
     paramfile      = {'DFT':'dft_vasp_pbe',
                       'PotBH':'PotBH.xml',
                       'EAM_Ack':'Fe_Ackland.xml',
@@ -76,11 +91,13 @@ class PotentialParameters(object):
     return paramfile
 
   def potdir_dict(self):
-    """
-    :method:`potdir_dict` invert keys from `paramfile_dict` to give 
+    """Invert keys from :py:func:`paramfile_dict` to give potential file to
+    directory mapping.
+
     Returns: 
-      {potential_file:potential_directory}
+      dict: {potential_file:potential_directory}
     """
+
     paramfile_dict = self.paramfile_dict()
     potdir = {}
     for k,v in paramfile_dict.items():
@@ -88,6 +105,12 @@ class PotentialParameters(object):
     return potdir
 
   def calc_e_gb(self, at, E_bulk):
+    """Calculate grain boundary energy relative to bulk value.
+
+    Returns:
+      float: E_gb grain boundary energy J/m^{2}
+    """
+
     cell = at.get_cell()
     A    = cell[0,0]*cell[1,1]
     E_gb = (at.get_potential_energy()-(at.n*(E_bulk)))/(2.*A)
@@ -97,73 +120,87 @@ class PotentialParameters(object):
 
 class GBQuery(object):
   """
-  :class:`GBQuery` routines for grabbing desired gb .xyz files and paths.
+  Routines for grabbing desired .xyz files and paths.
   """
+
   def __init__(self):
     self.__repr__=="FetchStructure"
 
-  def copy_gb_dirtree(self, material="alphaFe", or_axis="0,0,1", pots=['PotBH.xml']):
+  def copy_gb_dirtree(self, material="alphaFe", or_axis="0,0,1", pots=['PotBH.xml'], 
+                      target_dir='./', gb_type='tilt'):
+    """Pull all minimum energy structures, using :py:func:`pull_minen_structs`,
+    from database for an orientation axis and copy them to target_dir. Useful for checking out
+    structures into a unique directory for specialized analysis.
+
+    Args:
+      material(str): material name
+      or_axis(str): csv serialized vector of orientation axis
+      pots: list of potential parameter files.
+      target_dir: Location to copy files to  (Default: './').
+      gb_type(str): Options 'tilt' or 'twist'.
+
+    Todo:
+      * Add kwargs to pull_minen_structs to provide additional selection criteria.
+      
     """
-    :method:`copy_gb_dirtree` pull all min energy structures across from database.
-    """
-    grain_dicts = self.pull_minen_structs(material=material, or_axis=or_axis, pots=pots)
+
+    grain_dicts = self.pull_minen_structs(material=material, or_axis=or_axis, pots=pots, gb_type=gb_type)
     for gd in grain_dicts:
       gbid = gd['gbid']
-      new_dir_name=gbid.split('_')[0]
+      new_dir_name = gbid.split('_')[0]
+      new_dir_name = os.path.join(target_dir, new_dir_name)
       try:
         os.mkdir(new_dir_name)
       except OSError:
-        pass
+        print 'Directory already exists.'
       struct_name = gbid+'_traj.xyz'
       dir_path = gd['path']
     #grab the gb.json file path.
       gb_path = gd['path']
       gb_path = '/'.join(gb_path.split('/')[0:3])+'/gb.json'
-      gb_path = os.path.join(GBDATABASE, gb_path)
+      print gb_path
+      gb_path = os.path.join(app.config['GRAIN_DATABASE'], gb_path)
     #grab the struct file and the subgb.json path.
-      dir_path = os.path.join(GBDATABASE, dir_path)
+      dir_path = os.path.join(app.config['GRAIN_DATABASE'], dir_path)
       struct_path = os.path.join(dir_path, struct_name)
       subgb_path = os.path.join(dir_path, 'subgb.json')
       shutil.copy(struct_path, new_dir_name)
       shutil.copy(subgb_path, new_dir_name)
       shutil.copy(gb_path, new_dir_name)
 
-  def sort_jobdirs(self, pattern='001*', sort_key='angle'):
-    """
-    :method:`sort_jobdirs` Given a directory full of Grain Boundary directories
-    with gb.json files return a sorted list of those directories
-    by arbitrary key.
-    pattern: glob pattern for directory names
-    sort_key: attribute of the gb.json file to sort by.
-    """
-    job_dirs = glob.glob(pattern)
-    job_dirs = filter(os.path.isdir, job_dirs)
-    scratch = os.getcwd()
-    job_list = []
-    for job in job_dirs:
-      os.chdir(job)
-      with open('gb.json','r') as f:
-        j_dict = json.load(f)
-      sort_attr = j_dict[sort_key]
-      job_list.append((job, sort_attr))
-      os.chdir(scratch)
-    job_list = sorted(job_list, key= lambda x : x[1])
-    return job_list
+  def pull_minen_structs(self, material="alphaFe", or_axis="1,1,1", pots=['PotBH.xml'], gb_type='tilt'):
+    """Grab the minimum energy structure json dictionaries
+    for a given material, orientation_axis, and potential(s) parameter filenames.
 
-  def pull_minen_structs(material="alphaFe", or_axis="1,1,1", pots=['PotBH.xml']):
+    Args:
+      material(str,optional): Material to investigate.
+      or_axis(str,optional): Orientation axis "1,1,1".
+      pots(list): list of potentials parameter files.
+      gb_type(str): Options 'tilt' or 'twist'.
+
+    Returns:
+      list[:py:class:`SubGrainBoundary`]: List of :py:class:`SubGrainBoundary` :py:class:`Model` 
+      represented as dictionaries.
     """
-    :method:`pull_minen_structs` grab the minimum energy structure json dictionaries
-    for a given material, orientation_axis, potential.
-    """
+
     from gb_models import database, GrainBoundary, SubGrainBoundary
     from collections import OrderedDict
 
     database.connect()
     pot_param     = PotentialParameters()
     ener_per_atom = pot_param.gs_ener_per_atom()
-    gbs = (GrainBoundary.select()
+
+    if gb_type=='tilt':
+      gbs = (GrainBoundary.select()
                         .where(GrainBoundary.orientation_axis == or_axis)
                         .where(GrainBoundary.boundary_plane != or_axis))
+    elif gb_type=='twist':
+      gbs = (GrainBoundary.select()
+                        .where(GrainBoundary.orientation_axis == or_axis)
+                        .where(GrainBoundary.boundary_plane == or_axis))
+    else:
+      sys.exit("Unsupported gb_type. Options:'tilt' or 'twist'")
+
     dict_list = []
     for gb in gbs.order_by(GrainBoundary.angle):
       pot_dict = OrderedDict({})
@@ -181,53 +218,45 @@ class GBQuery(object):
             pot_dict[potential] = subgbs[0][0]
             dict_list.append(subgbs[0][1])
         except IndexError:
-          print 'no subgbs there: ', gb.gbid, potential
-
+          print 'No subgbs for: ', gb.gbid, potential
       print '{:.3f}'.format(180.0/np.pi*gb.angle), ' '.join(['{:.3f}'.format(x) for x in pot_dict.values()])
+    database.close()
     return dict_list
 
-  def find_struct_file(structure_name='', pot_dir='PotBH'):
-    """
-    :method: given a structure file
-    """
-    structure_list = structure_name.split('_')
-    struct_dir     = struct_list[0]
-    pot_dir        = struct_dir + '_'+ pot_dir
-    subgb_dir      = pot_dir + '_'.join()
-
 class Job(object):
+  """Collection of routines for generating and submitting pbs submission scripts.
   """
-  class:'Job' collection of routines for generating 
-  and submitting pbs submission scripts.
-  """
+
   def __init__(self):
     self.pbs_file = ''
     self.job_dir  = ''
     self.job_id   = ''
 
   def sub_pbs(self, job_dir, exclude='DFT', suffix='v6bxv2z', regex=None):
-    """ 
-    Given an explicit suffix, or a regex this routine recurses through
-    the directory structure and submits any pbs files that 
-    match the suffix or regex pattern. Exclude keeps track of 
-    directories that (we mightn't want for instance DFT on Ada
-    or EAM on Mira.)
+    """Given an explicit suffix, or a regex this routine recurses through
+    the directory structure and change directory to location of pbs file and
+    submits pbs files that match the suffix or regex pattern. 
+    Exclude avoids certain directories.
+
     Useful submission patterns include:
     REGEX:
-      submit all pbs files with a rigid body translation 
-      and any atom deletion criterion hydrogen concentration etc.: 
-        tv[.0-9]+bxv[.0-9]+_.*?
-      submit all sub-pbs files with a rigid body translation
-      and different atom _deletion criterion: 
-        tv[.0-9]+bxv[.0-9]+_d[.0-9]+
-      all translations with a specific deletion criterion
-      in this case 2.3 A:
-        tv[.0-9]+bxv[.0-9]+_d2.3
-      etc.
+    Submit all pbs files with a rigid body translation 
+    and any atom deletion criterion hydrogen concentration etc.: tv[.0-9]+bxv[.0-9]+_.*?
+
+    Submit all sub-pbs files with a rigid body translation
+    and different atom _deletion criterion: tv[.0-9]+bxv[.0-9]+_d[.0-9]+
+
+    All translations with a specific deletion criterion in this case 2.3 A: tv[.0-9]+bxv[.0-9]+_d2.3 etc.
     SUFFIX:
-      submit all super cells: 
-        v6bxv2z
+    submit all super cells: v6bxv2z
+
+    Args:
+      job_dir(str): root directory to walk downwards from.
+      exclude(str): directory names to exclude.
+      suffix(str): pattern that job file must contain to be submitted.
+      regex(str): regex pattern.
     """
+
     lst = os.listdir(job_dir)
     for target_dir in lst:
       target_dir = os.path.join(job_dir, target_dir)
@@ -253,22 +282,21 @@ class Job(object):
           pass
 
 class GBMaintenance(object):
+  """Collection of maintenance routines for the GB database.
+  Methods include routines to regenerate all the csl lattices in the database,
+  take a new grain boundary profile picture for multiple directories, 
+  update the gb.json information if a new grain boundary property is desired.
   """
-  :class'GBMaintenance' is a collection of maintenance routines for the GB database.
-  Possible usages: regenerate all the csl lattices in the database
-  or a subdirectory of the database, take a new grain boundary profile 
-  picture for multiple directories, update the gb json information if a
-  new grain boundary property is desired.
-  """
+
   def __init__(self):
     self.materials = ['alphaFe']
 
-  def retake_pic(self,fname, translate=False,toggle=False, confirm=True):
-    """ 
-    If using AtomEye take grain boundary profile pic in directory
-    requires gb directory with gbid.xyz file in it. set confirm = False 
-    to not prompt for overwrite.
+  def retake_pic(self, fname, translate=False, toggle=False, confirm=True):
+    """DEPRECATED If using AtomEye take grain boundary profile pic in directory
+    requires gb directory with gbid.xyz file in it. Set confirm=False 
+    to not prompt for overwrite. In future versions OVITO will be default image generator.
     """
+
     if confirm:
       var = 'n'
       var = raw_input('Retake photo (y/n)?')
@@ -284,14 +312,23 @@ class GBMaintenance(object):
   def remove_eo_files(self, path, num_deleted_files, dryrun=False):
     """
     Remove files with pattern matching jobname.[eo][0-9]+. 
-    Returns: number of deleted files.
+    
+    Args:
+      path(str): root path to start walking downwards from.
+      num_deleted_files(int): Number of job files deleted.
+      dryrun(bool): (Default: True).
+    
+    Returns: 
+      Number of deleted files.
     """
+
     eo_regex = re.compile(r'[eo][0-9]+')
     lst = os.listdir(path)
     for filename in lst:
       filename = os.path.join(path, filename)
       if os.path.isdir(filename):
-        rec_deleted_files = self.remove_eo_files(filename, 0)
+        if dryrun:
+          rec_deleted_files = self.remove_eo_files(filename, 0)
         num_deleted_files += rec_deleted_files
       elif eo_regex.match(filename.split('.')[-1]):
         print filename
@@ -301,118 +338,114 @@ class GBMaintenance(object):
         pass
     return num_deleted_files
 
-  def add_key_to_dict(self, dirname):
-    os.path.join(dirname, 'subgb.json')
+  def add_key_to_dict(self, dirname, new_key, new_value, dict_type='subgb.json', modify=False):
+    """Add single key to .json dictionary.
+
+    Args:
+      dirname(str): directory name with json dictionary.
+      new_key(str): key to add to dictionary.
+      new_value(generic): value to add to dictionary.
+      dict_type(str, optional): Type of json dict 'subgb.json' or 'gb.json'.
+      modify(bool): If True json file will be overwritten.
+
+    Returns:
+      dict: Updated json dictionary.
+    """
+
+    json_path = os.path.join(dirname, dict_type)
     new_json = {}
     with open(json_path,'r') as json_old:
       old_json = json.load(json_old)
     for key in old_json.keys():
       new_json[key] = old_json[key]
-    at = Atoms('{0}.xyz'.format(os.path.join(dirname, )))
-    cell = at.get_cell()
-    A    = cell[0,0]*cell[1,1]
-    new_json['A']    = A
-    new_json['H']    = cell[2,2]
-    new_json['n_at'] = len(at) 
+    #modify key or add it 
+    new_json[new_key] = new_value
+    if modify:
+      with open(json_path,'w') as json_new_file:
+        json.dump(new_json, json_new_file, indent=2)
+    return new_json
 
-  def update_json(self, dirname):
-    """ 
-    This function was originally written to update all keys in the
-    json dictionaries in the grain boundary directories.
-    The pattern is quite general and can be adapted to just add
-    new keys, delete old keys, consider it a dictionary migration
-    routine.
+  def update_json(self, json_path, new_keys=[], new_values=[], dryrun=True):
+    """Update or add multiple keys to json dictionaries. 
+
+    Args:
+      json_path(str): directory name where gb.json file needs to be updated.
+      new_keys(list): list of new keys.
+      new_values(list): list of new values
+      dryrun(bool):If False json file is over written with new keys.
+
+    Returns:
+      dict: Updated json dictionary.
+
     """
-    os.path.join(dirname,'gb.json')
-    new_json = {}
+
+    assert len(new_keys)==len(new_values)
+    assert type(new_keys)==list
+    assert type(new_values)==list
     with open(json_path,'r') as json_old:
       old_json = json.load(json_old)
-      new_json['zplanes'] = old_json['zplanes']
-      new_json['orientation_axis'] = old_json['orientation axis']
-      new_json['boundary_plane']   = old_json['boundary plane']
-      new_json['coincident_sites'] = old_json['coincident sites']
-      new_json['angle'] = old_json['angle']
-      new_json['gbid']  = old_json['gbid']
-      new_json['n_at']  = old_json['n_unit_cell']
-      new_json['type']  = 'symmetric tilt boundary'
-      at = Atoms('{0}.xyz'.format(os.path.join(job, (old_json['gbid']))))
-      cell = at.get_cell()
-      A    = cell[0,0]*cell[1,1]
-      new_json['A']  = A
-    with open(json_path,'w') as json_new_file:
-      json.dump(new_json, json_new_file, indent=2)
+    new_json = old_json
+    for key, value in zip(new_keys, new_values):
+      new_json[key] = value 
+    if dryrun:
+      print new_json
+    else:
+      with open(json_path,'w') as json_new_file:
+        json.dump(new_json, json_new_file, indent=2)
+    return new_json
 
   def fix_json(self, path):
+    """If json file is corrupted and contains two {}{} dictionaries,
+    this function selects the second of the two dictionaries and overwrites json file.
+
+    Args:
+      path(str): path to corrupted dictionary.
     """
-    Once my json files had two {}{} dictionaries written to them
-    this parser opened all the subgb files, 
-    and selected the dictionary I actually wanted.
-    """
+
     lst = os.listdir(path)
     for filename in lst:
       new_path = os.path.join(path, filename)
       if os.path.isdir(new_path):
-	      self.fix_json(new_path)
+        self.fix_json(new_path)
       elif new_path[-10:] == 'subgb.json':
-	      try: 
-	        with open(new_path,'r') as f:
-	          j_file = json.load(f)
-	      except ValueError:
-	        print 'Value Error', new_path
-	        with open(new_path,'r') as f:
-	          j_file = f.read()
-	        with open(new_path,'w') as f:
-	          print >> f, j_file.split('}')[1]+'}'
-	      try:
-	        with open(new_path,'r') as f:
-	          j_file = json.load(f)
-	        print 'j_file fixed'
-	      except:
-	        print new_path, 'Still Broken'
+        try: 
+          with open(new_path,'r') as f:
+            j_file = json.load(f)
+        except ValueError:
+          print 'Value Error', new_path
+          with open(new_path,'r') as f:
+            j_file = f.read()
+          with open(new_path,'w') as f:
+            print >> f, j_file.split('}')[1]+'}'
+        try:
+          with open(new_path,'r') as f:
+            j_file = json.load(f)
+          print 'j_file fixed'
+        except:
+          print new_path, 'Still Broken'
       else:
         pass
 
-  def update_json(self, filename):
-    """
-    This function was originally written to update all keys in the
-    json dictionaries in the grain boundary directories.
-    The pattern is quite general and can be adapted to just add
-    new keys delete old keys consider it a dictionary migration
-    routine.
-    """
-    new_json = {}
-    with open(filename,'r') as json_old:
-      old_json = json.load(json_old)
-      new_json['zplanes'] = old_json['zplanes']
-      new_json['orientation_axis'] = old_json['orientation axis']
-      new_json['boundary_plane']   = old_json['boundary plane']
-      new_json['coincident_sites'] = old_json['coincident sites']
-      new_json['angle'] = old_json['angle']
-      new_json['gbid']  = old_json['gbid']
-      new_json['n_at']  = old_json['n_unit_cell']
-      new_json['type']  = 'symmetric tilt boundary'
-      dir_path = os.path.join('/'.join((filename.split('/'))[:-1]), old_json['gbid'])
-      at = Atoms('{0}.xyz'.format(dir_path, old_json['gbid']))
-      cell = at.get_cell()
-      A    = cell[0,0]*cell[1,1]
-      new_json['A']  = A
-      json_path = filename
-    with open(json_path,'w') as json_new_file:
-      json.dump(new_json, json_new_file, indent=2)
-
-
 class GBAnalysis(object):
+  """Contains methods for pulling structural.
+  energetic, and meta data from the grain boundary data tree.
+  Also routines for identifying unconverged structural relaxations.
+  """
+
   def __init__(self):
     pass
+
   def find_gb_json(self, path, j_list, filetype):
-    """ 
-    :method:`find_gb_json` Populates the list j_list with lists of the form
-    [/directory_path/, /subgb_file_path].
-    attributes:
+    """ Populates the list j_list with lists of the form [/directory_path/, /subgb_file_path].
+    Args:
       path     : root directory to begin recursive search
       j_list   : empty list  to populate
       filetype : 'subgb.json', 'gb.json'
+
+    Returns:
+      None
     """
+
     lst = os.listdir(path)
     for filename in lst:
       filename = os.path.join(path, filename)
@@ -424,15 +457,21 @@ class GBAnalysis(object):
         pass
 
   def extract_energies(self, material='alphaFe', or_axis='001', gb_type='tilt'):
-    """
-    :method:`extract_energies` pull GB formation energies using recursion.
+    """Pull GB formation energies using recursion from json files.
     Go into a grain boundary directory, recurse through directory
-    to find subgb.json files and gb_energies pull them out.
+    to find subgb.json files and gb_energies and pull them out.
+
+    Args:
+      material(str): material directory to pull from.
+      or_axis(str): orientation axis.
+      gb_type(str): tilt or twist boundary.
+
     Returns:
-    list of dictionaries: each dictionary
-    contains values gbid, orientation_axis, angle, boundary_plane, 
-    param_file, and energies.
+      list: A list of dictionaries. Each dictionary contains keys
+      gbid, orientation_axis, angle, boundary_plane, param_file, 
+      and energies.
     """
+
     pot_param     = PotentialParameters()
     ener_per_atom = pot_param.gs_ener_per_atom()
     gb_files = []
@@ -476,19 +515,9 @@ class GBAnalysis(object):
           try:
             sub_dict = json.load(f)
             try:
-              append_energy = True
-              if 'iron_mish.xml' == sub_dict['param_file']:
-                gb_ener = 16.02*((sub_dict['E_gb']-(ener_per_atom['iron_mish.xml']*float(sub_dict['n_at'])))/(2*sub_dict['A']))
-              elif 'Fe_Mendelev.xml' == sub_dict['param_file']:  
-                gb_ener = 16.02*((sub_dict['E_gb']-(ener_per_atom['Fe_Mendelev.xml']*float(sub_dict['n_at'])))/(2*sub_dict['A']))
-              elif 'Fe_Ackland.xml' == sub_dict['param_file']:  
-                gb_ener = 16.02*((sub_dict['E_gb']-(ener_per_atom['Fe_Ackland.xml']*float(sub_dict['n_at'])))/(2*sub_dict['A']))
-              elif 'Fe_Dudarev.xml' == sub_dict['param_file']:  
-                gb_ener = 16.02*((sub_dict['E_gb']-(ener_per_atom['Fe_Dudarev.xml']*float(sub_dict['n_at'])))/(2*sub_dict['A']))
-              elif 'PotBH.xml' == sub_dict['param_file']:  
-                gb_ener = 16.02*((sub_dict['E_gb']-(ener_per_atom['PotBH.xml']*float(sub_dict['n_at'])))/(2*sub_dict['A']))
-              elif 'dft_vasp_pbe' == sub_dict['param_file']:  
-                gb_ener = 16.02*((sub_dict['E_gb']-(ener_per_atom['dft_vasp_pbe']*float(sub_dict['n_at'])))/(2*sub_dict['A']))
+              if (sub_dict['param_file'] in ener_per_atom.keys()):
+                append_energy = True
+                gb_ener = 16.02*((sub_dict['E_gb']-(ener_per_atom[sub_dict['param_file']]*float(sub_dict['n_at'])))/(2*sub_dict['A']))
               else:
                 append_energy = False
                 print 'Ground state energy not know for this potential!'
@@ -497,16 +526,24 @@ class GBAnalysis(object):
             except KeyError:
               pass
           except:
+            print 'Missing json file.'
             pass
       for gdict in gb_dict.values():
         grain_energies.append(gdict)
     return grain_energies
 
   def calc_energy(self, gb_dict, param_file='PotBH.xml'):
-    """
-    :method:`calc_energy` given a subgb.json dictionary, and a potential
+    """Given a subgb.json dictionary, and a potential
     calculate grainboundary energy.
+
+    Args:
+      gb_dict(dict): sub grain dictionary.
+      param_file(str): Inter-atomic potential filename.
+
+    Returns:
+      float: Grain boundary energy in J/m^{-2}.
     """
+
     pot_param     = PotentialParameters()
     ener_per_atom = pot_param.gs_ener_per_atom()
     try:
@@ -517,17 +554,19 @@ class GBAnalysis(object):
       return gb_ener
 
   def pull_gamsurf(self, path="./",  potential="PotBH"):
-    """
-    :method:`pull_gamsurf` Loop over subgrain directories of a potential (default PotBH) 
-    to find the minimum and maximum energies for the canonical grain, return
+    """Loop over subgrain directories of a potential
+    to find the minimum and maximum subgrain energies for the canonical grain, return
     a dictionary, with information about the lowest and highest energy structures, and the
-    directory they are contained in:
-    Parameters:
-      path: file path to begin search for json files.
-      potential: name of desired potential.
-    Return:
-      gam_dict = {'max_en':0.0, 'min_en':0.0,'min_coords':[],'max_coords':[], 'path':gb[0]}
+    directory they are contained in.
+
+    Args:
+      path(str): File path to begin search for subgb.json files.
+      potential(str): Name of potential directory.
+
+    Returns:
+      dictionary: {'max_en':float, 'min_en':float,'min_coords':list,'max_coords':list, 'path':str}
     """
+
     potparams = PotentialParameters()
     paramfile_dict = potparams.paramfile_dict()
     subgb_files = []
@@ -572,9 +611,12 @@ class GBAnalysis(object):
 
   def plot_gamsurf(self, pot_dir='PotBH', rcut=None, print_gamsurf=False):
     """
-    :method:`plot_gamsurf` return a dictionary for the gamma surface 
-             and the directory with the lowest energy structure.
+    Returns:
+      min and max rigid body translations for a particular rcut value. If rcut is None
+      return min and max rigid body translation for minimum energy structure for all
+      atom deletion criterion.
     """
+
     subgb_files = []
     self.find_gb_json(pot_dir, subgb_files, 'subgb.json')
     gam_surfs   = []
@@ -591,13 +633,11 @@ class GBAnalysis(object):
       gam_surf_rcut = filter(lambda x: x[0]==rcut, gam_surfs)
     else:
       gam_surf_rcut = gam_surfs
-
     if print_gamsurf:
       for count, gs in enumerate(gam_surf_rcut):
         print gs[1], gs[2], gs[3]
         if ((count+1)%6==0):
           print '\n'
-
     en_list = [x[3] for x in gam_surfs]
     en_list = [x for x in en_list if x is not None]
     min_en  = min(en_list)
@@ -615,14 +655,16 @@ class GBAnalysis(object):
     return min_coords, max_coords
 
   def list_all_unconverged(self, pattern='b111'):
-    """
-    :method:`list_all_unconverged` searches through subdirectories
-    that  match against pattern for subgb.json files.
+    """Searches through subdirectories that match against pattern for 
+    subgb.json files.
+
     Parameters:
       pattern: regex to pattern match against.
+
     Returns:
       Three lists converged_dirs, unconverged_dirs, dirs_missing_convergence_keys
     """
+
     jobdirs = glob.glob('{0}*'.format(pattern))
     jobdirs = filter(os.path.isdir, jobdirs)
     scratch = os.getcwd()
@@ -650,15 +692,17 @@ class GBAnalysis(object):
     return  converged_list, unconverged_list, missing_key_list
 
   def list_unconverged(self, pattern='001', potential='PotBH'):
-    """
-    :method:`list_unconverged` find all unconverged subgrains. 
-    Convergence flag is in subgb.json file. 
-    Parameters:
-      pattern: Orientation axis
-      potential: Interatomic Potential to search.
+    """ Find all unconverged subgrains. Convergence flag is in 
+    subgb.json file. 
+
+    Args:
+      pattern(str): Orientation axis
+      potential(str): Interatomic Potential to search.
+
     Returns:
       Three lists converged_dirs, unconverged_dirs, dirs_missing_convergence_keys
     """
+
     jobdirs = glob.glob('{0}*'.format(pattern))
     jobdirs = filter(os.path.isdir, jobdirs)
     scratch = os.getcwd()

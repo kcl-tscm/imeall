@@ -1,0 +1,199 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>imeall.calc_eseg &#8212; Imeall 0.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for imeall.calc_eseg</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">ase</span> <span class="k">import</span> <span class="n">Atoms</span> <span class="k">as</span> <span class="n">aseAtoms</span>
+<span class="kn">from</span> <span class="nn">ase.io.vasp</span> <span class="k">import</span> <span class="n">write_vasp</span>
+<span class="kn">from</span> <span class="nn">ase.calculators.vasp</span> <span class="k">import</span> <span class="n">Vasp</span>
+<span class="kn">from</span> <span class="nn">pyspglib</span> <span class="k">import</span> <span class="n">spglib</span>
+<span class="kn">from</span> <span class="nn">quippy</span> <span class="k">import</span> <span class="n">Atoms</span><span class="p">,</span> <span class="n">farray</span><span class="p">,</span> <span class="n">frange</span><span class="p">,</span> <span class="n">set_fortran_indexing</span>
+<span class="kn">from</span> <span class="nn">calc_inter_dist</span>  <span class="k">import</span> <span class="n">decorate_interface</span>
+
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="n">sys</span><span class="o">.</span><span class="n">settrace</span>
+
+<div class="viewcode-block" id="nearest_to_unique"><a class="viewcode-back" href="../../interstitials.html#imeall.calc_eseg.nearest_to_unique">[docs]</a><span class="k">def</span> <span class="nf">nearest_to_unique</span><span class="p">(</span><span class="n">at</span><span class="p">,</span> <span class="n">unique_sites</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Given an :class:`ase.Atom` object and an array of site vectors finds</span>
+<span class="sd">  whether there is a correspondence between the atom position</span>
+<span class="sd">  and one of the sites.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    at(:class:`ase.Atom`): atom object. </span>
+<span class="sd">    unique_sites(list): list of position vectors.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    bool: Whether or not atom position is identical to a site</span>
+<span class="sd">    in the unique_sites list.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">equiv_site</span> <span class="o">=</span> <span class="kc">False</span>
+  <span class="k">for</span> <span class="n">site</span> <span class="ow">in</span> <span class="n">unique_sites</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">at</span><span class="o">.</span><span class="n">position</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">site</span><span class="p">[:</span><span class="mi">3</span><span class="p">])):</span>
+      <span class="n">equiv_site</span> <span class="o">=</span> <span class="kc">True</span>
+  <span class="k">return</span> <span class="n">equiv_site</span></div>
+
+
+<div class="viewcode-block" id="gen_interface"><a class="viewcode-back" href="../../interstitials.html#imeall.calc_eseg.gen_interface">[docs]</a><span class="k">def</span> <span class="nf">gen_interface</span><span class="p">():</span>
+  <span class="sd">&quot;&quot;&quot;Selects an interfacial region of a bicrystal </span>
+<span class="sd">  based on common neighbour analysis. The width of the interfacial region</span>
+<span class="sd">  is equal to 2*(gb_max-gb_min) where gb_max is the z-coordinate of the highest</span>
+<span class="sd">  non-bcc atom, and gb_min is the lowest non-bcc atom.</span>
+
+<span class="sd">  The method creates a file `interface.xyz` in the working directory,</span>
+<span class="sd">  with the interface centered in a unit cell with 1 angstrom vacuum </span>
+<span class="sd">  on each side. </span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    :class:`ase.Atoms`: Atoms object of the interfacial slab in same </span>
+<span class="sd">    coordinates as original bicrystal.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="c1">#output.xyz must have structure_type property attached.</span>
+  <span class="n">ats</span> <span class="o">=</span> <span class="n">Atoms</span><span class="p">(</span><span class="s1">&#39;output.xyz&#39;</span><span class="p">)</span>
+  <span class="n">cell_midpoint</span> <span class="o">=</span> <span class="n">ats</span><span class="o">.</span><span class="n">get_cell</span><span class="p">()[</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">]</span><span class="o">/</span><span class="mf">2.0</span>
+  <span class="c1">#select non-BCC sites are 0 otherwise 3.</span>
+  <span class="n">struct_type</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">ats</span><span class="o">.</span><span class="n">properties</span><span class="p">[</span><span class="s1">&#39;structure_type&#39;</span><span class="p">])</span>
+  <span class="n">struct_mask</span> <span class="o">=</span> <span class="p">[</span><span class="ow">not</span> <span class="n">struct</span> <span class="k">for</span> <span class="n">struct</span> <span class="ow">in</span> <span class="n">struct_type</span><span class="p">]</span>
+  <span class="n">interface</span> <span class="o">=</span> <span class="n">ats</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">struct_mask</span><span class="p">)</span>
+  <span class="c1">#select upper interface to decorate.</span>
+  <span class="n">interface</span> <span class="o">=</span> <span class="n">interface</span><span class="o">.</span><span class="n">select</span><span class="p">([</span><span class="n">at</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">cell_midpoint</span> <span class="k">for</span> <span class="n">at</span> <span class="ow">in</span> <span class="n">interface</span><span class="p">])</span>
+  <span class="n">z_vals</span> <span class="o">=</span> <span class="p">[</span><span class="n">at</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="k">for</span> <span class="n">at</span> <span class="ow">in</span> <span class="n">interface</span><span class="p">]</span>
+  <span class="n">z_min</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">z_vals</span><span class="p">)</span>
+  <span class="n">z_max</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">z_vals</span><span class="p">)</span>
+  <span class="c1">#take slice of interface max uncoordinated with min uncoordinated.</span>
+  <span class="n">z_width</span> <span class="o">=</span> <span class="p">(</span><span class="n">z_max</span><span class="o">-</span><span class="n">z_min</span><span class="p">)</span><span class="o">/</span><span class="mf">2.0</span>
+  <span class="n">z_center</span> <span class="o">=</span> <span class="n">z_width</span> <span class="o">+</span> <span class="n">z_min</span>
+  <span class="n">gb_max</span> <span class="o">=</span> <span class="n">z_max</span> <span class="o">+</span> <span class="mf">1.0</span><span class="o">*</span><span class="n">z_width</span>
+  <span class="n">gb_min</span> <span class="o">=</span> <span class="n">z_min</span> <span class="o">-</span> <span class="mf">1.0</span><span class="o">*</span><span class="n">z_width</span>
+  <span class="n">zint</span> <span class="o">=</span> <span class="n">ats</span><span class="o">.</span><span class="n">select</span><span class="p">([(</span><span class="n">gb_min</span> <span class="o">&lt;=</span> <span class="n">at</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">gb_max</span><span class="p">)</span> <span class="k">for</span> <span class="n">at</span> <span class="ow">in</span> <span class="n">ats</span><span class="p">])</span>
+  <span class="c1">#make a copy to return</span>
+  <span class="n">int_ats</span> <span class="o">=</span> <span class="n">zint</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+  <span class="n">zint</span><span class="o">.</span><span class="n">center</span><span class="p">(</span><span class="n">vacuum</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+  <span class="n">zint</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;interface.xyz&#39;</span><span class="p">)</span>
+  <span class="c1">#Write POSCAR to use interstitial site generator:</span>
+  <span class="n">ats</span> <span class="o">=</span> <span class="n">Atoms</span><span class="p">(</span><span class="s1">&#39;interface.xyz&#39;</span><span class="p">)</span>
+  <span class="n">vasp_args</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">xc</span><span class="o">=</span><span class="s1">&#39;PBE&#39;</span><span class="p">,</span> <span class="n">amix</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">amin</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">bmix</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">amix_mag</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">bmix_mag</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span>
+               <span class="n">kpts</span><span class="o">=</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">kpar</span><span class="o">=</span><span class="mi">9</span><span class="p">,</span> <span class="n">lreal</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span><span class="p">,</span> <span class="n">ibrion</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">nsw</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">nelmdl</span><span class="o">=-</span><span class="mi">15</span><span class="p">,</span> <span class="n">ispin</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+               <span class="n">nelm</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">algo</span><span class="o">=</span><span class="s1">&#39;VeryFast&#39;</span><span class="p">,</span> <span class="n">npar</span><span class="o">=</span><span class="mi">24</span><span class="p">,</span> <span class="n">lplane</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">lwave</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">lcharg</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">istart</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+               <span class="n">voskown</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ismear</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">isym</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+  <span class="n">vasp</span> <span class="o">=</span> <span class="n">Vasp</span><span class="p">(</span><span class="o">**</span><span class="n">vasp_args</span><span class="p">)</span>
+  <span class="n">vasp</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="n">ats</span><span class="p">)</span>
+  <span class="n">write_vasp</span><span class="p">(</span><span class="s1">&#39;POSCAR&#39;</span><span class="p">,</span> <span class="n">vasp</span><span class="o">.</span><span class="n">atoms_sorted</span><span class="p">,</span> <span class="n">symbol_count</span><span class="o">=</span><span class="n">vasp</span><span class="o">.</span><span class="n">symbol_count</span><span class="p">,</span> <span class="n">vasp5</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">int_ats</span></div>
+
+<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+  <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
+  <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--gen_interface&#39;</span><span class="p">,</span><span class="s1">&#39;-g&#39;</span><span class="p">,</span><span class="n">help</span><span class="o">=</span><span class="s1">&#39;create a slab of the interfacial region.&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">)</span>
+  <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+
+  <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">gen_interface</span><span class="p">:</span>
+    <span class="n">gen_interface</span><span class="p">()</span>
+
+  <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">decorate_interface</span><span class="p">:</span>
+    <span class="n">decorate_interface</span><span class="p">()</span>
+
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Imeall</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../imeall.html">Imeall Package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../models.html">Models and Queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../views.html">Views</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../slabmaker.html">Slabmaker</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../generators.html">Generators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../interstitials.html">Interstitials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../calculators.html">Calculators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../examples.html">Examples</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Henry Lambert, Adam Fekete, James Kermode, Alessandro De Vita.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

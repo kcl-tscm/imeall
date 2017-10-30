@@ -1,5 +1,6 @@
 body            { font-family: sans-serif;}
 a               { color: #377bf8 }
+a:hover 	{ color: #245682; text-decoration: underline; }
 h1, h2          { font-family: 'Roman', serif; color: #25383C; margin: 0; }
 h1              { border-bottom: 2px solid #eee; }
 h2              { font-size: 1.2em; }
@@ -12,7 +13,8 @@ h2              { font-size: 1.2em; }
 .entries li h2  { margin-left: -1em; }
 .add-entry      { font-size: 0.9em; border-bottom: 1px solid #ccc; }
 .add-entry dl   { font-weight: bold; }
-.navigation li  { text-align: right; font-size: 1.0em; padding: 0.3em;
+.navigation ul  { text-align:center; background: #fafafa; padding: 0.3}
+.navigation li  { font-size: 1.25em; display: inline;
                   margin-bottom: 1em; background: #fafafa; list-style: none;}
 .flash          { background: #cee5F5; padding: 0.5em;
                   border: 1px solid #aacbe2; }

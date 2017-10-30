@@ -1,0 +1,227 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Interstitials &#8212; Imeall 0.0 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Calculators" href="calculators.html" />
+    <link rel="prev" title="Generators" href="generators.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="interstitials">
+<h1>Interstitials<a class="headerlink" href="#interstitials" title="Permalink to this headline">¶</a></h1>
+<p>Methods for selecting an interfacial region from a bicrystal
+and enumerating likely interstitial sites. The Voronoi analysis
+and package has been adapated to work with the ase interface from the
+<a class="reference external" href="https://github.com/pylada/pylada-defects">pylada-defect package</a>.
+Please see and cite the <a class="reference external" href="https://doi.org/10.1016/j.commatsci.2016.12.040">publication</a>
+describing this package.</p>
+<span class="target" id="module-imeall.calc_eseg"></span><dl class="function">
+<dt id="imeall.calc_eseg.gen_interface">
+<code class="descclassname">imeall.calc_eseg.</code><code class="descname">gen_interface</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/calc_eseg.html#gen_interface"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.calc_eseg.gen_interface" title="Permalink to this definition">¶</a></dt>
+<dd><p>Selects an interfacial region of a bicrystal
+based on common neighbour analysis. The width of the interfacial region
+is equal to 2*(gb_max-gb_min) where gb_max is the z-coordinate of the highest
+non-bcc atom, and gb_min is the lowest non-bcc atom.</p>
+<p>The method creates a file <cite>interface.xyz</cite> in the working directory,
+with the interface centered in a unit cell with 1 angstrom vacuum
+on each side.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Atoms object of the interfacial slab in same
+coordinates as original bicrystal.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="(in ASE v)"><code class="xref py py-class docutils literal"><span class="pre">ase.Atoms</span></code></a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.calc_eseg.nearest_to_unique">
+<code class="descclassname">imeall.calc_eseg.</code><code class="descname">nearest_to_unique</code><span class="sig-paren">(</span><em>at</em>, <em>unique_sites</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/calc_eseg.html#nearest_to_unique"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.calc_eseg.nearest_to_unique" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given an <code class="xref py py-class docutils literal"><span class="pre">ase.Atom</span></code> object and an array of site vectors finds
+whether there is a correspondence between the atom position
+and one of the sites.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>at</strong> (<code class="xref py py-class docutils literal"><span class="pre">ase.Atom</span></code>) – atom object.</li>
+<li><strong>unique_sites</strong> (<em>list</em>) – list of position vectors.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Whether or not atom position is identical to a site
+in the unique_sites list.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/2.7/library/functions.html#bool" title="(in Python v2.7)">bool</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<span class="target" id="module-imeall.calc_inter_ener"></span><dl class="function">
+<dt id="imeall.calc_inter_ener.apply_strain">
+<code class="descclassname">imeall.calc_inter_ener.</code><code class="descname">apply_strain</code><span class="sig-paren">(</span><em>ats</em>, <em>mode</em>, <em>st_num</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/calc_inter_ener.html#apply_strain"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.calc_inter_ener.apply_strain" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply a deformation mode to <a class="reference external" href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="(in ASE v)"><code class="xref py py-class docutils literal"><span class="pre">ase.Atoms</span></code></a> object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>mode</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Options are shear, stretch, hydrostatic.</li>
+<li><strong>st_num</strong> (<a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Strain applied as a percentage.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://wiki.fysik.dtu.dk/ase/ase/atoms.html#ase.Atoms" title="(in ASE v)"><code class="xref py py-class docutils literal"><span class="pre">ase.Atoms</span></code></a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.calc_inter_ener.get_interface_bounds">
+<code class="descclassname">imeall.calc_inter_ener.</code><code class="descname">get_interface_bounds</code><span class="sig-paren">(</span><em>ats</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/calc_inter_ener.html#get_interface_bounds"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.calc_inter_ener.get_interface_bounds" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pull the top half interface and return the boundaries
+of that interface in the original coordinates.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>ats</strong> (<a href="#id1"><span class="problematic" id="id2">:ase:class:`Atoms`</span></a>) – Atoms object of full bi-crystal.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">gb_min, gm_max, z_width, min_at</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="imeall.calc_inter_ener.h2_formation_energy">
+<code class="descclassname">imeall.calc_inter_ener.</code><code class="descname">h2_formation_energy</code><span class="sig-paren">(</span><em>pot</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/imeall/calc_inter_ener.html#h2_formation_energy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#imeall.calc_inter_ener.h2_formation_energy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given a potential calculate the H2 formation energy and
+equilibrium bond spacing.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>pot</strong> (<a href="#id3"><span class="problematic" id="id4">:quippy:class:`Potential`</span></a>) – </td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Hydrogen molecule formation energy.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/2.7/library/functions.html#float" title="(in Python v2.7)">float</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">Imeall</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="imeall.html">Imeall Package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models.html">Models and Queries</a></li>
+<li class="toctree-l1"><a class="reference internal" href="views.html">Views</a></li>
+<li class="toctree-l1"><a class="reference internal" href="slabmaker.html">Slabmaker</a></li>
+<li class="toctree-l1"><a class="reference internal" href="generators.html">Generators</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Interstitials</a></li>
+<li class="toctree-l1"><a class="reference internal" href="calculators.html">Calculators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="generators.html" title="previous chapter">Generators</a></li>
+      <li>Next: <a href="calculators.html" title="next chapter">Calculators</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Henry Lambert, Adam Fekete, James Kermode, Alessandro De Vita.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/interstitials.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

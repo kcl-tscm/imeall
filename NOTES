@@ -137,4 +137,38 @@ described here:
 https://atztogo.github.io/phonopy/setting-tags.html#irreducible-representation-related-tags
 
 
+Docker IMAGE:
+To see the current running docker instance:
+  docker ps
+
+
+To list available images:
+  docker images 
+
+To enter the docker container (an image instance) can use container id or NAME:
+  docker exec -it c631c5dccd91 bash
+
+
+to open ssh port to the machine 
+
+ssh -L 5000:localhost:8888 imeall
+
+
+To check error logs (useful for debugging web framework).
+  docker logs CONTAINER
+
+
+To set up an ssh port:
+  ssh -L 5000:localhost:8888 imeall
+
+To set the image running:
+docker run -d -p 5000:5000 -v /home/lambert/pymodules/imeall/imeall/grain_boundaries:/opt/imeall/grain_boundaries:ro manuscript-imeall
+
+
+docker exec -it sleepy_dubinsky bash
+
+#The docker logs print to stderr.
+docker logs c631c5dccd91 >stdout.log 2>stderr.log
+
+
 

@@ -7,25 +7,31 @@ import logging
 import argparse
 import numpy as np
 import logging
-from   pprint import pprint
-from   cStringIO           import StringIO
-from   ase.optimize.sciopt import SciPyFminCG
-from   quippy              import Atoms, Potential, frange, set_fortran_indexing
-from   ase.constraints     import UnitCellFilter, StrainFilter
-from   quippy.io           import AtomsWriter, AtomsReader, write
-from   ase.optimize        import BFGS, FIRE, LBFGS, MDMin, QuasiNewton
+
+from pprint import pprint
+from cStringIO import StringIO
+from ase.optimize.sciopt import SciPyFminCG
+from quippy import Atoms, Potential, frange, set_fortran_indexing
+from ase.constraints import UnitCellFilter, StrainFilter
+from quippy.io import AtomsWriter, AtomsReader, write
+from ase.optimize import BFGS, FIRE, LBFGS, MDMin, QuasiNewton
+from imeall import app
 
 set_fortran_indexing(False)
 
 def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200, force_tol = 0.05):
-  """
-  :method:`relax_gb` function definition to relax a grain_boundary.
-    gb_file     = gbid or subgbid.
-    traj_steps  = number of steps between print trajectories.
-    total_steps = total number of force relaxation steps.
+  """Method to relax a grain_boundary bicrystal structure.
+  
+  Args:
+    gb_file(str): gbid.
+    traj_steps(int): number of steps between print trajectories.
+    total_steps(int): total number of force relaxation steps.
+    force_tol(float): Force relaxation criterion in ev/A. 
+
+  Returns:
+    :class:`ase.Atoms` Object
   """
   def converged(grain, smax, fmax):
-
     maxstress = max(grain.get_stress().ravel())
     rmsforces = np.sum(grain.get_forces()**2, axis=1)**0.5
     maxforce  = max(rmsforces)
@@ -36,9 +42,9 @@ def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200, force_tol = 
   with open('subgb.json', 'r') as outfile:
     j_dict = json.load(outfile)
   try:
-    POT_DIR     = os.environ['POTDIR']
+    POT_DIR = os.path.join(app.root_path, 'potentials')
   except KeyError:
-    sys.exit("PLEASE SET export POTDIR='path/to/potfiles/'")
+    sys.exit("Please set POTDIR in os environment. `export POTDIR='path/to/potfiles/`")
   try: 
     param_file = j_dict['param_file']
     if param_file == 'iron_mish.xml':
@@ -66,33 +72,33 @@ def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200, force_tol = 
       print 'No paramfile found!'
       sys.exit()
   except KeyError:
-    print 'No EAM pot relax failed!'
+    print 'No EAM potential file with that name. Relax failed.'
     sys.exit()
   
   print 'Using: ', eam_pot
   pot_file    = eam_pot.split('/')[-1]
   print '{0}.xyz'.format(gb_file)
   print os.getcwd()
-  grain       = AtomsReader('{0}.xyz'.format(gb_file))[-1]
+  grain = AtomsReader('{0}.xyz'.format(gb_file))[-1]
   if param_file != 'gp33b.xml':
-    pot         = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=eam_pot)
+    pot = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=eam_pot)
   else:
-    pot         = Potential('IP GAP', param_filename=eam_pot)
+    pot = Potential('IP GAP', param_filename=eam_pot)
 
   grain.set_calculator(pot)
   grain.info['adsorbate_info'] = None
   E_gb_init   = grain.get_potential_energy()
   traj_file   = gb_file
   if 'traj' in traj_file:
-    out       = AtomsWriter('{0}'.format('{0}.xyz'.format(traj_file)))
+    out = AtomsWriter('{0}'.format('{0}.xyz'.format(traj_file)))
   else:
-    out       = AtomsWriter('{0}'.format('{0}_traj.xyz'.format(traj_file)))
+    out = AtomsWriter('{0}'.format('{0}_traj.xyz'.format(traj_file)))
   strain_mask = [0,0,1,0,0,0]
-  ucf         = UnitCellFilter(grain, strain_mask)
-  opt         = FIRE(ucf)
+  ucf = UnitCellFilter(grain, strain_mask)
+  opt = FIRE(ucf)
   cell = grain.get_cell()
-  A    = cell[0][0]*cell[1][1]
-  H    = cell[2][2]
+  A = cell[0][0]*cell[1][1]
+  H = cell[2][2]
   #Calculation dumps total energyenergy and grainboundary area data to json file.
   with open('subgb.json','r') as f:
     gb_dict = json.load(f)
@@ -130,14 +136,19 @@ def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200, force_tol = 
     for key, value in gb_dict.items():
       j_dict[key] = value
     json.dump(j_dict, outfile, indent=2)
-  os.remove(param_file)
-  os.remove(sparse_file)
+
+  if param_file == 'gp33b.xml':
+    os.remove(param_file)
+    os.remove(sparse_file)
+  else:
+   pass
+  return grain
 
 if __name__ == '__main__':
 #Command line tool for relaxing grainboundary structure
   parser = argparse.ArgumentParser()
   parser.add_argument('-inp', '--input_file', help='name of input structure file')
-  parser.add_argument('-ts',  '--traj_steps', help='Number of steps to write trajectory to file', type=int, default=120)
+  parser.add_argument('-ts',  '--traj_steps', help='Number of steps to write trajectory to file', type=int, default=1200)
   parser.add_argument('-f',  '--force_tol', help='Force tolerance for minimization', type=float, default=0.05)
   args = parser.parse_args()
   input_file = args.input_file
