@@ -11,7 +11,7 @@ from quippy import Atoms, Potential, AtomsReader
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-d', '--defect', action='store_true')
-parser.add_argument('-n', '--supercellsize', nargs='+', type=int, default = [3,3,3])
+parser.add_argument('-n', '--supercellsize', nargs='+', type=int, default = [5,5,5])
 args = parser.parse_args()
 
 #Hydrogen interatomic distance 0.73

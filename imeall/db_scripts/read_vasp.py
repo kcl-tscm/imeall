@@ -95,8 +95,6 @@ toten_regex = re.compile(r'free energy    TOTEN  =\s+([\-0-9\.]+)', re.S)
 iter_regex  = re.compile(r'Iteration\s+([0-9]+)\(\s+([0-9]+)\)')
 conv_regex  = re.compile('reached required accuracy', re.S)
 
-
-
 if __name__=='__main__':
 # Read text file
   with open('OUTCAR','r') as f:
@@ -139,5 +137,6 @@ if __name__=='__main__':
   with open('toten.dat','w' ) as f:
     for thing in gamma_surf.totens:
       print >> f, '\t'.join(map(str, thing))
+
   gamma_surf.write_json_file()
   gamma_surf.atoms.write('relaxed_dft_struct.xyz')
