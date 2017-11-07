@@ -87,7 +87,11 @@ parser.add_argument("--buff", "-b", type=float, default=6.0)
 parser.add_argument("--qm_radius", "-q", type=float, default=5.0)
 parser.add_argument("--use_socket", "-u", type=bool, default=True)
 parser.add_argument("--input", "-inp", help=".xyz input filename.")
-args=parser.parse_args()
+parser.add_argument("--nproc", "-np", help="number of processors.", type=int, default=24)
+parser.add_argument("--encut", "-en", help="wave function cutoff (eV).", type=float, default=267.9) #this should change! 
+parser.add_argument("--maxmix", "-mm", help="maximum mixing of dielectric, very useful on clusters.", type=int, default=30) #this should change! 
+parser.add_argument("--restart", "-r", help="restart calculation", action="store_true")
+args = parser.parse_args()
 
 buff = args.buff
 qm_radius = args.qm_radius
@@ -98,7 +102,11 @@ r_scale = 1.00894848312
 mm_pot = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=eam_pot)
 
 #disloc_fin, disloc_ini, bulk = sd.make_barrier_configurations(calculator=lammps, cylinder_r=cylinder_r)
-gb_cell = AtomsReader('bcc_h.xyz')[-1]
+if not args.restart:
+  gb_cell = AtomsReader('bcc_h.xyz')[-1]
+else:
+  gb_cell = AtomsReader('gb_traj_ini.xyz')[-1]
+
 defect = find_h_atom(gb_cell)
 h_pos = defect.position
 
@@ -117,12 +125,12 @@ print ("together with the buffer of %.1f" % (qm_radius + buff ) +
 magmoms=[2.6 for _ in range(np.count_nonzero(qm_buffer_mask))]
 vasp_args = dict(xc='PBE', amix=0.01, amin=0.001, bmix=0.001, amix_mag=0.01, bmix_mag=0.001,
                  kpts=[1, 1, 1], kpar=1, lreal='auto', nelmdl=-15, ispin=2, prec='Accurate',
-                 nelm=100, algo='VeryFast', lplane=False, lwave=False, lcharg=False, istart=0, 
-                 magmom=magmoms, maxmix=30, #https://www.vasp.at/vasp-workshop/slides/handsonIV.pdf #for badly behaved clusters.
+                 encut=args.encut, nelm=100, algo='VeryFast', lplane=False, lwave=False, lcharg=False, istart=0, 
+                 magmom=magmoms, maxmix=args.maxmix, #https://www.vasp.at/vasp-workshop/slides/handsonIV.pdf #for badly behaved clusters.
                  voskown=0, ismear=1, sigma=0.1, isym=2) # possibly try iwavpr=12, should be faster if it works
 
 # parallel config.
-procs = 24
+procs = args.nproc
 kpts = [1, 1, 1]
 # need to have procs % n_par == 0
 n_par = 1
@@ -132,7 +140,6 @@ else:
   for _npar in range(2, int(np.sqrt(1.*procs))):
     if procs % int(_npar) == 0:
       n_par = procs // int(_npar)
-
 
 if args.use_socket:
   vasp_client = VaspClient(client_id=0, npj=procs, ppn=1,
@@ -148,7 +155,6 @@ qmmm_pot = ForceMixingCarvingCalculator(gb_cell, qm_region_mask,
                                         qm_pot,
                                         buffer_width=buff,
                                         pbc_type=[False, False, False])
-
 
 def pass_trajectory_context(trajectory, dynamics):
   def traj_writer(dynamics):
@@ -168,6 +174,18 @@ gb_cell = AtomsReader('dft_edip_H_relaxed.xyz')[-1]
 #Remove defect
 defect = find_h_atom(gb_cell)
 gb_cell.remove_atoms([defect.index+1])
+
+x, y, z = gb_cell.positions.T
+radius1 = np.sqrt((x - h_pos[0])**2 + (y-h_pos[1])**2 + (z-h_pos[2])**2)
+qm_region_mask = (radius1 < qm_radius)
+qm_buffer_mask = (radius1 < qm_radius + buff)
+
+qmmm_pot = ForceMixingCarvingCalculator(gb_cell, qm_region_mask,
+                                        mm_pot,
+                                        qm_pot,
+                                        buffer_width=buff,
+                                        pbc_type=[False, False, False])
+
 #Get forces
 gb_cell.set_calculator(qmmm_pot)
 gb_cell.get_forces()
