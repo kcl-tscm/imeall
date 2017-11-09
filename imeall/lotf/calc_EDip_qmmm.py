@@ -88,7 +88,7 @@ parser.add_argument("--qm_radius", "-q", type=float, default=5.0)
 parser.add_argument("--use_socket", "-u", action="store_false")
 parser.add_argument("--input", "-inp", help=".xyz input filename.")
 parser.add_argument("--nproc", "-np", help="number of processors.", type=int, default=24)
-parser.add_argument("--encut", "-en", help="wave function cutoff (eV).", type=float, default=267.9) #this should change! 
+parser.add_argument("--encut", "-en", help="wave function cutoff (eV).", type=float, default=320) #this should change! 
 parser.add_argument("--maxmix", "-mm", help="maximum mixing of dielectric, very useful on clusters.", type=int, default=30) #this should change! 
 parser.add_argument("--restart", "-r", help="restart calculation", action="store_true")
 parser.add_argument("--force_tolerance", "-f", help="force tolerance for relaxation.", type=float, default=1e-3)

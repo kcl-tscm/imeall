@@ -22,7 +22,7 @@ from imeall import app
 from ForceMixerCarver import ForceMixingCarvingCalculator
 from matscipy.socketcalc import VaspClient, SocketCalculator
 
-from quippy import AtomsReader, AtomsWriter
+from quippy import AtomsReader, AtomsWriter, Atoms
 from quippy import Potential
 
 import matplotlib.pyplot as plt
@@ -74,7 +74,7 @@ class NEBAnalysis(object):
 
     ax.plot(Sfit, Efit, 'C0-')
     Ef = max(Efit) - E[0]
-    ax.plot(s, E, "oC0", label="%s: $E_f = %.4f$"%("QM/MM EAM result", Ef))
+    ax.plot(s, E, "oC0", label="%s: $E_f = %.4f$ (meV)"%("QM/MM EAM result", Ef*1000))
     ax.legend(loc="best")
     ax.grid(True, linestyle="dashed")
 
@@ -106,32 +106,40 @@ class NEBPaths(object):
     mid_point = 0.5*(np.diag(ats_ini.get_cell()))
     mid_point = [((sup_cell-1)/2.)*alat for sp in range(3)]
     h_pos = tetra_pos + mid_point
-    images = []
-    for knot in range(knots+1):
-      ats_tmp = ats_ini.copy()
-      h_tmp = h_pos + ((float(knot)/float(knots))*alat)*neb_path
-      ats_tmp.add_atoms(np.array(h_tmp), 1)
-      images.append(ats_tmp)
+
+    disloc_ini = ats_ini.copy()
+    h_tmp = h_pos
+    disloc_ini.add_atoms(np.array(h_tmp), 1)
+
+    disloc_fin = ats_ini.copy()
+    h_tmp = h_pos + neb_path*alat
+    disloc_fin.add_atoms(h_tmp,1)
 
 #Relax images at the start and end of trajectory.
-    opt = FIRE(images[0])
-    images[0].set_calculator(mm_pot)
+    disloc_ini.set_calculator(mm_pot)
+    opt = FIRE(disloc_ini)
     opt.run(fmax=fmax)
 
-    opt = FIRE(images[-1])
-    images[-1].set_calculator(mm_pot)
+    disloc_fin.set_calculator(mm_pot)
+    opt = FIRE(disloc_fin)
     opt.run(fmax=fmax)
-    return images
+
+    return disloc_ini, disloc_fin
 
 mpirun = spawn.find_executable('mpirun')
 vasp = '/home/mmm0007/vasp/vasp.5.4.1/bin/vasp_std'
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--buff", "-b", type=float, default=6.0)
+parser.add_argument("--buff", "-b", type=float, default=8.0)
 parser.add_argument("--qm_radius", "-q", type=float, default=2.0)
 parser.add_argument("--use_socket", "-u", action="store_false")
 parser.add_argument("--neb_path", "-n", nargs="+", type=float, default=[0.25, 0, -0.25])
 parser.add_argument("--fmax", "-f", type=float, help="maximum force for relaxation.", default=0.01)
+parser.add_argument("--sup_cell", "-s", type=int, help="size of fe matrix super cell")
+parser.add_argument("--knots", "-kn", type=int, help="number of images", default=11)
+parser.add_argument("--k", "-k", type=float, default=5.0, help="spring constant for NEB (default eV/A^2).")
+parser.add_argument("--input_file", "-i", default="fe_bcc_h.xyz", help="input file.")
+parser.add_argument("--auto_gen", "-a", action="store_true")
 args = parser.parse_args()
 
 buff = args.buff
@@ -142,8 +150,11 @@ eam_pot = os.path.join(POT_DIR, 'PotBH.xml')
 r_scale = 1.00894848312
 mm_pot = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=eam_pot)
 
-#disloc_fin, disloc_ini, bulk = sd.make_barrier_configurations(calculator=lammps, cylinder_r=cylinder_r)
-gb_cell = AtomsReader('fe_bcc_h.xyz')[-1]
+#gb_cell = AtomsReader('fe_bcc_h.xyz')[-1]
+if args.auto_gen:
+  gb_cell = AtomsReader(args.input_file)[-1]
+else:
+  gb_cell = AtomsReader("disloc_ini_traj.xyz")[-1]
 
 defect = find_h_atom(gb_cell)
 h_pos = defect.position
@@ -191,18 +202,27 @@ else:
 
 nebpath = NEBPaths()
 nebanalysis = NEBAnalysis()
-images = nebpath.build_h_nebpath(neb_path=np.array(args.neb_path), fmax = args.fmax)
 
+if args.auto_gen:
+  disloc_ini, disloc_fin = nebpath.build_h_nebpath(neb_path=np.array(args.neb_path), fmax = args.fmax, sup_cell=args.sup_cell)
+else:
+  disloc_ini = Atoms('disloc_ini_traj.xyz')
+  disloc_fin = Atoms('disloc_fin_traj.xyz')
+
+n_knots = args.knots
+images = [disloc_ini] + \
+         [disloc_ini.copy() for i in range(n_knots)] + \
+         [disloc_fin]
+
+qmmm_pot = ForceMixingCarvingCalculator(disloc_ini, qm_region_mask,
+                                        mm_pot, qm_pot,
+                                        buffer_width=buff,
+                                        pbc_type=[False, False, False])
 for image in images:
-  qmmm_pot = ForceMixingCarvingCalculator(image, qm_region_mask,
-                                          mm_pot, qm_pot,
-                                          buffer_width=buff,
-                                          pbc_type=[False, False, False])
   image.set_calculator(qmmm_pot)
 
-neb = NEB(images, force_only=True)
+neb = NEB(images, k=args.k, force_only=True)
 neb.interpolate(mic=False)
-
 nebanalysis.save_barriers(images, neb, prefix="ini")
 
 opt = FIRE(neb)
