@@ -1,6 +1,6 @@
 import os
 import sys
-from models import GBMaintenance 
+from models import GBMaintenance
 import argparse
 
 #"""""""""""""""""""""""""""""""""""""""#
@@ -21,5 +21,5 @@ dryrun      = args.dryrun
 remove_type = args.remove_type
 
 for thing in os.listdir('./'):
-  if os.path.isdir(thing) and thing[:len(prefix)] == prefix:
-    gbm.remove_xyz(thing, dryrun=dryrun, remove_type=remove_type)
+    if os.path.isdir(thing) and thing[:len(prefix)] == prefix:
+        gbm.remove_xyz(thing, dryrun=dryrun, remove_type=remove_type)
