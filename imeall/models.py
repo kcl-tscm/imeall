@@ -126,6 +126,33 @@ class GBQuery(object):
   def __init__(self):
     self.__repr__=="FetchStructure"
 
+  def copy_gb_dir(self, gd, target_dir='./'):
+    """
+    Given a :py:class:`SubGrainBoundary` model as a dictionary copy
+    the directory
+    """
+    gbid = gd['gbid']
+    new_dir_name = gbid.split('_')[0]
+    new_dir_name = os.path.join(target_dir, new_dir_name)
+    try:
+      os.mkdir(new_dir_name)
+    except OSError:
+      print 'Directory already exists.'
+    struct_name = gbid+'_traj.xyz'
+    dir_path = gd['path']
+  #grab the gb.json file path.
+    gb_path = gd['path']
+    gb_path = '/'.join(gb_path.split('/')[0:3])+'/gb.json'
+    print gb_path
+    gb_path = os.path.join(app.config['GRAIN_DATABASE'], gb_path)
+  #grab the struct file and the subgb.json path.
+    dir_path = os.path.join(app.config['GRAIN_DATABASE'], dir_path)
+    struct_path = os.path.join(dir_path, struct_name)
+    subgb_path = os.path.join(dir_path, 'subgb.json')
+    shutil.copy(struct_path, new_dir_name)
+    shutil.copy(subgb_path, new_dir_name)
+    shutil.copy(gb_path, new_dir_name)
+
   def copy_gb_dirtree(self, material="alphaFe", or_axis="0,0,1", pots=['PotBH.xml'], 
                       target_dir='./', gb_type='tilt'):
     """Pull all minimum energy structures, using :py:func:`pull_minen_structs`,
@@ -141,32 +168,12 @@ class GBQuery(object):
 
     Todo:
       * Add kwargs to pull_minen_structs to provide additional selection criteria.
-      
     """
 
     grain_dicts = self.pull_minen_structs(material=material, or_axis=or_axis, pots=pots, gb_type=gb_type)
     for gd in grain_dicts:
-      gbid = gd['gbid']
-      new_dir_name = gbid.split('_')[0]
-      new_dir_name = os.path.join(target_dir, new_dir_name)
-      try:
-        os.mkdir(new_dir_name)
-      except OSError:
-        print 'Directory already exists.'
-      struct_name = gbid+'_traj.xyz'
-      dir_path = gd['path']
-    #grab the gb.json file path.
-      gb_path = gd['path']
-      gb_path = '/'.join(gb_path.split('/')[0:3])+'/gb.json'
-      print gb_path
-      gb_path = os.path.join(app.config['GRAIN_DATABASE'], gb_path)
-    #grab the struct file and the subgb.json path.
-      dir_path = os.path.join(app.config['GRAIN_DATABASE'], dir_path)
-      struct_path = os.path.join(dir_path, struct_name)
-      subgb_path = os.path.join(dir_path, 'subgb.json')
-      shutil.copy(struct_path, new_dir_name)
-      shutil.copy(subgb_path, new_dir_name)
-      shutil.copy(gb_path, new_dir_name)
+      self.copy_gb_dir(gd, target_dir=target_dir)
+
 
   def pull_minen_structs(self, material="alphaFe", or_axis="1,1,1", pots=['PotBH.xml'], gb_type='tilt'):
     """Grab the minimum energy structure json dictionaries
@@ -219,7 +226,7 @@ class GBQuery(object):
             dict_list.append(subgbs[0][1])
         except IndexError:
           print 'No subgbs for: ', gb.gbid, potential
-      print '{:.3f}'.format(180.0/np.pi*gb.angle), ' '.join(['{:.3f}'.format(x) for x in pot_dict.values()])
+        #print '{:.3f}'.format(180.0/np.pi*gb.angle), ' '.join(['{:.3f}'.format(x) for x in pot_dict.values()])
     database.close()
     return dict_list
 

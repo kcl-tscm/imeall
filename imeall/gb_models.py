@@ -32,7 +32,7 @@ class GrainBoundary(BaseModel):
 
   Attributes:
     orientation_axis(str): orientation axis defining the grain.
-    angle(str): misorientation angle for defining the grain.
+    angle(float): misorientation angle defining the grain (radians).
     boundary_plane(str): boundary plane normal defining the grain.  
     path(str): Full directory string relative to the grain boundary database root.
     gb_type(str): Grain boundary type (tilt, twist, general).

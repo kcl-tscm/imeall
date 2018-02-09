@@ -148,7 +148,7 @@ def calc_elast_dipole_eam(input_file, force_tol, relax_cell):
   ats.set_calculator(pot)
   return elastic.compute_vacancy_dipole(defect, ats.copy(), pot)
 
-def calc_elast_dipole_dft(input_file):
+def calc_elast_dipole_dft(input_file, vasp_calc=True):
   """Reads OUTCAR file in the same directory with one shot forces 
   induced by removal of defect. Reads defect position 
   from .xyz file (which contains the defect) defined by `input_file` 
@@ -160,15 +160,21 @@ def calc_elast_dipole_dft(input_file):
   Returns:
     Elastic Dipole Tensor 3x3 numpy array.
   """
-  import ase.io.vasp as vs
+
   elastic = ElasticDipole()
   ats_def = Atoms(input_file)
   defect = find_h_atom(ats_def)
-  ats_pos = vs.read_vasp()
-  ats = vs.read_vasp_out()
-  ats = Atoms(ats)
+  if vasp_calc:
+    import ase.io.vasp as vasp
+    ats_pos = vasp.read_vasp()
+    ats = vasp.read_vasp_out()
+    ats = Atoms(ats)
+  else:
+    pass
+    
   print 'Defect index', defect.index, 'Position', defect.position, 'Type: ', defect.number
-  ats.get_forces()
+  f = ats.get_forces()
+  ats.add_property('force', f.T)
   ats.write('force.xyz')
   return elastic.compute_vacancy_dipole(defect, ats_pos.copy(), forces=ats.get_forces())
 
