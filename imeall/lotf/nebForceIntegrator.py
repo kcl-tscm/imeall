@@ -202,7 +202,7 @@ class NEB:
             energies = self.energies[1:-1]
 
         if self.force_only == True and self.climb == False:
-                imax = self.nimages // 2  # just to avoid non-assigned error
+            imax = self.nimages // 2  # just to avoid non-assigned error
         else:
             imax = 1 + np.argsort(energies)[-1]
 

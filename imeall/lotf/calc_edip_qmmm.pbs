@@ -6,12 +6,12 @@
 #$ -N vasptest
 #$ -pe mpi 48
 #$ -P Gold
-#$ -A 
+#$ -A
 #$ -cwd
 
 module purge
-module load gcc-libs/4.9.2               
-module load compilers/intel/2015/update2 
+module load gcc-libs/4.9.2
+module load compilers/intel/2015/update2
 module load mpi/intel/2015/update3/intel
 module load vasp/5.4.1-24jun15-p08072015/intel-2015-update2
 module load libxc/3.0.0/intel-2015-update2
@@ -21,5 +21,4 @@ eval "$(pyenv init -)"
 eval "$(pyenv virtualenv-init -)"
 pyenv activate t2
 
-python /home/mmm0007/pymodules/imeall/imeall/lotf/calc_NEB_qmmm.py -b 6.0 -q 2.0 
-
+python /home/mmm0007/pymodules/imeall/imeall/lotf/calc_NEB_qmmm.py -b 6.0 -q 2.0

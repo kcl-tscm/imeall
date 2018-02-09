@@ -32,10 +32,10 @@ print 'jobdirs = %s' % jobdirs
 jobdirs = filter(os.path.isdir, jobdirs)
 jdirs = []
 for job in jobdirs:
-  for rc in np.arange(1.6, 1.81, 0.05):
-    for i in np.arange(0.0, 0.51, 0.1):
-      for j in np.arange(0.0, 0.51, 0.1):
-        jdirs.append((job, rc, i, j))
+    for rc in np.arange(1.6, 1.81, 0.05):
+        for i in np.arange(0.0, 0.51, 0.1):
+            for j in np.arange(0.0, 0.51, 0.1):
+                jdirs.append((job, rc, i, j))
 
 jobdirs = filter(lambda x: os.path.isdir(x[0]), jdirs)
 jobdirs = jobdirs[:128]
@@ -68,18 +68,18 @@ logs = []
 # Lets make each job a tuple struct like
 # (jobdir, bxv, v, rc).
 for job, (block, corner, shape) in zip(jobdirs, block_corner_iter(blocks, npj)):
-  print job, (block, corner, shape)
-  os.chdir(os.path.join(scratch, job[0]))
-  log = open('gbrelax.out', 'a')
-  locargs = '--block %s --corner %s --shape %s' % (block, corner, shape)
+    print job, (block, corner, shape)
+    os.chdir(os.path.join(scratch, job[0]))
+    log = open('gbrelax.out', 'a')
+    locargs = '--block %s --corner %s --shape %s' % (block, corner, shape)
 # runjob_args = ('python %s -n %d -p %d %s' % (locargs, npj*ppn, ppn, envargs)).split()
-  pyargs  = 'python /home/lambert/pymodules/imeall/imeall/run_dyn.py -rc {rc} -i_v {i_v} -i_bxv {i_bxv} '.format(rc=job[1], i_v=job[2], i_bxv=job[3])
-  runjob_args = ('runjob %s -n %d -p %d %s : %s'%(locargs, 1, 1, envargs, pyargs)).split()
-  print ' '.join(runjob_args)
-  jobs.append(subprocess.Popen(runjob_args, stdout=log))
-  logs.append(log)
-    
+    pyargs  = 'python /home/lambert/pymodules/imeall/imeall/run_dyn.py -rc {rc} -i_v {i_v} -i_bxv {i_bxv} '.format(rc=job[1], i_v=job[2], i_bxv=job[3])
+    runjob_args = ('runjob %s -n %d -p %d %s : %s'%(locargs, 1, 1, envargs, pyargs)).split()
+    print ' '.join(runjob_args)
+    jobs.append(subprocess.Popen(runjob_args, stdout=log))
+    logs.append(log)
+
 # wait for all background jobs to finish, then flush their logs
 for (job, log) in zip(jobs, logs):
-  job.wait()
-  log.flush()
+    job.wait()
+    log.flush()
