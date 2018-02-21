@@ -35,14 +35,14 @@ mid_point = [((sup_cell[0]-1)/2.)*alat for sp in sup_cell]
 
 gb = Atoms(gb)
 if args.tetra:
-  print 'Tetrahedral Defect'
-  tetra_pos += mid_point
-  gb.add_atoms(tetra_pos, 1)
-  gb.write('bcc_h.xyz')
+    print 'Tetrahedral Defect'
+    tetra_pos += mid_point
+    gb.add_atoms(tetra_pos, 1)
+    gb.write('bcc_h.xyz')
 elif args.octa:
-  print 'Octahedral Defect'
-  octa_pos += mid_point
-  gb.add_atoms(octa_pos, 1)
-  gb.write('bcc_h.xyz')
+    print 'Octahedral Defect'
+    octa_pos += mid_point
+    gb.add_atoms(octa_pos, 1)
+    gb.write('bcc_h.xyz')
 else:
-  gb.write('bcc.xyz')
+    gb.write('bcc.xyz')

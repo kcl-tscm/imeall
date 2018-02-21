@@ -56,4 +56,3 @@ print 'E_gb', E_gb
 print 'E_gbh', E_gbh
 print 'H2 Formation Energy', E_h2
 print 'Dissolution Energy', E_dis
-

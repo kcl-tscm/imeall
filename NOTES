@@ -5,7 +5,8 @@ Overall:
   Strictly speaking each view of a grain boundary should have a neural net
   attached to it which is capable producing its dynamics, it's potential energy
   surface etc.
-  Visualization Stuff:
+
+Visualization Stuff:
   Thinking more now about how the library is going to look:
 
 I'd really like some kind of X11 server embedding in the page

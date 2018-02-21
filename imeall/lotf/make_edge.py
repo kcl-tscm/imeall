@@ -8,7 +8,7 @@ from quippy import Atoms, Potential, calc_nye_tensor
 from qlab import set_fortran_indexing
 
 from imeall.run_dyn import GBRelax
-from imeall.lotf.screw import Dislocation 
+from imeall.lotf.screw import Dislocation
 
 import argparse
 
@@ -31,7 +31,7 @@ print x,y,z
 
 disloc  = Dislocation(x=x, y=y, z=z, name=name)
 disloc.gen_edge_dislocation()
-POT_DIR = '/Users/lambert/pymodules/imeall/imeall/potentials' 
+POT_DIR = '/Users/lambert/pymodules/imeall/imeall/potentials'
 eam_pot = os.path.join(POT_DIR,'Fe_Mendelev.xml')
 
 print 'Open Atoms'
@@ -46,13 +46,13 @@ at.info['OrigHeight'] = at.positions[:,1].max()-at.positions[:,1].min()
 r_scale = 1.00894848312
 rem = []
 for atom in at:
-  if atom.position[0] <= 0.00 and atom.position[1] <= 100.0:
-    rem.append(atom.index+1)
+    if atom.position[0] <= 0.00 and atom.position[1] <= 100.0:
+        rem.append(atom.index+1)
 print 'Removing ', len(rem), ' atoms.'
 if len(rem) > 0:
-  at.remove_atoms(rem)
+    at.remove_atoms(rem)
 else:
-  print 'No atoms displaced from unitcell'
+    print 'No atoms displaced from unitcell'
 pot     = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=eam_pot)
 at.set_calculator(pot)
 at.write('unrelaxed.xyz')
@@ -73,4 +73,3 @@ at.add_property('screw', alpha[2,2,:])
 at.add_property('edgex', alpha[2,0,:])
 at.add_property('edgey', alpha[2,1,:])
 at.write('e{0}.xyz'.format(name))
-

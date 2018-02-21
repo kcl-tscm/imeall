@@ -22,4 +22,3 @@ write_vasp('POSCAR', vasp.atoms_sorted, symbol_count=vasp.symbol_count, vasp5=Tr
 vasp.write_incar(ats)
 vasp.write_potcar()
 vasp.write_kpoints()
-

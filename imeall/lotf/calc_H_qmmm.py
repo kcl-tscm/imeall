@@ -2,7 +2,7 @@ from __future__ import print_function
 import os
 import sys
 
-import json 
+import json
 import numpy as np
 
 from ase.optimize import FIRE
@@ -41,7 +41,7 @@ mm_pot = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), 
 
 
 with open('subgb.json','r') as f:
-  subgb_dict = json.load(f)
+    subgb_dict = json.load(f)
 #[11.79728921, 4.61819134, 34.51540462]
 h_pos = subgb_dict['site']
 print (h_pos)
@@ -63,7 +63,7 @@ magmoms=[2.6 for _ in range(np.count_nonzero(qm_buffer_mask))]
 vasp_args = dict(xc='PBE', amix=0.01, amin=0.001, bmix=0.001, amix_mag=0.01, bmix_mag=0.001,
                  kpts=[1, 1, 1], kpar=1, lreal='auto', nelmdl=-15, ispin=2, prec='High', encut=320,
                  nelm=150, algo='Fast', lplane=False, lwave=False, lcharg=False, istart=0, addgrid=True,
-                 magmom=magmoms, maxmix=30, ediff=1.e-4, 
+                 magmom=magmoms, maxmix=30, ediff=1.e-4,
                  voskown=0, ismear=1, sigma=0.1, isym=0) # possibly try iwavpr=12
 #https://www.vasp.at/vasp-workshop/slides/handsonIV.pdf #for badly behaved clusters.
 
@@ -73,23 +73,23 @@ kpts = [1, 1, 1]
 # need to have procs % n_par == 0
 n_par = 1
 if procs <= 8:
-  n_par = procs
+    n_par = procs
 else:
-  for _npar in range(2, int(np.sqrt(1.*procs))):
-    if procs % int(_npar) == 0:
-      n_par = procs // int(_npar)
+    for _npar in range(2, int(np.sqrt(1.*procs))):
+        if procs % int(_npar) == 0:
+            n_par = procs // int(_npar)
 
 
 if args.use_socket:
-  vasp_client = VaspClient(client_id=0, npj=procs, ppn=1,
-                         exe=vasp, mpirun=mpirun, parmode='mpi',
-                         ibrion=13, nsw=1000000,
-                         npar=n_par, **vasp_args)
+    vasp_client = VaspClient(client_id=0, npj=procs, ppn=1,
+                           exe=vasp, mpirun=mpirun, parmode='mpi',
+                           ibrion=13, nsw=1000000,
+                           npar=n_par, **vasp_args)
 
-  qm_pot = SocketCalculator(vasp_client)
+    qm_pot = SocketCalculator(vasp_client)
 
 else:
-  pass
+    pass
 
 #For rescaling bulk and dft bulk moduli examples from Ni.
 #dft_alat = 3.19
@@ -105,15 +105,15 @@ else:
 
 qmmm_pot = ForceMixingCarvingCalculator(gb_cell, qm_region_mask,
                                         mm_pot, #mm_pot_mod, #for testing
-                                        qm_pot, 
+                                        qm_pot,
                                         buffer_width=buff,
                                         pbc_type=[False, False, False])
 
 #opt = PreconFIRE(gb_cell, precon=Exp())
 def pass_trajectory_context(trajectory, dynamics):
-  def traj_writer(dynamics):
-      trajectory.write(dynamics.atoms)
-  return traj_writer
+    def traj_writer(dynamics):
+        trajectory.write(dynamics.atoms)
+    return traj_writer
 
 trajectory = AtomsWriter('gb_traj.xyz')
 
@@ -123,4 +123,3 @@ gb_cell.set_calculator(qmmm_pot)
 opt.run(fmax=1.0e-3)
 gb_cell.write('dft_relaxed.xyz')
 sock_calc.shutdown()
-

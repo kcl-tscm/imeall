@@ -8,4 +8,4 @@ files_to_remove = ['bcc_h.xyz.idx',
 
 
 for f in files_to_remove:
-	os.remove(f)
+    os.remove(f)
