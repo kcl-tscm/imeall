@@ -13,13 +13,12 @@ pattern = args.pattern
 jobdirs = ['./']
 
 for job in jobdirs:
-  os.chdir(job)
-  struct_file = glob.glob(pattern+'.xyz')
-  print job
-  var = raw_input('Retake photo?')
-  if var =='y':
-    print 'retaking photo'
-    slabmaker.take_pic(pattern, translate=True)
-  elif var =='n':
-    pass
-
+    os.chdir(job)
+    struct_file = glob.glob(pattern+'.xyz')
+    print job
+    var = raw_input('Retake photo?')
+    if var =='y':
+        print 'retaking photo'
+        slabmaker.take_pic(pattern, translate=True)
+    elif var =='n':
+        pass

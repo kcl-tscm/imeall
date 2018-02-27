@@ -479,19 +479,19 @@ print tb_pot
 
 # compute energies and forces for a range of lattice constants
 if True:
-  a = np.linspace(2.5, 3.0, 5)
-  e = []
-  f = []
-  configs = []
-  for aa in a:
-      atoms = BodyCenteredCubic(symbol='Fe',
-                                latticeconstant=aa)
-      atoms *= [n, n, n]
-      atoms.set_calculator(tb_pot)    
-      e.append(atoms.get_potential_energy())
-      f.append(atoms.get_forces()[0, 0])
-      configs.append(atoms.copy())
+    a = np.linspace(2.5, 3.0, 5)
+    e = []
+    f = []
+    configs = []
+    for aa in a:
+        atoms = BodyCenteredCubic(symbol='Fe',
+                                  latticeconstant=aa)
+        atoms *= [n, n, n]
+        atoms.set_calculator(tb_pot)    
+        e.append(atoms.get_potential_energy())
+        f.append(atoms.get_forces()[0, 0])
+        configs.append(atoms.copy())
 # print lattice constants, energies and forces
-  print 'a = ', list(a)
-  print 'e = ', list(e)
-  print 'f = ', list(f)
+    print 'a = ', list(a)
+    print 'e = ', list(e)
+    print 'f = ', list(f)

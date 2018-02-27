@@ -51,6 +51,7 @@
 <span class="kn">from</span> <span class="nn">fracture.hydrify_cracktips</span> <span class="k">import</span> <span class="n">Hydrify</span>
 
 <span class="kn">from</span> <span class="nn">quippy</span> <span class="k">import</span> <span class="n">Atoms</span><span class="p">,</span> <span class="n">Potential</span><span class="p">,</span> <span class="n">AtomsReader</span>
+<span class="kn">from</span> <span class="nn">imeall</span> <span class="k">import</span> <span class="n">app</span>
 
 
 <div class="viewcode-block" id="calc_bulk_dissolution"><a class="viewcode-back" href="../../calculators.html#imeall.calc_bulk_dissolution_energy.calc_bulk_dissolution">[docs]</a><span class="k">def</span> <span class="nf">calc_bulk_dissolution</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
@@ -59,7 +60,7 @@
 <span class="sd">  Args:</span>
 <span class="sd">    args(list): determine applied strain to unit cell.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="n">POT_DIR</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;POTDIR&#39;</span><span class="p">]</span>
+  <span class="n">POT_DIR</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">root_path</span><span class="p">,</span> <span class="s1">&#39;potentials&#39;</span><span class="p">)</span>
   <span class="n">eam_pot</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">POT_DIR</span><span class="p">,</span> <span class="s1">&#39;PotBH.xml&#39;</span><span class="p">)</span>
   <span class="n">r_scale</span> <span class="o">=</span> <span class="mf">1.00894848312</span>
   <span class="n">pot</span> <span class="o">=</span> <span class="n">Potential</span><span class="p">(</span><span class="s1">&#39;IP EAM_ErcolAd do_rescale_r=T r_scale=</span><span class="si">{0}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">r_scale</span><span class="p">),</span> <span class="n">param_filename</span><span class="o">=</span><span class="n">eam_pot</span><span class="p">)</span>

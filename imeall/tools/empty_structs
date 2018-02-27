@@ -13,7 +13,6 @@ jobdirs = filter(os.path.isdir, glob.glob("{0}*".format(args.prefix)))
 print jobdirs
 
 for job in jobdirs:
-  structs_dir = os.path.join(job,"structs")
-  print os.listdir(structs_dir)
-  shutil.rmtree(structs_dir)
-
+    structs_dir = os.path.join(job,"structs")
+    print os.listdir(structs_dir)
+    shutil.rmtree(structs_dir)

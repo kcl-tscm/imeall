@@ -4,7 +4,7 @@ import json
 from imeall.models import PotentialParameters
 
 with open('subgb.json','r') as f:
-  gb_dict = json.load(f)
+    gb_dict = json.load(f)
 
 pot_param     = PotentialParameters()
 ener_per_atom = pot_param.gs_ener_per_atom()
@@ -12,4 +12,4 @@ gb_ener = 16.02*((gb_dict['E_gb']-(ener_per_atom[gb_dict['param_file']]*float(gb
 print 'GB Info'
 print round(gb_ener,3), 'J/m^{2}', round(gb_dict['A'],3), 'A', gb_dict['n_at'], 'atoms'
 for k,v in gb_dict.items():
-  print k, v
+    print k, v

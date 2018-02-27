@@ -20,179 +20,179 @@ import os
 set_fortran_indexing(False)
 
 def write_interstitials(ats, ttol=0.5):
-  vasp_args=dict(xc='PBE', amix=0.01, amin=0.001, bmix=0.001, amix_mag=0.01, bmix_mag=0.001,
-                 kpts=[3, 3, 3], kpar=6, lreal='auto', ibrion=1, nsw=50, nelmdl=-15, ispin=2, 
-                 prec='High', nelm=100, algo='VeryFast', npar=24, lplane=False, 
-                 lwave=False, lcharg=False, istart=0,
-                 voskown=0, ismear=1, sigma=0.1, isym=2) 
-  vasp = Vasp(**vasp_args)
-  vasp.initialize(ats)
-  write_vasp('POSCAR', vasp.atoms_sorted, symbol_count=vasp.symbol_count, vasp5=True)
+    vasp_args=dict(xc='PBE', amix=0.01, amin=0.001, bmix=0.001, amix_mag=0.01, bmix_mag=0.001,
+                   kpts=[3, 3, 3], kpar=6, lreal='auto', ibrion=1, nsw=50, nelmdl=-15, ispin=2,
+                   prec='High', nelm=100, algo='VeryFast', npar=24, lplane=False,
+                   lwave=False, lcharg=False, istart=0,
+                   voskown=0, ismear=1, sigma=0.1, isym=2)
+    vasp = Vasp(**vasp_args)
+    vasp.initialize(ats)
+    write_vasp('POSCAR', vasp.atoms_sorted, symbol_count=vasp.symbol_count, vasp5=True)
 
 class Voronoi(object):
-  """ :class:`Voronoi` is a wrapper around tess and pylada_defects methods 
-  for computing and working with Voronoi tesselations.
-  """
-  def __init__(self, limits = ((-50,-50,-50), (50,50,50)), periodic=(False,False,False)):
-    self.limits = limits
-    self.periodic = periodic
+    """ :class:`Voronoi` is a wrapper around tess and pylada_defects methods
+    for computing and working with Voronoi tesselations.
+    """
+    def __init__(self, limits = ((-50,-50,-50), (50,50,50)), periodic=(False,False,False)):
+        self.limits = limits
+        self.periodic = periodic
 
-  def compute_voronoi(self, points):
-      """ Function to return the tess container having information of Voronoi cells 
-      for given points in 3D space. 
+    def compute_voronoi(self, points):
+        """ Function to return the tess container having information of Voronoi cells
+        for given points in 3D space.
 
-      Args:
-        points: numpy array of points coordinates.                        
+        Args:
+          points: numpy array of points coordinates.
 
-      Returns:
-        :tess:class:`Container`: tess container of Voronoi cells.
-      """
-  
-      P = np.array(points)
-      cntr = tess.Container(P, self.limits, self.periodic)
-  
-      return cntr
-  
-  ##########################################################
-  def calculate_midpoint(self, p1, p2):
-      """Calculate the midpoint given two points.
-      Args:    
-          p1, p2 = numpy array of point coordinates
+        Returns:
+          :tess:class:`Container`: tess container of Voronoi cells.
+        """
 
-      Returns: 
-        midpoint numpy array of midpoint coordinates
-      """
-  
-      return ((p1[0]+p2[0])/2.0, (p1[1]+p2[1])/2.0, (p1[2]+p2[2])/2.0)
-  
-  ##########################################################
-  def calculate_polygon_centroid(self, poly_pts):
-      """ Function to calculate the centroid of non-self-intersecting polygon.
+        P = np.array(points)
+        cntr = tess.Container(P, self.limits, self.periodic)
 
-      Args:
-          pts: numpy array of coordinates of vertices of polygon
+        return cntr
 
-      Returns:
-          centroid numpy array of centroid coordinates
-      """
-  
-      P = np.array(poly_pts)
-      C = np.mean(P, axis=0)
-  
-      return C
-  
-  ##########################################################
-  def neighbor_list(self, list_):
-      """Generator to form unique neighboring pairs along the polygon perimeter.
+    ##########################################################
+    def calculate_midpoint(self, p1, p2):
+        """Calculate the midpoint given two points.
+        Args:
+            p1, p2 = numpy array of point coordinates
 
-      Args:
-        list: list of indices of Voronoi vertices forming the perimeter.
+        Returns:
+          midpoint numpy array of midpoint coordinates
+        """
 
-      Returns:
-        list: tuple of neighboring pairs as tuples
-      """
-  
-      i = 0
-      while i + 1 < len(list_):
-          yield (list_[i], list_[i+1])
-          i += 1
-      else:
-          yield (list_[i], list_[0])
-  
-  ##########################################################
-  def get_vertices(self, site_num, cntr):
-      """Function that returns vertices of the Voronoi associated with given site.
+        return ((p1[0]+p2[0])/2.0, (p1[1]+p2[1])/2.0, (p1[2]+p2[2])/2.0)
 
-      Args:
-        site_num(int): number for the lattice site of interest
-        cntr(:tess:class:`Container`): Container having information of Voronoi cells
-  
-      Returns:
-        numpy array of Voronoi vertices coordinates
-      """
-  
-      list_voronoi_vertices = cntr[site_num].vertices()
-      V = list_voronoi_vertices
-  
-      # convert the list to numpy array
-      V = np.asarray(V)
-  
-      return V
-  
-  ##########################################################
-  def get_edgecenter(self, site_num, cntr):
-      """ Function that returns vertices unique edge centers of 
-      the Voronoi associated with specific lattice site.
-  
-      Args:
-        site_num(int) for the lattice site of interest
-        cntr(:tess:class:`Container`) having information of Voronoi cells
-  
-      Returns:
-        numpy array of Voronoi edge center coordinates
-      """
-  
-      list_face_vertices_indices = cntr[site_num].face_vertices()
-  
-      V_vertices = self.get_vertices(site_num, cntr)
-  
-      all_midpoint = []
-  
-      for face in list_face_vertices_indices:
-          for(x,y) in self.neighbor_list(face):
-              midpoint = self.calculate_midpoint(V_vertices[x], V_vertices[y])
-              all_midpoint.append(midpoint)
-  
-      #using set so to choose only unique edge centers
-      S = set(all_midpoint)
-  
-      #converting set to list
-      Ec = list(S)
-  
-      #converting list to numpy array
-      Ec = np.asarray(Ec)
-  
-      return Ec
-  
-  ##########################################################
-  def get_facecentroid(self, site_num, cntr):
-      """Function the returns vertices of face centers of the Voronoi associated with 
-      specific lattice site.
-  
-      Args:
-        site_num(int): number for the lattice site of interest.
-        cntr(:tess:class:`Container`) having information of Voronoi cells.
-  
-      Returns:
-        numpy array of Voronoi face center coordinates
-      """
-  
-      list_face_vertices_indices = cntr[site_num].face_vertices()
-  
-      V_vertices = self.get_vertices(site_num, cntr)
-  
-      list_face_centroid = []
-  
-      for face in list_face_vertices_indices:
-          l = []
-          for j in face:
-              vv  = V_vertices[j]
-              l.append(vv)
-          l = np.asarray(l)
-          pc = self.calculate_polygon_centroid(l)
-          list_face_centroid.append(pc.tolist())
-  
-      Fc = list_face_centroid
-  
-      # converting list to numpy array                                                               
-      Fc = np.asarray(Fc)
-  
-      return Fc
+    ##########################################################
+    def calculate_polygon_centroid(self, poly_pts):
+        """ Function to calculate the centroid of non-self-intersecting polygon.
+
+        Args:
+            pts: numpy array of coordinates of vertices of polygon
+
+        Returns:
+            centroid numpy array of centroid coordinates
+        """
+
+        P = np.array(poly_pts)
+        C = np.mean(P, axis=0)
+
+        return C
+
+    ##########################################################
+    def neighbor_list(self, list_):
+        """Generator to form unique neighboring pairs along the polygon perimeter.
+
+        Args:
+          list: list of indices of Voronoi vertices forming the perimeter.
+
+        Returns:
+          list: tuple of neighboring pairs as tuples
+        """
+
+        i = 0
+        while i + 1 < len(list_):
+            yield (list_[i], list_[i+1])
+            i += 1
+        else:
+            yield (list_[i], list_[0])
+
+    ##########################################################
+    def get_vertices(self, site_num, cntr):
+        """Function that returns vertices of the Voronoi associated with given site.
+
+        Args:
+          site_num(int): number for the lattice site of interest
+          cntr(:tess:class:`Container`): Container having information of Voronoi cells
+
+        Returns:
+          numpy array of Voronoi vertices coordinates
+        """
+
+        list_voronoi_vertices = cntr[site_num].vertices()
+        V = list_voronoi_vertices
+
+        # convert the list to numpy array
+        V = np.asarray(V)
+
+        return V
+
+    ##########################################################
+    def get_edgecenter(self, site_num, cntr):
+        """ Function that returns vertices unique edge centers of
+        the Voronoi associated with specific lattice site.
+
+        Args:
+          site_num(int) for the lattice site of interest
+          cntr(:tess:class:`Container`) having information of Voronoi cells
+
+        Returns:
+          numpy array of Voronoi edge center coordinates
+        """
+
+        list_face_vertices_indices = cntr[site_num].face_vertices()
+
+        V_vertices = self.get_vertices(site_num, cntr)
+
+        all_midpoint = []
+
+        for face in list_face_vertices_indices:
+            for(x,y) in self.neighbor_list(face):
+                midpoint = self.calculate_midpoint(V_vertices[x], V_vertices[y])
+                all_midpoint.append(midpoint)
+
+        #using set so to choose only unique edge centers
+        S = set(all_midpoint)
+
+        #converting set to list
+        Ec = list(S)
+
+        #converting list to numpy array
+        Ec = np.asarray(Ec)
+
+        return Ec
+
+    ##########################################################
+    def get_facecentroid(self, site_num, cntr):
+        """Function the returns vertices of face centers of the Voronoi associated with
+        specific lattice site.
+
+        Args:
+          site_num(int): number for the lattice site of interest.
+          cntr(:tess:class:`Container`) having information of Voronoi cells.
+
+        Returns:
+          numpy array of Voronoi face center coordinates
+        """
+
+        list_face_vertices_indices = cntr[site_num].face_vertices()
+
+        V_vertices = self.get_vertices(site_num, cntr)
+
+        list_face_centroid = []
+
+        for face in list_face_vertices_indices:
+            l = []
+            for j in face:
+                vv  = V_vertices[j]
+                l.append(vv)
+            l = np.asarray(l)
+            pc = self.calculate_polygon_centroid(l)
+            list_face_centroid.append(pc.tolist())
+
+        Fc = list_face_centroid
+
+        # converting list to numpy array
+        Fc = np.asarray(Fc)
+
+        return Fc
 
 
 def get_unique_wyckoff(ats_in):
     """ Function to find unique wyckoff sites in the primitive cell
-    
+
     Args:
       ats_in(:ase:class:`Atoms`): Atoms object of interface.
 
@@ -206,11 +206,11 @@ def get_unique_wyckoff(ats_in):
 
     # compute inverce cell of the primitive cell
     inverse_cell = np.linalg.inv(ats.cell)
-    
+
     dummy_list = []
     wyckoff_list = []
     #args = np.argsort(ats.positions[:, 0])
-    #ats = ats[args] 
+    #ats = ats[args]
     for i, at in enumerate(ats):
         print i,'/',len(ats)
         a = at.position
@@ -237,10 +237,10 @@ def get_unique_wyckoff(ats_in):
         dummy_list = a.tolist()
         dummy_list.append(ats[i].symbol)
         wyckoff_list.append(dummy_list)
-    
+
     ### getting unique array of positions
     unique_list = [list(t) for t in set(map(tuple, wyckoff_list))]
-    
+
     return unique_list
 
 def get_pos_in_prim_cell(ats, a):
@@ -253,7 +253,7 @@ def get_pos_in_prim_cell(ats, a):
     Returns
         a2 = cartesian coordinates, such that fractional coordination = [0,1)
     """
-    
+
     a1 = np.array(a)
     inv_cell = np.linalg.inv(ats.cell)
 
@@ -267,7 +267,7 @@ def get_pos_in_prim_cell(ats, a):
 
 def get_ints_in_prim_cell(ats, positions, interstitial_type=['B','C','N']):
     """ Function to to map positions into the primitive cell.
-    
+
     Args:
       prim(:ase:class:`Atoms`) = pylada primitive cell
       positions(list) = list of sites (as list ['element',[x,y,z]])
@@ -277,12 +277,12 @@ def get_ints_in_prim_cell(ats, positions, interstitial_type=['B','C','N']):
     Returns
         int_pos_list1 = unique list of sites within primitive cell
     """
-   #generate copys of Atoms object and positions list. 
+   #generate copys of Atoms object and positions list.
     prim1 = ats.copy()
     ints1 = deepcopy(positions)
     inverse_cell1 = np.linalg.inv(prim1.cell)
     int_pos_list1 = []
-    
+
     for i in range(len(ints1)):
         a1 = np.array(ints1[i][1])
         frac_a1 = np.dot(inverse_cell1, a1)
@@ -291,7 +291,7 @@ def get_ints_in_prim_cell(ats, positions, interstitial_type=['B','C','N']):
             if frac_a1[m1] >= 0.999: frac_a1[m1] = frac_a1[m1] - 1.
         a2 = np.dot(prim1.cell, frac_a1)
         int_pos_list1.append([ints1[i][0], a2])
-    
+
     return int_pos_list1
 
 def get_interstitials(ats, ttol=0.5):
@@ -319,7 +319,7 @@ def get_interstitials(ats, ttol=0.5):
 
     ### Step 3: get unique interstitials after symmetry analysis
     ints3 = get_unique_ints(ats, ints_prim, ttol=ttol)
-        
+
     return ints3
 
 def get_all_interstitials(ats, unique_atoms):
@@ -348,8 +348,8 @@ def get_all_interstitials(ats, unique_atoms):
         print 'site_num:', site_num
         for i, offset in zip(indices, offsets):
             if offset[2] == 0.0:
-              print 'neighb:', i,ats.positions[i], offset, np.dot(offset, ats.get_cell())
-              points.append(ats.positions[i] + np.dot(offset, ats.get_cell()))
+                print 'neighb:', i,ats.positions[i], offset, np.dot(offset, ats.get_cell())
+                points.append(ats.positions[i] + np.dot(offset, ats.get_cell()))
         ### converting list to numpy array
         print "neighbors", len(points)
         points = np.asarray(points)
@@ -414,7 +414,7 @@ def get_unique_ints(ats, int_pos, ttol=0.5):
             symm_list2.append(symm_a4)
             symm_a5 = get_pos_in_prim_cell(ats.copy(), symm_a4)
             symm_list2.append(symm_a5)
-        # loop to find symmetrical equivalent positions    
+        # loop to find symmetrical equivalent positions
         for k in range(i+1, len(pos2)):
             b2 = pos2[k]
             # check distance between positions in pos and symm_list
@@ -426,4 +426,3 @@ def get_unique_ints(ats, int_pos, ttol=0.5):
     unique_int_list = [list(t) for t in set(map(tuple, int_list2))]
 
     return unique_int_list
-
