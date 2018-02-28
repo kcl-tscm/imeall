@@ -33,10 +33,12 @@ class Dislocation(object):
                                             size = (1,1,1), symbol='Fe', pbc=(1,1,1),
                                             latticeconstant = 2.83)
         screw_slab_unit = Atoms(screw_slab_unit)
+
 # set the supercell:
         n_x = int(self.l_x/screw_slab_unit.get_cell()[0,0])
         n_y = int(self.l_y/screw_slab_unit.get_cell()[1,1])
         n_z = 2
+
         screw_slab_super = supercell(screw_slab_unit, n_x, n_y, n_z)
         ref_slab = screw_slab_unit*(n_x,n_y,n_z)
         ref_slab.write('ref_slab.xyz')
@@ -63,7 +65,6 @@ class Dislocation(object):
         disloc_noam(screw_slab_super, core, disloc_l, brg_vec)
         screw_slab_super.info['core'] = core
         screw_slab_super.write('s{0}.xyz'.format(self.name))
-
 
     def gen_quad_smart(self, dis_type="easy"):
         alat = 2.82893
@@ -149,7 +150,6 @@ class Dislocation(object):
                  np.array([(L_x)/2., (L_y)/2., L_z/2.]),
                  np.array([(L_x)/2., (L_y)/2., L_z/2.]),
                  np.array([(L_x)/2., (L_y)/2., L_z/2.])]
-        
 
     def gen_edge_dislocation(self):
         screw_slab_unit = BodyCenteredCubic(directions = [self.x, self.y, self.z],
