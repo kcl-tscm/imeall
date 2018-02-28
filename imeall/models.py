@@ -166,6 +166,10 @@ class GBQuery(object):
           target_dir: Location to copy files to  (Default: './').
           gb_type(str): Options 'tilt' or 'twist'.
 
+        Returns:
+          list[:py:class:`SubGrainBoundary`]: List of :py:class:`SubGrainBoundary` :py:class:`Model`
+          represented as dictionaries.
+
         Todo:
           * Add kwargs to pull_minen_structs to provide additional selection criteria.
         """
@@ -173,6 +177,8 @@ class GBQuery(object):
         grain_dicts = self.pull_minen_structs(material=material, or_axis=or_axis, pots=pots, gb_type=gb_type)
         for gd in grain_dicts:
             self.copy_gb_dir(gd, target_dir=target_dir)
+
+        return grain_dicts
 
 
     def pull_minen_structs(self, material="alphaFe", or_axis="1,1,1", pots=['PotBH.xml'], gb_type='tilt'):

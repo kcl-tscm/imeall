@@ -136,7 +136,8 @@ class GBRelax(object):
 
     def gen_super_rbt(self, bp=[],v=[], angle=None, rbt=[0.0, 0.0], sup_v=6, sup_bxv=2, rcut=2.0, gb_type="tilt"):
         """
-        Create a :class:`SubGrainBoundary` supercell with rigid body translations (rbt).
+        Create a :class:`SubGrainBoundary` supercell with rigid body translations (rbt) 
+        and a particular atom deletion criterion 2.0.
 
         Args:
           bp (list): Boundary plane normal.
@@ -162,13 +163,14 @@ class GBRelax(object):
             print 'V', v[0]
             grain = build_twist_sym_gb(bp=bp, v=v[0][1], rbt=rbt)
         #For RBT we build a top level dir with just the translated supercell and no deletion criterion
-        m, n, grain  = self.gen_super(grain=grain, rbt=rbt, sup_v=sup_v, sup_bxv=sup_bxv,  rcut=0.0)
-        self.name    = '{0}_v{1}bxv{2}_tv{3}bxv{4}'.format(self.gbid,
-        str(m), str(n), str(round(rbt[0],2)), str(round(rbt[1],2)))
+        m, n, grain = self.gen_super(grain=grain, rbt=rbt, sup_v=sup_v, sup_bxv=sup_bxv,  rcut=0.0)
+        self.name = '{0}_v{1}bxv{2}_tv{3}bxv{4}'.format(self.gbid, str(m), str(n), 
+                                                        str(round(rbt[0],2)), str(round(rbt[1],2)))
         self.subgrain_dir = io.make_dir(self.calc_dir, self.name)
         grain.write('{0}.xyz'.format(os.path.join(self.subgrain_dir, self.name)))
-        self.name    = '{0}_v{1}bxv{2}_tv{3}bxv{4}_d{5}z'.format(self.gbid,
-        str(sup_v), str(sup_bxv), str(round(rbt[0],2)), str(round(rbt[1],2)), str(rcut))
+        self.name = '{0}_v{1}bxv{2}_tv{3}bxv{4}_d{5}z'.format(self.gbid, str(sup_v), 
+                                                              str(sup_bxv), str(round(rbt[0],2)), 
+                                                              str(round(rbt[1],2)), str(rcut))
         self.subgrain_dir = io.make_dir(self.subgrain_dir, self.name)
         print "delete atoms"
         grain = self.delete_atoms(grain=grain, rcut=rcut)
