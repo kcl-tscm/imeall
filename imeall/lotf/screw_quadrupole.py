@@ -1,4 +1,5 @@
 import sys
+import argparse
 import numpy as np
 from ase import Atoms, Atom
 from quippy import Atoms as quipAtoms
@@ -7,6 +8,10 @@ from quippy import set_fortran_indexing
 
 set_fortran_indexing(False)
 
+parser = argparse.ArgumentParser()
+parser.add_argument("-c", "--core", default="easy")
+parser.add_argument("-s", "--super", default="sup_1")
+args = parser.parse_args()
 
 alat = 2.82893
 
@@ -14,12 +19,6 @@ alat = 2.82893
 a1 = (1./3.)*alat*np.array([-1,-1,2])
 a2 = (1./2.)*alat*np.array([1,-1,0])
 a3 = (1./2.)*alat*np.array([1,1,1])
-
-#latt_1 = alat*np.array([-1,-1,2])
-#latt_2 = alat*np.array([1,-1,0])
-#latt_1 = alat*np.array([-1,-1,2])
-#latt_2 = alat*np.array([1,-1,0])
-#latt_3 = alat*np.array([1,1,1])
 
 latt_1 = alat*np.array([1,0,0])
 latt_2 = alat*np.array([0,1,0])
@@ -29,9 +28,8 @@ basis_1 = alat*np.array([0,0,0])
 basis_2 = alat*np.array([0.5,0.5,0.5])
 basis_3 = alat*np.array([-0.5, 0.5, -0.5])
 
-
-sup_cell = 'sup_2'
-core_type = "easy"
+sup_cell = args.super
+core_type = args.core
 
 if sup_cell =='sup_1':
     n = 15.
@@ -42,16 +40,19 @@ elif sup_cell=='sup_2':
 else:
     sys.exit("not valid cell.")
 
+print "sup_cell n {}  m {}".format(n,m), "print core_type:", core_type
+
 if core_type == "easy":
   c1 = (n*a1) - (1.0/(3.0*m))*a3
   c2 = (n/2.)*a1 + m*a2 + (0.5)*a3 - 1.0/(6.0*m)*a3
   c3 = a3
 elif core_type == "hard":
-  c1 = (n*a1) + (1.0/(3.0*m))*a3
-  c2 = (n/2.)*a1 + m*a2 + (0.5)*a3 + 1.0/(6.0*m)*a3
+  c1 = (n*a1) - (1.0/(3.0*m))*a3
+  c2 = (n/2.)*a1 + m*a2 + (0.5)*a3 - 1.0/(6.0*m)*a3
+  #c1 = (n*a1) + (1.0/(3.0*m))*a3
+  #c2 = (n/2.)*a1 + m*a2 + (0.5)*a3 + 1.0/(6.0*m)*a3
   c3 = a3
 
-#ats = Atoms(cell=[c1,c2,c3], pbc=[True,True,True])
 ats = Atoms(pbc=[True,True,True])
 
 for x in range(-25,25):
@@ -82,20 +83,25 @@ for x in range(-25,25):
         ats.append(Atom('Fe', position=Fe_2))
 
 if sup_cell =="sup_1":
-    ats.append(Atom('Fe', position=0.5*a3) )
+    ats.append(Atom('Fe', position=(c2+0.5*c3)))
+
+if core_type == "easy":
+    brg_vec = c3
+elif core_type == "hard":
+    brg_vec = -c3
+else:
+    sys.exit("bad_brg_vec")
 
 ats = quipAtoms(ats)
 ats.set_cutoff(3.0)
 ats.calc_connect()
 core = 0.25*c1+ 0.5*c2 + 0.5*c3
-brg_vec = -c3
 disloc_l = c3
 disloc_noam(ats, core, disloc_l, brg_vec)
 
 core = 0.75*c1+ 0.5*c2 + 0.5*c3
-brg_vec = +c3
 disloc_l = c3
-disloc_noam(ats, core, disloc_l, brg_vec)
+disloc_noam(ats, core, disloc_l, -brg_vec)
 
 ats.set_cell([c1,c2,c3], scale_atoms=False)
 ats.write("screw.xyz")
