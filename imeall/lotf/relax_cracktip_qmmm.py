@@ -139,14 +139,14 @@ if __name__=="__main__":
     parser.add_argument("--sup_cell", "-s", type=int, help="size of fe matrix super cell")
     parser.add_argument("--knots", "-kn", type=int, help="number of images", default=11)
     parser.add_argument("--k", "-k", type=float, default=5.0, help="spring constant for NEB (default eV/A^2).")
-    parser.add_argument("--input_file", "-i", default="fe_bcc_h.xyz", help="input file.")
+    parser.add_argument("--input_file", "-i", default="crack.xyz", help="input file.")
     parser.add_argument("--auto_gen", "-a", action="store_true")
     parser.add_argument("--use_gap", "-g", action="store_true")
     args = parser.parse_args()
 
     #only one qmpot specifed at command line
     use_eampot = not(args.use_gap or args.use_socket) 
-    assert sum(args.use_gap + args.use_socket + use_mmpot) == 1 
+    assert sum(args.use_gap + args.use_socket + use_eampot) == 1 
 
     buff = args.buff
     qm_radius = args.qm_radius
@@ -156,14 +156,10 @@ if __name__=="__main__":
     r_scale = 1.00894848312
     mm_pot = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=eam_pot)
 
-    if args.auto_gen:
-        gb_cell = AtomsReader(args.input_file)[-1]
-    else:
-        gb_cell = AtomsReader("disloc_ini_traj.xyz")[-1]
+    crack_slab = AtomsReader('crack.xyz')[-1]
 
-    defect = find_h_atom(gb_cell)
-    h_pos = defect.position
-    x, y, z = gb_cell.positions.T
+    crack_pos = crack_slab.info['CrackPos']
+    x, y, z = crack_slab.positions.T
     radius1 = np.sqrt((x - h_pos[0])**2 + (y-h_pos[1])**2 + (z-h_pos[2])**2)
 
     qm_region_mask = (radius1 < qm_radius)
@@ -175,25 +171,24 @@ if __name__=="__main__":
     print ("together with the buffer of %.1f" % (qm_radius + buff ) +
                                     "A %i" % np.count_nonzero(qm_buffer_mask))
 
-    magmoms=[2.6, len(gb_cell)]
-    vasp_args = dict(xc='PBE', amix=0.01, amin=0.001, bmix=0.001, amix_mag=0.01, bmix_mag=0.001,
+    if args.use_socket:
+        magmoms=[2.6, len(gb_cell)]
+        vasp_args = dict(xc='PBE', amix=0.01, amin=0.001, bmix=0.001, amix_mag=0.01, bmix_mag=0.001,
                      kpts=[1, 1, 1], kpar=1, lreal='auto', nelmdl=-15, ispin=2, prec='Accurate', ediff=1.e-3,
                      nelm=100, algo='VeryFast', lplane=False, lwave=False, lcharg=False, istart=0, encut=320,
                      magmom=magmoms, maxmix=30, voskown=0, ismear=1, sigma=0.1, isym=0) # possibly try iwavpr=12, should be faster if it works
 
     # parallel config.
-    procs = 48
-    kpts = [1, 1, 1]
+        procs = 48
+        kpts = [1, 1, 1]
     # need to have procs % n_par == 0
-    n_par = 1
-    if procs <= 8:
-        n_par = procs
-    else:
-        for _npar in range(2, int(np.sqrt(1.*procs))):
-            if procs % int(_npar) == 0:
-                n_par = procs // int(_npar)
-
-    if args.use_socket:
+        n_par = 1
+        if procs <= 8:
+            n_par = procs
+        else:
+            for _npar in range(2, int(np.sqrt(1.*procs))):
+                if procs % int(_npar) == 0:
+                    n_par = procs // int(_npar)
         vasp_client = VaspClient(client_id=0, npj=procs, ppn=1,
                                  exe=vasp, mpirun=mpirun, parmode='mpi',
                                  ibrion=13, nsw=1000000,
@@ -210,36 +205,16 @@ if __name__=="__main__":
     #for entirely mm potential
         qm_pot = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(1.00894848312), param_filename=eam_pot)
 
-    nebpath = NEBPaths()
-    nebanalysis = NEBAnalysis()
-
-    if args.auto_gen:
-        disloc_ini, disloc_fin = nebpath.build_h_nebpath(neb_path=np.array(args.neb_path), fmax = args.fmax, sup_cell=args.sup_cell)
-    else:
-        disloc_ini = Atoms('disloc_ini_traj.xyz')
-        disloc_fin = Atoms('disloc_fin_traj.xyz')
-
-    n_knots = args.knots
-    images = [disloc_ini] + \
-             [disloc_ini.copy() for i in range(n_knots)] + \
-             [disloc_fin]
-
     qmmm_pot = ForceMixingCarvingCalculator(disloc_ini, qm_region_mask,
                                             mm_pot, qm_pot,
                                             buffer_width=buff,
                                             pbc_type=[False, False, False])
+    opt = PreconLBFGS(crack_slab)
+    def pass_trajectory_context(trajectory, dynamics):
+        def traj_writer(dynamics):
+            trajectory.write(dynamics.atoms)
+    return traj_writer
 
-    for image in images:
-        image.set_calculator(qmmm_pot)
-
-    neb = NEB(images, k=args.k, force_only=True)
-    neb.interpolate(mic=False)
-    #nebanalysis.save_barriers(images, neb, prefix="ini")
-    #opt = FIRE(neb)
-    opt = PreconLBFGS(neb)
-    opt.run(fmax=args.fmax)
-
-    nebanalysis.save_barriers(images, neb, prefix="fin")
-
-    if args.use_socket:
-        sock_calc.shutdown()
+    trajectory = AtomsWriter('relaxation.xyz')
+    opt.attach(pass_trajectory_context(trajectory, opt), 1, opt)
+    opt.run(fmax=0.01)
