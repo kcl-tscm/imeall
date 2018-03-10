@@ -8,6 +8,7 @@ from ase.io import vasp
 from ase import io
 from os_supp.pushd import pushd
 from argparse import ArgumentParser
+import json
 
 #displacement in angstrom
 #index of atom in vasp list
@@ -26,11 +27,20 @@ def find_indices(center=np.array([0.0, 0.0, 0.0]), cutoff=6.0):
             cluster.append([index, at.position.tolist(), at.symbol])
         else:
             for latt_vec in ats.cell:
+#test minus a latt vec
                 vec = at.position - latt_vec - center
                 if np.linalg.norm(vec) <= cutoff:
                     print index, at.position
                     cluster.append([index, at.position.tolist(), at.symbol])
+#Test plus a latt vec
+                vec = at.position + latt_vec - center
+                if np.linalg.norm(vec) <= cutoff:
+                    print index, at.position
+                    cluster.append([index, at.position.tolist(), at.symbol])
     print len(cluster), 'atoms in the cluster'
+    indices = [c for c in cluster]
+    with open('indices.json', 'w') as f:
+        json.dump({'indices':indices}, f)
     return cluster
 
 def gen_cluster_dirs(center=np.array([0.0,0.0,0.0]), cutoff=6.0):
@@ -99,5 +109,5 @@ if __name__=="__main__":
         pull_forces(args.species, args.index, args.cart)
 
     if args.array:
-        gen_cluster_dirs(center=np.array([0.0,0.0,0.0]), cutoff=6.0)
+        gen_cluster_dirs(center=np.array([-0.07774,-11.4519, 14.0087]), cutoff=8.0)
 

@@ -34,20 +34,24 @@ def read_vasp_args():
 #    print k, v
 #vasp_pot.set(**vasp_args)
 
-gam_cell = io.read('init_relaxed.xyz')
+if os.path.isfile('relaxation.xyz'):
+    print 'using relaxation.xyz'
+    gam_cell = io.read('relaxation.xyz',index='-1')
+else:
+    gam_cell = io.read('init_relaxed.xyz')
+
 magmoms = [len(gam_cell), 2.24]
 
 vasp_args = dict(xc='PBE', amix=0.22, amin=0.02, bmix=0.9, amix_mag=1.1, bmix_mag=1.0,
-                 kpts=[3, 3, 1], kpar=8, lreal='auto', nelmdl=-15, ispin=2, prec='Accurate', ediffg=-1.e-4,
-                 encut=420, nelm=120, algo='VeryFast', lplane=False, lwave=False, lcharg=False, istart=0,
-                 magmom=magmoms, maxmix=-25, #https://www.vasp.at/vasp-workshop/slides/handsonIV.pdf #for badly behaved clusters.
-                 voskown=0, ismear=1, sigma=0.1, isym=2) # possibly try iwavpr=12, should be faster if it works
-
+                 kpts=[1, 4, 4], kpar=8, lreal='auto', nelmdl=-15, ispin=2, prec='Accurate', ediff=1.e-4,
+                 encut=420, nelm=100, algo='VeryFast', lplane=False, lwave=False, lcharg=False, istart=0,
+                 magmom=magmoms, maxmix=25, #https://www.vasp.at/vasp-workshop/slides/handsonIV.pdf #for badly behaved clusters.
+                 voskown=0, ismear=1, sigma=0.1, isym=2, iwavpr=11) 
 
 mpirun = spawn.find_executable('mpirun')
 vasp = '/home/mmm0007/vasp/vasp.5.4.1/bin/vasp_std'
 
-vasp_client = VaspClient(client_id=0, npj=48, ppn=1,
+vasp_client = VaspClient(client_id=0, npj=96, ppn=1,
                          exe=vasp, mpirun=mpirun, parmode='mpi',
                          ibrion=13, nsw=1000000,
                          npar=6, **vasp_args)
@@ -62,11 +66,10 @@ trajectory = AtomsWriter('relaxation.xyz')
 qm_pot = SocketCalculator(vasp_client)
 gam_cell.set_calculator(qm_pot)
 
-#fixed_line=[]
-#for at in gam_cell:
-#    fixed_line.append(FixedLine(at.index, (1,0,0)))
-#gam_cell.set_constraint(fixed_line)
-
+fixed_line=[]
+for at in gam_cell:
+    fixed_line.append(FixedLine(at.index, (1,0,0)))
+gam_cell.set_constraint(fixed_line)
 opt = PreconLBFGS(Atoms(gam_cell))
 opt.attach(pass_trajectory_context(trajectory, opt), 1, opt)
 opt.run(fmax=0.01)
