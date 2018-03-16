@@ -136,7 +136,8 @@ class GBRelax(object):
 
     def gen_super_rbt(self, bp=[],v=[], angle=None, rbt=[0.0, 0.0], sup_v=6, sup_bxv=2, rcut=2.0, gb_type="tilt"):
         """
-        Create a :class:`SubGrainBoundary` supercell with rigid body translations (rbt).
+        Create a :class:`SubGrainBoundary` supercell with rigid body translations (rbt) 
+        and a particular atom deletion criterion 2.0.
 
         Args:
           bp (list): Boundary plane normal.

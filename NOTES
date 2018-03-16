@@ -172,4 +172,11 @@ docker exec -it sleepy_dubinsky bash
 docker logs c631c5dccd91 >stdout.log 2>stderr.log
 
 
+Fixing the old favicon issue.
+https://stackoverflow.com/questions/5307417/how-to-skip-the-commit-message-step-in-git-commit-amend
 
+
+      The second level of testing is the "accuracy" of the structures and the properties calculated which
+      can only be compared for consistency between different interatomic potentials, and for accuracy
+      with reference to experimental data. It is these sorts of comparisons, between potentials and between
+      experimental data, that the Imeall tool is meant to enable.

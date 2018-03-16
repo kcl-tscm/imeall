@@ -20,7 +20,8 @@ from imeall import app
 set_fortran_indexing(False)
 
 def relax_gb(gb_file='file_name', traj_steps=120, total_steps=1200, force_tol = 0.05):
-    """Method to relax a grain_boundary bicrystal structure.
+    """Method to relax a grain_boundary bicrystal structure. Requires a .json
+    file with at a minimum the 'param_file' variable specified.
 
     Args:
       gb_file(str): gbid.
