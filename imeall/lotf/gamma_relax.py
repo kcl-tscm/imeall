@@ -1,7 +1,9 @@
 import re
+import os
 import sys
 
-import os
+import argparse
+
 from matscipy.socketcalc import VaspClient, SocketCalculator
 from distutils import spawn
 
@@ -12,6 +14,8 @@ from ase.calculators import vasp
 from ase.constraints import FixedLine
 
 from quippy import AtomsWriter, Atoms
+
+from ase.io.xyz import write_xyz
 
 def read_vasp_args():
     kv_pairs = re.compile(r'(.*?)=(.*?)\n')
@@ -34,16 +38,26 @@ def read_vasp_args():
 #    print k, v
 #vasp_pot.set(**vasp_args)
 
-if os.path.isfile('relaxation.xyz'):
-    print 'using relaxation.xyz'
-    gam_cell = io.read('relaxation.xyz',index='-1')
+parser = argparse.ArgumentParser()
+parser.add_argument('-i','--input_file', default=None)
+parser.add_argument('-k','--kpar', type=int, default=4)
+args = parser.parse_args()
+
+if args.input_file != None:
+    if args.input_file =='POSCAR':
+        print 'reading poscar'
+        gam_cell = io.read('POSCAR')
+#elif os.path.isfile('relaxation.xyz'):
+#    print 'using relaxation.xyz'
+#    gam_cell = io.read('relaxation.xyz',index='-1')
 else:
+    print 'using init_relaxed.xyz'
     gam_cell = io.read('init_relaxed.xyz')
 
 magmoms = [len(gam_cell), 2.24]
 
-vasp_args = dict(xc='PBE', amix=0.22, amin=0.02, bmix=0.9, amix_mag=1.1, bmix_mag=1.0,
-                 kpts=[1, 4, 4], kpar=8, lreal='auto', nelmdl=-15, ispin=2, prec='Accurate', ediff=1.e-4,
+vasp_args = dict(xc='PBE', amix=0.22, amin=0.02, bmix=0.6, amix_mag=1.0, bmix_mag=0.9,
+                 kpts=[1, 4, 4], kpar=args.kpar, lreal='auto', nelmdl=-15, ispin=2, prec='Accurate', ediff=1.e-4,
                  encut=420, nelm=100, algo='VeryFast', lplane=False, lwave=False, lcharg=False, istart=0,
                  magmom=magmoms, maxmix=25, #https://www.vasp.at/vasp-workshop/slides/handsonIV.pdf #for badly behaved clusters.
                  voskown=0, ismear=1, sigma=0.1, isym=2, iwavpr=11) 
@@ -56,12 +70,10 @@ vasp_client = VaspClient(client_id=0, npj=96, ppn=1,
                          ibrion=13, nsw=1000000,
                          npar=6, **vasp_args)
 
-def pass_trajectory_context(trajectory, dynamics):
-    def traj_writer(dynamics):
-        trajectory.write(dynamics.atoms)
-    return traj_writer
-
-trajectory = AtomsWriter('relaxation.xyz')
+traj = io.Trajectory('relaxation.traj','w', gam_cell)
+#def traj_writer(ats_loc=gam_cell):
+#    with open('relaxation.traj', 'w') as f:
+#        write_xyz(f, ats_loc, mode='w')
 
 qm_pot = SocketCalculator(vasp_client)
 gam_cell.set_calculator(qm_pot)
@@ -71,5 +83,8 @@ for at in gam_cell:
     fixed_line.append(FixedLine(at.index, (1,0,0)))
 gam_cell.set_constraint(fixed_line)
 opt = PreconLBFGS(Atoms(gam_cell))
-opt.attach(pass_trajectory_context(trajectory, opt), 1, opt)
+#opt.attach(traj_writer, interval=1)
+opt.attach(traj.write, interval=1)
 opt.run(fmax=0.01)
+traj.close()
+
