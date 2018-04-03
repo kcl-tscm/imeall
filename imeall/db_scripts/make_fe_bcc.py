@@ -29,10 +29,8 @@ octa_pos = alat*np.array([0.5, 0.5, 0.0])
 gb = BodyCenteredCubic(directions = [[1,0,0], [0,1,0], [0,0,1]],
                        size = (sup_cell[0],sup_cell[1],sup_cell[2]), symbol='Fe', pbc=(1,1,1),
                        latticeconstant = alat)
-
 mid_point = 0.5*(np.diag(gb.get_cell()))
 mid_point = [((sup_cell[0]-1)/2.)*alat for sp in sup_cell]
-
 gb = Atoms(gb)
 if args.tetra:
     print 'Tetrahedral Defect'

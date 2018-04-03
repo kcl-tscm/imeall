@@ -1,5 +1,6 @@
 import numpy as np
 from ase import Atoms
+from ase.calculators.calculator import Calculator
 from ase.utils.geometry import find_mic
 from ase.lattice.cubic import FaceCenteredCubic,BodyCenteredCubic
 
@@ -7,6 +8,7 @@ from ase.lattice.cubic import FaceCenteredCubic,BodyCenteredCubic
 class ForceMixingCarvingCalculator:
     def __init__(self, atoms, qm_list, mm_calc, qm_calc, pbc_type=[False,False,False],\
                vacuum=5., alpha=1., beta=1., buffer_width=3.):
+        self.name = 'ForceMixingCarvingCalculator'
         self.mm_calc = mm_calc
         self.qm_calc = qm_calc
         self.alpha = alpha
