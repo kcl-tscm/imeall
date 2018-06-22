@@ -20,7 +20,9 @@ POT_DIR = os.environ['POTDIR']
 eam_pot = os.path.join(POT_DIR, 'PotBH.xml')
 r_scale = 1.00894848312
 pot = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=eam_pot)
-alat = 2.82893
+#alat = 2.82893
+#could just use the proper one as well....
+alat = 2.85
 
 sup_cell = args.supercellsize
 tetra_pos = alat*np.array([0.5, 0.0, 0.75])
