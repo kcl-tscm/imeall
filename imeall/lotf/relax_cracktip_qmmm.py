@@ -64,7 +64,7 @@ if __name__=="__main__":
     r_scale = 1.00894848312
     mm_pot = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=eam_pot)
 
-    crack_slab = AtomsReader('crack.xyz')[-1]
+    crack_slab = AtomsReader('crack_sim.xyz')[-1]
 
     crack_pos = crack_slab.info['CrackPos']
     x, y, z = crack_slab.positions.T
@@ -82,7 +82,7 @@ if __name__=="__main__":
     if args.use_socket:
         magmoms=[2.6, len(crack_slab)]
         vasp_args = dict(xc='PBE', amix=0.01, amin=0.001, bmix=0.001, amix_mag=0.01, bmix_mag=0.001,
-                     kpts=[1, 1, 1], kpar=1, lreal='auto', nelmdl=-15, ispin=2, prec='Accurate', ediff=1.e-3,
+                     kpts=[1, 1, 4], kpar=1, lreal='auto', nelmdl=-15, ispin=2, prec='Accurate', ediff=1.e-3,
                      nelm=100, algo='VeryFast', lplane=False, lwave=False, lcharg=False, istart=0, encut=320,
                      magmom=magmoms, maxmix=30, voskown=0, ismear=1, sigma=0.1, isym=0) # possibly try iwavpr=12, should be faster if it works
 
@@ -132,5 +132,5 @@ if __name__=="__main__":
         ats_loc.arrays["forces"] = dynamics.atoms.get_forces()
         write_xyz(f, ats_loc, mode='a')
         f.close()
-    opt.attach(traj_writer, interval=2)
+    opt.attach(traj_writer, interval=1)
     opt.run(fmax=0.08)
