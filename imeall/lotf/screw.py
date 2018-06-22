@@ -13,6 +13,7 @@ from quippy import set_fortran_indexing
 from quippy.farray import fzeros, frange, unravel_index, farray
 
 #Create unit cell with the orientation:
+#https://www.sciencedirect.com/science/article/pii/S135964541300222X
 
 class Dislocation(object):
     def __init__(self, x=[1,1,-2], y=[-1,1,0],z=[1,1,1], name='defect.xyz'):

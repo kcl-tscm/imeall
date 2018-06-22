@@ -639,7 +639,7 @@ if __name__=="__main__":
     parser.add_argument("-gbid","--gbid", help="grain boundary id if present only perform action on specific boundary. applies to populate.", default="")
     parser.add_argument("-j","--json_path", help="Path (relative to Database root of subgrain to be added to database).", default="")
     parser.add_argument("-mod","--modify", help="Generic flag. If included database will be updated, otherwise program just reports intended actions  \
-                                                    without  modifying database. Applies to check_conv and check_force.", action="store_true")
+                                                 without  modifying database. Applies to check_conv and check_force.", action="store_true")
     parser.add_argument("-gbs", "--gb_start", help="Which grain number to start checking forces at. (default:0)", default=0, type=int)
     parser.add_argument("-sgbs", "--sub_start", help="Which grain number to start checking forces at. (default:0)", default=0, type=int)
 #Actions

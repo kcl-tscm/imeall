@@ -4,6 +4,7 @@ matplotlib.use('Agg')
 
 import os
 import sys
+import shutil
 
 import argparse
 
@@ -14,6 +15,7 @@ from ase.neb import fit0
 from ase.io import write
 from ase.optimize import FIRE
 from ase.optimize.precon import PreconFIRE, Exp, PreconLBFGS
+from ase.io.xyz import write_xyz
 
 
 from distutils import spawn
@@ -23,7 +25,7 @@ from ForceMixerCarver import ForceMixingCarvingCalculator
 from matscipy.socketcalc import VaspClient, SocketCalculator
 
 from quippy import AtomsReader, AtomsWriter, Atoms
-from quippy import Potential
+from quippy import Potential, set_fortran_indexing
 
 import matplotlib.pyplot as plt
 
@@ -32,99 +34,7 @@ from imeall.calc_elast_dipole import find_h_atom
 #from ase.neb import NEB
 from nebForceIntegrator import NEB
 
-class NEBAnalysis(object):
-    def __init__(self):
-        pass
-
-    def save_barriers(self, images, neb, prefix=""):
-        """ Saves the NEB results and plots energy barrier.
-        Arguments:
-          images ::
-          prefix ::
-          neb :: :class:ase:`NEB`
-        """
-        if not os.path.exists('NEB_images'):
-            os.mkdir('NEB_images')
-
-        for i, image in enumerate(images):
-            write("NEB_images/" + prefix + "ini_NEB_image%03i.xyz" % i, image)
-
-        plot_dir = "NEB_plots"
-        if not os.path.exists(plot_dir):
-            os.mkdir(plot_dir)
-
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-
-        R = [atoms.positions for atoms in images]
-        E = neb.get_potential_energies()
-        F = [atoms.get_forces() for atoms in images]
-        A = images[0].cell
-        pbc = images[0].pbc
-        s, E, Sfit, Efit, lines = fit0(E, F, R, A, pbc)
-
-        s = np.array(s)
-        norm = s.max()
-        s /= norm
-        Sfit /= norm
-
-        for x, y in lines:
-            x /= norm
-            ax.plot(x, y, '-C0')
-
-        ax.plot(Sfit, Efit, 'C0-')
-        Ef = max(Efit) - E[0]
-        ax.plot(s, E, "oC0", label="%s: $E_f = %.4f$ (meV)"%("QM/MM EAM result", Ef*1000))
-        ax.legend(loc="best")
-        ax.grid(True, linestyle="dashed")
-
-        np.savetxt(plot_dir + '/' + prefix + "_s_E.txt", np.array([s, E]))
-        np.savetxt(plot_dir + '/' + prefix + "_fit.txt", np.array([Sfit, Efit]))
-        np.savetxt(plot_dir + '/' + prefix + "_lines.txt", np.vstack(lines))
-
-        fig.savefig(plot_dir + '/' + prefix + "_barrier.eps")
-        return None
-
-
-class NEBPaths(object):
-    def __init__(self):
-        pass
-
-    def build_h_nebpath(self, struct_path="fe_bcc.xyz", neb_path=np.array([0.25, 0.0, -0.25]), alat=2.8297, knots=5, sup_cell=5, fmax=1.e-4):
-        """
-        Takes a vector neb_path, and generates n intermediate images along the minimum energy path.
-        the struct path should point to the relaxed structure.
-        """
-        POT_DIR = os.path.join(app.root_path, 'potentials')
-        eam_pot = os.path.join(POT_DIR, 'PotBH.xml')
-        r_scale = 1.00894848312
-        mm_pot = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=eam_pot)
-
-        ats_ini = AtomsReader(struct_path)[-1]
-        #Pick the top tetrahedral H position in the cell [[1,0,0],[0,1,0],[0,0,1]]
-        tetra_pos = alat*np.array([0.5, 0.0, 0.75])
-        mid_point = 0.5*(np.diag(ats_ini.get_cell()))
-        mid_point = [((sup_cell-1)/2.)*alat for sp in range(3)]
-        h_pos = tetra_pos + mid_point
-
-        disloc_ini = ats_ini.copy()
-        h_tmp = h_pos
-        disloc_ini.add_atoms(np.array(h_tmp), 1)
-
-        disloc_fin = ats_ini.copy()
-        h_tmp = h_pos + neb_path*alat
-        disloc_fin.add_atoms(h_tmp,1)
-
-#Relax images at the start and end of trajectory.
-        disloc_ini.set_calculator(mm_pot)
-        opt = FIRE(disloc_ini)
-        opt.run(fmax=fmax)
-
-        disloc_fin.set_calculator(mm_pot)
-        opt = FIRE(disloc_fin)
-        opt.run(fmax=fmax)
-
-        return disloc_ini, disloc_fin
+set_fortran_indexing(False)
 
 if __name__=="__main__":
     mpirun = spawn.find_executable('mpirun')
@@ -132,21 +42,19 @@ if __name__=="__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--buff", "-b", type=float, default=8.0)
-    parser.add_argument("--qm_radius", "-q", type=float, default=2.0)
-    parser.add_argument("--use_socket", "-u", action="store_false")
-    parser.add_argument("--neb_path", "-n", nargs="+", type=float, default=[0.25, 0, -0.25])
+    parser.add_argument("--qm_radius", "-q", type=float, default=3.0)
+    parser.add_argument("--use_socket", "-u", action="store_true")
     parser.add_argument("--fmax", "-f", type=float, help="maximum force for relaxation.", default=0.01)
     parser.add_argument("--sup_cell", "-s", type=int, help="size of fe matrix super cell")
-    parser.add_argument("--knots", "-kn", type=int, help="number of images", default=11)
-    parser.add_argument("--k", "-k", type=float, default=5.0, help="spring constant for NEB (default eV/A^2).")
     parser.add_argument("--input_file", "-i", default="crack.xyz", help="input file.")
-    parser.add_argument("--auto_gen", "-a", action="store_true")
     parser.add_argument("--use_gap", "-g", action="store_true")
+    parser.add_argument("--precon", "-p", action='store_true')
     args = parser.parse_args()
 
     #only one qmpot specifed at command line
-    use_eampot = not(args.use_gap or args.use_socket) 
-    assert sum(args.use_gap + args.use_socket + use_eampot) == 1 
+    use_eampot = not (args.use_gap or args.use_socket)
+    if use_eampot:
+        print ('USING EAMPOT')
 
     buff = args.buff
     qm_radius = args.qm_radius
@@ -156,11 +64,11 @@ if __name__=="__main__":
     r_scale = 1.00894848312
     mm_pot = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=eam_pot)
 
-    crack_slab = AtomsReader('crack.xyz')[-1]
+    crack_slab = AtomsReader('crack_sim.xyz')[-1]
 
     crack_pos = crack_slab.info['CrackPos']
     x, y, z = crack_slab.positions.T
-    radius1 = np.sqrt((x - h_pos[0])**2 + (y-h_pos[1])**2 + (z-h_pos[2])**2)
+    radius1 = np.sqrt((x - crack_pos[0])**2 + (y-crack_pos[1])**2 + (z-crack_pos[2])**2)
 
     qm_region_mask = (radius1 < qm_radius)
     qm_buffer_mask = (radius1 < qm_radius + buff)
@@ -172,9 +80,9 @@ if __name__=="__main__":
                                     "A %i" % np.count_nonzero(qm_buffer_mask))
 
     if args.use_socket:
-        magmoms=[2.6, len(gb_cell)]
+        magmoms=[2.6, len(crack_slab)]
         vasp_args = dict(xc='PBE', amix=0.01, amin=0.001, bmix=0.001, amix_mag=0.01, bmix_mag=0.001,
-                     kpts=[1, 1, 1], kpar=1, lreal='auto', nelmdl=-15, ispin=2, prec='Accurate', ediff=1.e-3,
+                     kpts=[1, 1, 4], kpar=1, lreal='auto', nelmdl=-15, ispin=2, prec='Accurate', ediff=1.e-3,
                      nelm=100, algo='VeryFast', lplane=False, lwave=False, lcharg=False, istart=0, encut=320,
                      magmom=magmoms, maxmix=30, voskown=0, ismear=1, sigma=0.1, isym=0) # possibly try iwavpr=12, should be faster if it works
 
@@ -205,16 +113,24 @@ if __name__=="__main__":
     #for entirely mm potential
         qm_pot = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(1.00894848312), param_filename=eam_pot)
 
-    qmmm_pot = ForceMixingCarvingCalculator(disloc_ini, qm_region_mask,
+    qmmm_pot = ForceMixingCarvingCalculator(crack_slab, qm_region_mask,
                                             mm_pot, qm_pot,
                                             buffer_width=buff,
-                                            pbc_type=[False, False, False])
-    opt = PreconLBFGS(crack_slab)
-    def pass_trajectory_context(trajectory, dynamics):
-        def traj_writer(dynamics):
-            trajectory.write(dynamics.atoms)
-    return traj_writer
+                                            pbc_type=[False, False, True])
+    crack_slab.set_calculator(qmmm_pot)
 
-    trajectory = AtomsWriter('relaxation.xyz')
-    opt.attach(pass_trajectory_context(trajectory, opt), 1, opt)
-    opt.run(fmax=0.01)
+    if args.precon:
+        #opt = PreconLBFGS(crack_slab)
+        opt = PreconFIRE(crack_slab)
+    else:
+        opt = FIRE(crack_slab)
+
+    crack_slab.new_array('qm_atoms',qm_region_mask)
+    crack_slab.new_array('qm_buffer_atoms',qm_buffer_mask)
+    def traj_writer(ats_loc=crack_slab):
+        f = open('relaxation.xyz', 'a')
+        ats_loc.arrays["forces"] = dynamics.atoms.get_forces()
+        write_xyz(f, ats_loc, mode='a')
+        f.close()
+    opt.attach(traj_writer, interval=1)
+    opt.run(fmax=0.08)
