@@ -12,7 +12,7 @@ import json
 import numpy as np
 
 from ase.neb import fit0
-from ase.io import write
+from ase.io import write, Trajectory
 from ase.optimize import FIRE
 from ase.optimize.precon import PreconFIRE, Exp, PreconLBFGS
 from ase.io.xyz import write_xyz
@@ -30,6 +30,7 @@ from quippy import Potential, set_fortran_indexing
 import matplotlib.pyplot as plt
 
 from imeall.calc_elast_dipole import find_h_atom
+from simulate_crack import fix_edges
 
 #from ase.neb import NEB
 from nebForceIntegrator import NEB
@@ -41,10 +42,10 @@ if __name__=="__main__":
     vasp = '/home/mmm0007/vasp/vasp.5.4.1/bin/vasp_std'
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--buff", "-b", type=float, default=8.0)
+    parser.add_argument("--buff", "-b", type=float, default=9.0)
     parser.add_argument("--qm_radius", "-q", type=float, default=3.0)
     parser.add_argument("--use_socket", "-u", action="store_true")
-    parser.add_argument("--fmax", "-f", type=float, help="maximum force for relaxation.", default=0.01)
+    parser.add_argument("--fmax", "-f", type=float, help="maximum force for relaxation.", default=0.1)
     parser.add_argument("--sup_cell", "-s", type=int, help="size of fe matrix super cell")
     parser.add_argument("--input_file", "-i", default="crack.xyz", help="input file.")
     parser.add_argument("--use_gap", "-g", action="store_true")
@@ -82,13 +83,12 @@ if __name__=="__main__":
     if args.use_socket:
         magmoms=[2.6, len(crack_slab)]
         vasp_args = dict(xc='PBE', amix=0.01, amin=0.001, bmix=0.001, amix_mag=0.01, bmix_mag=0.001,
-                     kpts=[1, 1, 4], kpar=1, lreal='auto', nelmdl=-15, ispin=2, prec='Accurate', ediff=1.e-3,
-                     nelm=100, algo='VeryFast', lplane=False, lwave=False, lcharg=False, istart=0, encut=320,
+                     kpts=[1, 1, 4], kpar=1, lreal='auto', nelmdl=-15, ispin=2, prec='Accurate', ediff=1.e-4,
+                     nelm=100, algo='VeryFast', lplane=False, lwave=False, lcharg=False, istart=0, encut=400,
                      magmom=magmoms, maxmix=30, voskown=0, ismear=1, sigma=0.1, isym=0) # possibly try iwavpr=12, should be faster if it works
 
     # parallel config.
-        procs = 48
-        kpts = [1, 1, 1]
+        procs = 96
     # need to have procs % n_par == 0
         n_par = 1
         if procs <= 8:
@@ -113,6 +113,7 @@ if __name__=="__main__":
     #for entirely mm potential
         qm_pot = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(1.00894848312), param_filename=eam_pot)
 
+    strain_atoms = fix_edges(crack_slab)
     qmmm_pot = ForceMixingCarvingCalculator(crack_slab, qm_region_mask,
                                             mm_pot, qm_pot,
                                             buffer_width=buff,
@@ -120,17 +121,15 @@ if __name__=="__main__":
     crack_slab.set_calculator(qmmm_pot)
 
     if args.precon:
-        #opt = PreconLBFGS(crack_slab)
         opt = PreconFIRE(crack_slab)
     else:
         opt = FIRE(crack_slab)
 
     crack_slab.new_array('qm_atoms',qm_region_mask)
     crack_slab.new_array('qm_buffer_atoms',qm_buffer_mask)
-    def traj_writer(ats_loc=crack_slab):
-        f = open('relaxation.xyz', 'a')
-        ats_loc.arrays["forces"] = dynamics.atoms.get_forces()
-        write_xyz(f, ats_loc, mode='a')
-        f.close()
-    opt.attach(traj_writer, interval=1)
-    opt.run(fmax=0.08)
+    def write_slab(a=crack_slab):
+        write_xyz('crack_slab.xyz', a, append=True)
+    opt.attach(write_slab)
+    opt.run(fmax=args.fmax)
+    crack_slab.write('relaxed.xyz')
+

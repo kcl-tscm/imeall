@@ -52,8 +52,8 @@ else:
 
 magmoms = [len(gam_cell), 2.24]
 
-vasp_args = dict(xc='PBE', amix=0.22, amin=0.02, bmix=0.6, amix_mag=1.0, bmix_mag=0.9,
-                 kpts=[1, 4, 4], kpar=args.kpar, lreal='auto', nelmdl=-15, ispin=2, prec='Accurate', ediff=1.e-5,
+vasp_args = dict(xc='PBE', amix=0.22, amin=0.02, bmix=0.6, amix_mag=1.0, bmix_mag=0.9, lorbit=11,
+                 kpts=[1, 6, 6], kpar=args.kpar, lreal='auto', nelmdl=-15, ispin=2, prec='Accurate', ediff=1.e-4,
                  encut=480, nelm=100, algo='VeryFast', lplane=False, lwave=False, lcharg=False, istart=0,
                  magmom=magmoms, maxmix=25, #https://www.vasp.at/vasp-workshop/slides/handsonIV.pdf #for badly behaved clusters.
                  voskown=0, ismear=1, sigma=0.1, isym=2, iwavpr=11) 
@@ -78,6 +78,6 @@ gam_cell.set_constraint(fixed_line)
 opt = PreconLBFGS(Atoms(gam_cell))
 #opt.attach(traj_writer, interval=1)
 opt.attach(traj.write, interval=1)
-opt.run(fmax=0.001)
+opt.run(fmax=0.01)
 traj.close()
 

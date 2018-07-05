@@ -12,6 +12,7 @@ import numpy as np
 
 from ase.neb import fit0
 from ase.io import write
+from ase.io.xyz import write_xyz
 from ase.optimize import FIRE
 from ase.optimize.precon import PreconFIRE, Exp, PreconLBFGS
 
@@ -90,7 +91,8 @@ class NEBPaths(object):
     def __init__(self):
         pass
 
-    def build_h_nebpath(self, struct_path="fe_bcc.xyz", neb_path=np.array([0.25, 0.0, -0.25]), alat=2.8297, knots=5, sup_cell=5, fmax=1.e-4):
+    def build_h_nebpath(self, struct_path="fe_bcc.xyz", neb_path=np.array([0.25, 0.0, -0.25]), 
+                        alat=2.8297, knots=5, sup_cell=5, fmax=1.e-4):
         """
         Takes a vector neb_path, and generates n intermediate images along the minimum energy path.
         the struct path should point to the relaxed structure.
@@ -133,11 +135,11 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--buff", "-b", type=float, default=8.0)
     parser.add_argument("--qm_radius", "-q", type=float, default=2.0)
-    parser.add_argument("--use_socket", "-u", action="store_false")
+    parser.add_argument("--use_socket", "-u", action="store_true")
     parser.add_argument("--neb_path", "-n", nargs="+", type=float, default=[0.25, 0, -0.25])
     parser.add_argument("--fmax", "-f", type=float, help="maximum force for relaxation.", default=0.01)
     parser.add_argument("--sup_cell", "-s", type=int, help="size of fe matrix super cell")
-    parser.add_argument("--knots", "-kn", type=int, help="number of images", default=11)
+    parser.add_argument("--knots", "-kn", type=int, help="number of images", default=15)
     parser.add_argument("--k", "-k", type=float, default=5.0, help="spring constant for NEB (default eV/A^2).")
     parser.add_argument("--input_file", "-i", default="fe_bcc_h.xyz", help="input file.")
     parser.add_argument("--auto_gen", "-a", action="store_true")
@@ -146,7 +148,7 @@ if __name__=="__main__":
 
     #only one qmpot specifed at command line
     use_eampot = not(args.use_gap or args.use_socket) 
-    assert sum(args.use_gap + args.use_socket + use_mmpot) == 1 
+    #assert sum(args.use_gap + args.use_socket + use_mmpot) == 1 
 
     buff = args.buff
     qm_radius = args.qm_radius
@@ -161,8 +163,9 @@ if __name__=="__main__":
     else:
         gb_cell = AtomsReader("disloc_ini_traj.xyz")[-1]
 
-    defect = find_h_atom(gb_cell)
-    h_pos = defect.position
+   # defect = find_h_atom(gb_cell)
+   # h_pos = defect.position
+    h_pos = np.array([87.1442,2.36104,5.99855])
     x, y, z = gb_cell.positions.T
     radius1 = np.sqrt((x - h_pos[0])**2 + (y-h_pos[1])**2 + (z-h_pos[2])**2)
 
@@ -177,13 +180,12 @@ if __name__=="__main__":
 
     magmoms=[2.6, len(gb_cell)]
     vasp_args = dict(xc='PBE', amix=0.01, amin=0.001, bmix=0.001, amix_mag=0.01, bmix_mag=0.001,
-                     kpts=[1, 1, 1], kpar=1, lreal='auto', nelmdl=-15, ispin=2, prec='Accurate', ediff=1.e-3,
-                     nelm=100, algo='VeryFast', lplane=False, lwave=False, lcharg=False, istart=0, encut=320,
+                     kpts=[1, 1, 4], kpar=1, lreal='auto', nelmdl=-15, ispin=2, prec='Accurate', ediff=1.e-4,
+                     nelm=100, algo='VeryFast', lplane=False, lwave=False, lcharg=False, istart=0, encut=420,
                      magmom=magmoms, maxmix=30, voskown=0, ismear=1, sigma=0.1, isym=0) # possibly try iwavpr=12, should be faster if it works
 
     # parallel config.
-    procs = 48
-    kpts = [1, 1, 1]
+    procs = 96
     # need to have procs % n_par == 0
     n_par = 1
     if procs <= 8:
@@ -227,19 +229,15 @@ if __name__=="__main__":
     qmmm_pot = ForceMixingCarvingCalculator(disloc_ini, qm_region_mask,
                                             mm_pot, qm_pot,
                                             buffer_width=buff,
-                                            pbc_type=[False, False, False])
+                                            pbc_type=[False, False, True])
 
     for image in images:
         image.set_calculator(qmmm_pot)
 
     neb = NEB(images, k=args.k, force_only=True)
     neb.interpolate(mic=False)
-    #nebanalysis.save_barriers(images, neb, prefix="ini")
-    #opt = FIRE(neb)
-    opt = PreconLBFGS(neb)
+    opt = PreconFIRE(neb)
     opt.run(fmax=args.fmax)
-
     nebanalysis.save_barriers(images, neb, prefix="fin")
-
     if args.use_socket:
         sock_calc.shutdown()
