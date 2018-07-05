@@ -12,7 +12,8 @@ import json
 import numpy as np
 
 from ase.neb import fit0
-from ase.io import write
+from ase.io import write, Trajectory
+from ase.io.xyz import write_xyz
 from ase.optimize import FIRE
 from ase.optimize.precon import PreconFIRE, Exp, PreconLBFGS
 from ase.io.xyz import write_xyz
@@ -127,10 +128,8 @@ if __name__=="__main__":
 
     crack_slab.new_array('qm_atoms',qm_region_mask)
     crack_slab.new_array('qm_buffer_atoms',qm_buffer_mask)
-    def traj_writer(ats_loc=crack_slab):
-        f = open('relaxation.xyz', 'a')
-        ats_loc.arrays["forces"] = dynamics.atoms.get_forces()
-        write_xyz(f, ats_loc, mode='a')
-        f.close()
-    opt.attach(traj_writer, interval=1)
-    opt.run(fmax=0.08)
+    def write_slab(a=crack_slab):
+        write_xyz('crack_slab.xyz', a, append=True)
+    opt.attach(write_slab)
+    opt.run(fmax=0.1)
+    crack_slab.write('relaxed.xyz')
