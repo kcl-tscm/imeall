@@ -13,10 +13,9 @@ import numpy as np
 
 from ase.neb import fit0
 from ase.io import write, Trajectory
+from ase.io.xyz import write_xyz
 from ase.optimize import FIRE
 from ase.optimize.precon import PreconFIRE, Exp, PreconLBFGS
-from ase.io.xyz import write_xyz
-
 
 from distutils import spawn
 
