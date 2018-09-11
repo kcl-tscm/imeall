@@ -75,14 +75,19 @@ def print_dos(Emin = -15.00, Emax = 4.0, n_at=207):
 if __name__=='__main__':
     parser = ArgumentParser()
     parser.add_argument("-g", "--gen_dos", action="store_true")
-    parser.add_argument("--Emin", default = 4.0)
-    parser.add_argument("--Emax", default = 4.0)
     parser.add_argument("-p", "--print_dos", action="store_true")
-    parser.add_argument("-a", "--ats", type=int, nargs='+')
+    parser.add_argument("-a", "--ats", type=int, nargs='+', help="atom position number in POSCAR file for projected dos")
+    parser.add_argument("--Emin", default = -15.0)
+    parser.add_argument("--Emax", default = 4.0)
+    #Example nions=207, nks=2, n_bands=1260
+    parser.add_argument("--nions", type=int, help="number of ions in system.", default=207)
+    parser.add_argument("--nks", type=int, help="number of k points in system.", nks=2)
+    parser.add_argument("--n_bands", type=int, help="number of n_bands in system.", n_bands=1260)
+
     args = parser.parse_args()
 
     if args.gen_dos:
-        gen_dos() 
+        gen_dos(nions=args.nions) 
 
     if args.print_dos:
         for at in args.ats:
