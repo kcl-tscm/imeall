@@ -11,6 +11,8 @@ parser.add_argument("-r", "--radius", default=40.0, type=float, help="radius aro
 parser.add_argument("-i", "--input", default="crack_traj.xyz", help="trajectory file to cut crack tip from.")
 parser.add_argument("-o", "--output", default="cracktip_zone.xyz", help="trajectory file to write cracktip region to.")
 
+args = parser.parse_args()
+
 def append(ats, rr, initial_crack, output_file='joined.xyz'):
     for i, at in enumerate(ats):
         print i, initial_crack
