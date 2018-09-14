@@ -1,12 +1,15 @@
 import numpy as np
 from ase import Atoms
+from ase.calculators.calculator import Calculator
 from ase.utils.geometry import find_mic
 from ase.lattice.cubic import FaceCenteredCubic,BodyCenteredCubic
+from quippy.clusters import HYBRID_NO_MARK, HYBRID_ACTIVE_MARK
 
 # just allows for pbc / free
 class ForceMixingCarvingCalculator:
     def __init__(self, atoms, qm_list, mm_calc, qm_calc, pbc_type=[False,False,False],\
                vacuum=5., alpha=1., beta=1., buffer_width=3.):
+        self.name = 'ForceMixingCarvingCalculator'
         self.mm_calc = mm_calc
         self.qm_calc = qm_calc
         self.alpha = alpha
@@ -89,3 +92,18 @@ class ForceMixingCarvingCalculator:
 
     def get_stress(self, atoms):
         raise NotImplementedError
+
+    def set_qm_atoms(self, qm_list, atoms):
+        """
+        Set the QM atoms, given as a list of atom indices
+        """
+        if not atoms.has_property('hybrid'):
+            atoms.add_property('hybrid', HYBRID_NO_MARK)
+        atoms.hybrid[:] = HYBRID_NO_MARK
+        atoms.hybrid[qm_list] = HYBRID_ACTIVE_MARK
+
+    def get_qm_atoms(self, atoms):
+        """
+        Return the current list of QM atom indices as a list
+        """
+        return list((self.atoms.hybrid == HYBRID_ACTIVE_MARK).nonzero()[0])
