@@ -77,8 +77,8 @@ if __name__=='__main__':
     parser.add_argument("-g", "--gen_dos", action="store_true")
     parser.add_argument("-p", "--print_dos", action="store_true")
     parser.add_argument("-a", "--ats", type=int, nargs='+', help="atom position number in POSCAR file for projected dos")
-    parser.add_argument("--Emin", default = -10.0)
-    parser.add_argument("--Emax", default = 4.0)
+    parser.add_argument("--Emin", default = -10.0, type=float)
+    parser.add_argument("--Emax", default = 4.0, type=float)
     #Example nions=207, nks=2, n_bands=1260
     parser.add_argument("--nions", type=int, help="number of ions in system.", default=207)
     parser.add_argument("--nks", type=int, help="number of k points in system.", default=3)
@@ -91,6 +91,6 @@ if __name__=='__main__':
 
     if args.print_dos:
         for at in args.ats:
-            print_dos(n_at=at)
+            print_dos(n_at=at, Emin=args.Emin, Emax=args.Emax)
 
 
