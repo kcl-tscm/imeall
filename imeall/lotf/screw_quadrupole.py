@@ -13,6 +13,8 @@ a1 = (1./3.)*alat*np.array([-1,-1,2])
 a2 = (1./2.)*alat*np.array([1,-1,0])
 a3 = (1./2.)*alat*np.array([1,1,1])
 
+a2_tmp = (1./3.)*alat*np.array([-2,1,1])
+
 #latt_1 = alat*np.array([-1,-1,2])
 #latt_2 = alat*np.array([1,-1,0])
 #latt_1 = alat*np.array([-1,-1,2])
@@ -80,6 +82,10 @@ for x in range(-25,25):
           and (np.dot((point_2-c3), c1xc2) <=0) and (np.dot((point_2-c2), c3xc1) <= 0) and (np.dot((point_2-c1), c2xc3) <=0)):
         ats.append(Atom('Fe', position=Fe_2))
 
-#ats.set_cell([c1,c2,c3])
+#reset cell
+#c1 = (n*a1) + (1.0/(3.0*m))*a3
+#c2 = (n/2.)*a1 +m*a2 + (0.5)*a3 + 1.0/(6.0*m)*a3
+#c3 = a3
+ats.set_cell([c1,c2,c3])
 ats.write("screw.xyz")
 
