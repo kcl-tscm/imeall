@@ -15,13 +15,13 @@ def w0gauss(x,n=0):
     """
     ! Copyright (C) 2001 PWSCF group
     We only implement the simplest gaussian mixing
-    n=0. If you wish to extend check q-e/Modules/dos.f90
+    n=0. If you wish to extend check q-e/PP/dos.f90
     """
     sqrtpm1 = 1.0/np.pi
     arg = min (200.0, x**2) 
     return np.exp(-arg)*sqrtpm1
 
-def gen_dos(nions=207, nks=2, n_bands=1260, weight=0.5, Emin = -15.00, Emax = 4.0):
+def gen_dos(nions=207, nks=2, n_bands=1260, weight=0.5, Emin = -15.00, Emax = 4.0, spin=1, input_file='PROCAR'):
     deltaE = 0.0329
     degauss = 0.1
     ndos = int((Emax - Emin)/deltaE + 0.500000)
@@ -30,7 +30,7 @@ def gen_dos(nions=207, nks=2, n_bands=1260, weight=0.5, Emin = -15.00, Emax = 4.
     bands_regex = re.compile("band\s+([0-9]+|\*\*\*)\s#\s+energy\s+([+-]?[0-9\.]+)\s#\socc.")
     weight_regex = re.compile("weight = ([0-9\.]+)")
     
-    with open('PROCAR','r') as f:
+    with open(input_file,'r') as f:
         procar_str = f.read()
     
     #build a matrix integrated over bands and kpoints of the projected density 
@@ -40,9 +40,10 @@ def gen_dos(nions=207, nks=2, n_bands=1260, weight=0.5, Emin = -15.00, Emax = 4.
     weights = weight_regex.findall(procar_str)
     print "k-point weights:", weights
     kpoints = re.split(kpoint_regex, procar_str)
+    print "kpoint blocks", len(kpoints)
     for k in range(1,nks):
-        bands = re.split(bands_regex, kpoints[k*4])[1:]
-        weight = float(weights[k-1])
+        bands = re.split(bands_regex, kpoints[k*4 + 4*nks*(spin-1)])[1:]
+        weight = float(weights[k-1 + nks*(spin-1)])
         print 'weight', weight
         for n_b in range(n_bands):
             print 'band', n_b, '/', n_bands
@@ -74,6 +75,8 @@ def print_dos(Emin = -15.00, Emax = 4.0, n_at=207):
 
 if __name__=='__main__':
     parser = ArgumentParser()
+    parser.add_argument("-s", "--spin", type=int, default=1)
+    parser.add_argument("-i", "--input_file", default="PROCAR")
     parser.add_argument("-g", "--gen_dos", action="store_true")
     parser.add_argument("-p", "--print_dos", action="store_true")
     parser.add_argument("-a", "--ats", type=int, nargs='+', help="atom position number in POSCAR file for projected dos")
@@ -87,7 +90,7 @@ if __name__=='__main__':
     args = parser.parse_args()
 
     if args.gen_dos:
-        gen_dos(nions=args.nions, nks=args.nks, n_bands=args.n_bands, Emin=args.Emin, Emax=args.Emax) 
+        gen_dos(nions=args.nions, nks=args.nks, n_bands=args.n_bands, Emin=args.Emin, Emax=args.Emax, spin=args.spin, input_file=args.input_file)
 
     if args.print_dos:
         for at in args.ats:
