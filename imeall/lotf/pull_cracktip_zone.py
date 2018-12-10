@@ -14,8 +14,9 @@ parser.add_argument("-o", "--output", default="cracktip_zone.xyz", help="traject
 args = parser.parse_args()
 
 def append(ats, rr, initial_crack, output_file='joined.xyz'):
+    num_images = len(ats)
     for i, at in enumerate(ats):
-        print i, initial_crack
+        print i+1, '/', num_images, initial_crack
         fixed_mask = (np.sqrt(map(sum, map(np.square, at.positions[:,0:3]-initial_crack[0:3]))) <= rr)
         cl = at.select(fixed_mask)
         write_xyz(output_file, cl, append=True)

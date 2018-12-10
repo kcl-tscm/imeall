@@ -16,6 +16,11 @@ import json
 def find_indices(center=np.array([0.0, 0.0, 0.0]), cutoff=6.0):
     """
     Find a cluster around a point
+    Args:
+        cutoff(float) :: radius of cluster.
+        center(np.array) :: center of cluster.
+    Returns:
+        cluster(quippy.Atoms) ::
     """
     ats = io.read('./unpert/POSCAR')
     print 'Find cluster around', center
@@ -52,12 +57,16 @@ def gen_cluster_dirs(center=np.array([0.0,0.0,0.0]), cutoff=6.0):
         for cart in directions:
             gen_forceconstants(at_line[2], at_line[0], cart, displacement=0.1, hour=5, np=48)
 
-def gen_forceconstants(species, index, cart, displacement=0.1, hour=5, np=48):
+def gen_forceconstants(species, index, cart, displacement=0.1, hour=5, np=48, template_dir='templates'):
     """
     generate directory and POSCAR perturbation
+
+    Args:
+        species(str): Name of perturbed atom.
+        
     """
     target_dir = "{spec}_{index}_{cart}_disp".format(spec=species, index=index, cart=cart[1])
-    dir_util.copy_tree('./unpert/', target_dir)
+    dir_util.copy_tree(template_dir, target_dir)
     with pushd(target_dir) as ctx0:
 #Fix the pbs string
         with open('vasp.sh','r') as f:
@@ -90,20 +99,21 @@ if __name__=="__main__":
     parser.add_argument("-p", "--pull_forces", help="pull the forces and store the 3N vector of force couplings.",  action="store_true")
     parser.add_argument("-s", "--species", default="Fe", type=str)
     parser.add_argument("-c", "--cart", default="x", type=str)
-    parser.add_argument("-d", "--displacement", help="atomic displacement distance in angstrom", default=0.1, type=float)
+    parser.add_argument("-d", "--displacement", help="atomic displacement distance in angstrom", default=0.005, type=float)
     parser.add_argument("-i", "--index", help="index of atom in list", type=int)
-    parser.add_argument("-t", "--time", help="hours to run", default=5)
-    parser.add_argument("-n", "--np", help="hours to run", default=48)
+    parser.add_argument("-t", "--time", help="hours to run.", default=2)
+    parser.add_argument("-n", "--np", help="number of processors.", default=48)
     parser.add_argument("-a", "--array", help="generate array of jobs", action='store_true')
+    parser.add_argument("-f", "--template_dir", help="folder containing POSCAR, INCAR templates", default='templates')
 
     args = parser.parse_args()
 
     if args.gen_forces:
-        if args.index < 0:
-            print "Index not given or must be greater than 0."
-        directions = [(0, 'x'), (1,'y'), (2,'z')]
-        for cart in directions:
-            gen_forceconstants(args.species, args.index, cart, displacement=args.displacement, hour=args.time, np=args.np)
+        ats = io.read('./{tmp_folder}/POSCAR'.format(tmp_folder=args.template_dir))
+        for at in ats:
+            directions = [(0, 'x'), (1,'y'), (2,'z')]
+            for cart in directions:
+                gen_forceconstants(at.symbol, at.index, cart, displacement=args.displacement, hour=args.time, np=args.np, template_dir=args.template_dir)
 
     if args.pull_forces:
         pull_forces(args.species, args.index, args.cart)
