@@ -133,14 +133,14 @@ if __name__=="__main__":
     vasp = '/home/mmm0007/vasp/vasp.5.4.1/bin/vasp_std'
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--buff", "-b", type=float, default=8.0)
-    parser.add_argument("--qm_radius", "-q", type=float, default=2.0)
+    parser.add_argument("--buff", "-b", type=float, default=9.1)
+    parser.add_argument("--qm_radius", "-q", type=float, default=3.25)
     parser.add_argument("--use_socket", "-u", action="store_true")
     parser.add_argument("--neb_path", "-n", nargs="+", type=float, default=[0.25, 0, -0.25])
     parser.add_argument("--fmax", "-f", type=float, help="maximum force for relaxation.", default=0.08)
     parser.add_argument("--sup_cell", "-s", type=int, help="size of fe matrix super cell")
     parser.add_argument("--knots", "-kn", type=int, help="number of images", default=15)
-    parser.add_argument("--k", "-k", type=float, default=5.0, help="spring constant for NEB (default eV/A^2).")
+    parser.add_argument("--k", "-k", type=float, default=0.5, help="spring constant for NEB (default eV/A^2).")
     parser.add_argument("--input_file", "-i", default="fe_bcc_h.xyz", help="input file.")
     parser.add_argument("--auto_gen", "-a", action="store_true")
     parser.add_argument("--use_gap", "-g", action="store_true")
@@ -181,7 +181,7 @@ if __name__=="__main__":
     magmoms=[2.6, len(gb_cell)]
     vasp_args = dict(xc='PBE', amix=0.01, amin=0.001, bmix=0.001, amix_mag=0.01, bmix_mag=0.001,
                      kpts=[1, 1, 1], kpar=1, lreal='auto', nelmdl=-15, ispin=2, prec='Accurate', ediff=1.e-4,
-                     nelm=100, algo='VeryFast', lplane=False, lwave=False, lcharg=False, istart=0, encut=400,
+                     nelm=100, algo='VeryFast', lplane=False, lwave=False, lcharg=False, istart=0, encut=420,
                      magmom=magmoms, maxmix=30, voskown=0, ismear=1, sigma=0.1, isym=0) # possibly try iwavpr=12, should be faster if it works
 
     # parallel config.

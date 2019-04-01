@@ -7,7 +7,7 @@ from quippy import set_fortran_indexing
 
 set_fortran_indexing(False)
 parser = argparse.ArgumentParser()
-parser.add_argument("-r", "--radius", default=40.0, type=float, help="radius around cracktip to cutout")
+parser.add_argument("-r", "--radius", default=40.0, type=float, help="radius around cracktip to cutout (default 40\A)")
 parser.add_argument("-i", "--input", default="crack_traj.xyz", help="trajectory file to cut crack tip from.")
 parser.add_argument("-o", "--output", default="cracktip_zone.xyz", help="trajectory file to write cracktip region to.")
 
