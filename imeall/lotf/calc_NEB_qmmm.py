@@ -4,7 +4,6 @@ matplotlib.use('Agg')
 
 import os
 import sys
-
 import argparse
 
 import json
@@ -16,22 +15,23 @@ from ase.io.xyz import write_xyz
 from ase.optimize import FIRE
 from ase.optimize.precon import PreconFIRE, Exp, PreconLBFGS
 
-
 from distutils import spawn
 
-from imeall import app
 from ForceMixerCarver import ForceMixingCarvingCalculator
-from matscipy.socketcalc import VaspClient, SocketCalculator
 
-from quippy import AtomsReader, AtomsWriter, Atoms
-from quippy import Potential
+from imeall import app
+from imeall.calc_elast_dipole import find_h_atom
+from fracture.simulate_crack import fix_edges
 
 import matplotlib.pyplot as plt
-
-from imeall.calc_elast_dipole import find_h_atom
-
-#from ase.neb import NEB
+from matscipy.socketcalc import VaspClient, SocketCalculator
 from nebForceIntegrator import NEB
+
+from quippy import Potential
+from quippy import set_fortran_indexing
+from quippy import AtomsReader, AtomsWriter, Atoms
+
+set_fortran_indexing(False)
 
 class NEBAnalysis(object):
     def __init__(self):
@@ -142,13 +142,15 @@ if __name__=="__main__":
     parser.add_argument("--knots", "-kn", type=int, help="number of images", default=15)
     parser.add_argument("--k", "-k", type=float, default=0.5, help="spring constant for NEB (default eV/A^2).")
     parser.add_argument("--input_file", "-i", default="fe_bcc_h.xyz", help="input file.")
-    parser.add_argument("--auto_gen", "-a", action="store_true")
+    parser.add_argument("--use_socket", "-s", action="store_true")
     parser.add_argument("--use_gap", "-g", action="store_true")
+    parser.add_argument("--relax", "-r", action="store_true", help='If true relaxes initial and final positions of the NEB calculation.')
     args = parser.parse_args()
 
     #only one qmpot specifed at command line
     use_eampot = not(args.use_gap or args.use_socket) 
     #assert sum(args.use_gap + args.use_socket + use_mmpot) == 1 
+    print (args, file=(open('output.txt','w')))
 
     buff = args.buff
     qm_radius = args.qm_radius
@@ -161,13 +163,13 @@ if __name__=="__main__":
     if args.auto_gen:
         gb_cell = AtomsReader(args.input_file)[-1]
     else:
-        gb_cell = AtomsReader("disloc_ini_traj.xyz")[-1]
+        gb_cell = AtomsReader("disloc_0.xyz")[-1]
 
    # defect = find_h_atom(gb_cell)
    # h_pos = defect.position
-    h_pos = np.array([87.1442,2.36104,5.99855])
+    qm_center = gb_cell.info['CrackPos']
     x, y, z = gb_cell.positions.T
-    radius1 = np.sqrt((x - h_pos[0])**2 + (y-h_pos[1])**2 + (z-h_pos[2])**2)
+    radius1 = np.sqrt((x -qm_center[0])**2 + (y-qm_center[1])**2 + (z-qm_center[2])**2)
 
     qm_region_mask = (radius1 < qm_radius)
     qm_buffer_mask = (radius1 < qm_radius + buff)
@@ -196,6 +198,15 @@ if __name__=="__main__":
                 n_par = procs // int(_npar)
 
     if args.use_socket:
+    #DFT PARAMETERS SOCKET CALCULATOR.
+        magmoms=[2.6, len(gb_cell)]
+        kpts = [1,1,10]
+        vasp_args = dict(xc='PBE', amix=0.01, amin=0.001, bmix=0.001, amix_mag=0.01, bmix_mag=0.001,
+                         kpts=kpts, kpar=1, lreal='auto', nelmdl=-15, ispin=2, prec='Accurate', ediff=1.e-4,
+                         nelm=100, algo='VeryFast', lplane=False, lwave=False, lcharg=False, istart=0, encut=420,
+                         iwavpr=11, magmom=magmoms, maxmix=30, voskown=0, ismear=1, sigma=0.1, isym=0) # possibly try iwavpr=12, should be faster if it works
+        procs = 96
+        n_par = 8
         vasp_client = VaspClient(client_id=0, npj=procs, ppn=1,
                                  exe=vasp, mpirun=mpirun, parmode='mpi',
                                  ibrion=13, nsw=1000000,
@@ -209,7 +220,7 @@ if __name__=="__main__":
         shutil.copy(gap_pot_sparse, './')
         qm_pot = Potential('IP GAP', param_filename=gap_pot)
     else:
-    #for entirely mm potential
+        print ("Using PURE EAM POTENTIAL")
         qm_pot = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(1.00894848312), param_filename=eam_pot)
 
     nebpath = NEBPaths()
@@ -218,26 +229,43 @@ if __name__=="__main__":
     if args.auto_gen:
         disloc_ini, disloc_fin = nebpath.build_h_nebpath(neb_path=np.array(args.neb_path), fmax = args.fmax, sup_cell=args.sup_cell)
     else:
-        disloc_ini = Atoms('disloc_ini_traj.xyz')
-        disloc_fin = Atoms('disloc_fin_traj.xyz')
+        disloc_ini = Atoms('disloc_0.xyz')
+        disloc_fin = Atoms('disloc_1.xyz')
 
     n_knots = args.knots
     images = [disloc_ini] + \
              [disloc_ini.copy() for i in range(n_knots)] + \
              [disloc_fin]
 
+    #copied this from Tom's scripts: need to check and understand
+    #Will turn these on after the initial run throughs to check the difference.
+    #alpha = dft_alat/eam_alat
+    #eam_bulk_mod = (eam_C11 + 2.0*eam_C12)/3.0
+    #dft_bulk_mod = (dft_C11 + 2.0*dft_C12)/3.0
+    #beta = eam_bulk_mod/dft_bulk_mod/alpha/alpha/alpha
+
     qmmm_pot = ForceMixingCarvingCalculator(disloc_ini, qm_region_mask,
                                             mm_pot, qm_pot,
                                             buffer_width=buff,
+                                            alpha=1.0, beta=1.0,
+                                            vacuum=5.0,
                                             pbc_type=[False, False, True])
 
     for image in images:
+        fix_edges(image)
         image.set_calculator(qmmm_pot)
+
+    if args.relax:
+        opt = FIRE(images[0])
+        opt.run(fmax=args.fmax)
+        opt = FIRE(images[-1])
+        opt.run(fmax=args.fmax)
 
     neb = NEB(images, k=args.k, force_only=True)
     neb.interpolate(mic=False)
-    opt = PreconFIRE(neb)
+    opt = FIRE(neb)
     opt.run(fmax=args.fmax)
     nebanalysis.save_barriers(images, neb, prefix="fin")
+
     if args.use_socket:
         sock_calc.shutdown()
