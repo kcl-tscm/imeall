@@ -1,6 +1,7 @@
 import os
 import sys
 import shutil
+import argparse
 
 from ase import io
 from ase.units import Bohr
@@ -31,6 +32,13 @@ def atoms_to_site(atoms):
         print >> f, comment_line
         print >> f, site_str
 
+def pos_to_xyz(struct_file):
+    with open(struct_file) as f:
+        struct_str = f.read()
+    struct_lines = struct_file.split('\n')[1:-1]
+    ats.write("conv.xyz")
+
+
 def gen_multiple_images():
   at_images = io.read("restart_images.xyz", index=":")
   print "{} images in file".format(len(at_images))
@@ -46,9 +54,18 @@ def gen_multiple_images():
         atoms_to_site(atoms)
 
 if __name__=='__main__':
-  ats = io.read(sys.argv[1])
-  atoms_to_site(ats)
 
+    parser = parser.ArgumentParser()
+    parser.add_argument("-i","--input",help="input format suffix",default="xyz")
+    parser.add_argument("-o","--output",help="output format suffix",default="site")
+    parser.add_argument("-s","--struct_file",help="input format suffix",required=True)
 
+    if args.input=="xyz" and args.output=="site":
+        ats = io.read(args.struct_file)
+        atoms_to_site(ats)
+    if args.input=="pos" and args.output=="xyz":
+        pos_to_xyz(args.struct_file)
+    else:
+        print "No conversion method available"
 
 
