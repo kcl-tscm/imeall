@@ -74,6 +74,15 @@ else:
 
 atoms.set_calculator(qm_pot)
 
+if args.restart:
+#delete certain keys so they don't cause problem in write_xyz.
+    del_keys = ['force','forces', 'forces0']
+    array_keys = atoms.arrays.keys()
+    prop_keys = atoms.properties.keys()
+    for key in del_keys:
+        if key in array_keys:
+            del(atoms.arrays[key])
+
 #thermalize atoms
 if not args.restart:
     MaxwellBoltzmannDistribution(atoms, 2.0*sim_T)

@@ -20,7 +20,7 @@ def w0gauss(x,n=0):
     arg = min (200.0, x**2) 
     return np.exp(-arg)*sqrtpm1
 
-def gen_dos(nions=207, nks=2, n_bands=1260, weight=0.5, Emin = -15.00, Emax = 4.0):
+def gen_dos(nions=207, nks=2, n_bands=1260, weight=0.5, Emin = -15.00, Emax = 4.0, input_file="PROCAR"):
     deltaE = 0.0329
     degauss = 0.1
     ndos = int((Emax - Emin)/deltaE + 0.500000)
@@ -29,7 +29,7 @@ def gen_dos(nions=207, nks=2, n_bands=1260, weight=0.5, Emin = -15.00, Emax = 4.
     bands_regex = re.compile("band\s+([0-9]+|\*\*\*)\s#\s+energy\s+([+-]?[0-9\.]+)\s#\socc.")
     weight_regex = re.compile("weight = ([0-9\.]+)")
     
-    with open('PROCAR','r') as f:
+    with open(input_file, 'r') as f:
         procar_str = f.read()
     
     #build a matrix integrated over bands and kpoints of the projected density 
@@ -74,6 +74,7 @@ def print_dos(Emin = -15.00, Emax = 4.0, n_at=207):
 if __name__=='__main__':
     parser = ArgumentParser()
     parser.add_argument("-g", "--gen_dos", action="store_true")
+    parser.add_argument("-i", "--input_file", default="PROCAR")
     parser.add_argument("-p", "--print_dos", action="store_true")
     parser.add_argument("-a", "--ats", type=int, nargs='+', help="atom position number in POSCAR file for projected dos")
     parser.add_argument("--Emin", default = -10.0, type=float)
@@ -86,7 +87,7 @@ if __name__=='__main__':
     args = parser.parse_args()
 
     if args.gen_dos:
-        gen_dos(nions=args.nions, nks=args.nks, n_bands=args.n_bands) 
+        gen_dos(nions=args.nions, nks=args.nks, n_bands=args.n_bands, input_file=args.input_file) 
 
     if args.print_dos:
         for at in args.ats:
