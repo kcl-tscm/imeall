@@ -1,6 +1,5 @@
 import re
 import numpy as np
-
 from argparse import ArgumentParser
 from quippy import set_fortran_indexing
 
