@@ -20,6 +20,13 @@ a1 = (1./3.)*alat*np.array([-1,-1,2])
 a2 = (1./2.)*alat*np.array([1,-1,0])
 a3 = (1./2.)*alat*np.array([1,1,1])
 
+#a2_tmp = (1./3.)*alat*np.array([-2,1,1])
+#latt_1 = alat*np.array([-1,-1,2])
+#latt_2 = alat*np.array([1,-1,0])
+#latt_1 = alat*np.array([-1,-1,2])
+#latt_2 = alat*np.array([1,-1,0])
+#latt_3 = alat*np.array([1,1,1])
+
 latt_1 = alat*np.array([1,0,0])
 latt_2 = alat*np.array([0,1,0])
 latt_3 = alat*np.array([0,0,1])
