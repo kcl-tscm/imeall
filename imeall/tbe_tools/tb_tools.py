@@ -54,16 +54,17 @@ def gen_multiple_images():
         atoms_to_site(atoms)
 
 if __name__=='__main__':
-
-    parser = parser.ArgumentParser()
+    parser = argparse.ArgumentParser()
     parser.add_argument("-i","--input",help="input format suffix",default="xyz")
     parser.add_argument("-o","--output",help="output format suffix",default="site")
-    parser.add_argument("-s","--struct_file",help="input format suffix",required=True)
+    parser.add_argument("-s","--struct_file",help="input file name",required=True)
+    args = parser.parse_args()
 
-    if args.input=="xyz" and args.output=="site":
+    print args.input, args.output
+    if (args.input=="xyz" and args.output=="site"):
         ats = io.read(args.struct_file)
         atoms_to_site(ats)
-    if args.input=="pos" and args.output=="xyz":
+    elif (args.input=="pos" and args.output=="xyz"):
         pos_to_xyz(args.struct_file)
     else:
         print "No conversion method available"
