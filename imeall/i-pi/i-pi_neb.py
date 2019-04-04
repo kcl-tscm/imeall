@@ -96,16 +96,28 @@ if __name__=="__main__":
     
     potentials = read_neb_energies(prefix)
     #zero and convert to eV
-    potentials[1:,:] -= potentials[1:,:].min()
-    potentials[1:,:] *= units.Hartree
+    print np.shape(potentials)
+    if np.shape(potentials)[0] > 1:
+        potentials[1:,:] -= potentials[1:,:].min()
+        potentials[1:,:] *= units.Hartree
+    else:
+        print potentials[0][1:] 
+        potentials[0][1:] -= potentials[:].min()
+        potentials[0][1:] *= units.Hartree
+
     print "Removing old neb path"
     if os.path.isfile("neb_path.xyz"):
         os.remove("neb_path.xyz")
     
     images = []
     print "shape of potential array", np.shape(potentials)
-    print "Final image potentials:", potentials[-1,1:]
-    for potential, pos_file, force_file in zip((potentials)[-1,1:], positions, forces):
+    #print "Final image potentials:", potentials[-1,1:]
+    if np.shape(potentials)[0] > 1:
+        final_pots = (potentials)[-1,1:]
+    else:
+        final_pots = potentials[0][1:]
+    print final_pots, potentials
+    for potential, pos_file, force_file in zip(final_pots, positions, forces):
         print pos_file, force_file, potential
         ats = io.read(pos_file,index="-1")
         forces = io.read(force_file,index="-1")
