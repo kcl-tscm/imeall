@@ -120,6 +120,9 @@ if __name__=="__main__":
     for potential, pos_file, force_file in zip(final_pots, positions, forces):
         print pos_file, force_file, potential
         ats = io.read(pos_file,index="-1")
+        alat = 14.35
+        ats.cell = np.array([[alat,0.0,0.0],[0.0,alat,0.0],[0.0,0.0,alat]])
+        ats.set_pbc(True) 
         forces = io.read(force_file,index="-1")
         #if conversion required:
         #forces *= units.Hartree/units.Bohr
