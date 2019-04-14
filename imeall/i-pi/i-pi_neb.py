@@ -126,9 +126,10 @@ if __name__=="__main__":
         #bit of a hack but the positions of the force images are the forces:
         calc = Calculator(ats,potential,forces=forces.get_positions())
         ats.set_calculator(calc)
-        ats.get_forces()
-        images.append(ats)
+        forces = ats.get_forces()
+        ats.arrays['forces'] = forces
         write_xyz("neb_path.xyz",ats, append=True)
+        images.append(ats)
     
     calc_neb_barriers(prefix, images)
 
