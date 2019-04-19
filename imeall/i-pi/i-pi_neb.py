@@ -36,7 +36,6 @@ class Calculator(object):
     def calculation_required(self, atoms):
         return False
 
-
 def calc_neb_barriers(prefix, images):
     R = [ats.positions for ats in images]
     E = [ats.get_potential_energy() for ats in images]
