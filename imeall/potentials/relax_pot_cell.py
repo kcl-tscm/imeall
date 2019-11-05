@@ -23,12 +23,12 @@ print 'Input File', args.input_file
 
 r_scale = 1.0
 if args.pot_type =='EAM':
-  pot = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale=1.0', r_scale=r_scale, param_filename=args.input_file)
+    pot = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale=1.0', r_scale=r_scale, param_filename=args.input_file)
 elif args.pot_type =='GAP':
-  pot = Potential('IP GAP', param_filename ='gp33b.xml')
-  #pot.set_calc_args({'local_gap_variance': False})
+    pot = Potential('IP GAP', param_filename ='gp33b.xml')
+    #pot.set_calc_args({'local_gap_variance': False})
 else:
-  sys.exit('Invalid pot type.')
+    sys.exit('Invalid pot type.')
 
 fe_bulk.set_calculator(pot)
 print pot.cutoff()
@@ -46,7 +46,7 @@ fe_bulk.rattle()
 
 trajectory = AtomsWriter('minim.xyz')
 def traj_writer(dynamics):
-  trajectory.write(dynamics.atoms)
+    trajectory.write(dynamics.atoms)
 
 minim   = Minim(fe_bulk, relax_positions=True, relax_cell=True)
 minim.run(fmax=1e-6)
@@ -68,14 +68,14 @@ fe_bulk.set_atoms(26)
 
 print 'IP {1} do_rescale_r=T r_scale={0}'.format(r_scale, args.pot_type)
 if args.pot_type == 'EAM':
-  pot     = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=args.input_file)
+    pot     = Potential('IP EAM_ErcolAd do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=args.input_file)
 elif args.pot_type == 'GAP':
-  #rescale not yet implemented
-  #pot     = Potential('IP GAP do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=args.input_file)
-  print 'No Gap Rescale Implemented!'
-  pot     = Potential('IP GAP', param_filename=args.input_file)
+    #rescale not yet implemented
+    #pot     = Potential('IP GAP do_rescale_r=T r_scale={0}'.format(r_scale), param_filename=args.input_file)
+    print 'No Gap Rescale Implemented!'
+    pot     = Potential('IP GAP', param_filename=args.input_file)
 else:
-  sys.exit('Invalid pot_type')
+    sys.exit('Invalid pot_type')
 
 fe_bulk.set_calculator(pot)
 print fe_bulk.get_potential_energy()/len(fe_bulk)
@@ -87,4 +87,3 @@ print 'After rescaled Relaxation'
 print 'Per Atom Energy', fe_bulk.get_potential_energy()/len(fe_bulk)
 print fe_bulk.get_cell().round(5)
 fe_bulk.write('Fe_rescaled_relax.xyz')
-

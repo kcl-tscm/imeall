@@ -13,6 +13,6 @@ pattern = args.pattern
 jobs = glob.glob(pattern)
 out = AtomsWriter('traj.xyz')
 for job  in jobs:
-  struct_file = os.path.join(job,'feb{0}.xyz'.format(job[-3:]))
-  ats = AtomsReader(struct_file)[-1]
-  out.write(ats)
+    struct_file = os.path.join(job,'feb{0}.xyz'.format(job[-3:]))
+    ats = AtomsReader(struct_file)[-1]
+    out.write(ats)

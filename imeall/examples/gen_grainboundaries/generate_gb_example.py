@@ -15,7 +15,6 @@ gb_list = quat_gb.gen_sym_tilt(orientation_axis=or_axis)
 
 if __name__=='__main__':
 #create Canonical Grain Directories from the list.
-  for gb in gb_list[:5]:
-    print gb[0], gb[1]
-    gen_canonical_grain_dir(gb[0]*(np.pi/180.), or_axis, gb[1], target_dir='./example_dir', gb_type='tilt')
-
+    for gb in gb_list[:5]:
+        print gb[0], gb[1]
+        gen_canonical_grain_dir(gb[0]*(np.pi/180.), or_axis, gb[1], target_dir='./example_dir', gb_type='tilt')
